@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginSchema, registerSchema } from "../validators/auth.schemas.js";
+import { useAuthMutations } from "../hooks/useAuthMutations.js";
 import { Input } from "../../../components/ui/Input.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
@@ -14,19 +16,26 @@ const submitLabelByMode = {
 };
 
 export const AuthForm = ({ mode = "login", title, subtitle }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { loginMutation, registerMutation, resolveRedirectPath, extractApiErrorMessage } = useAuthMutations();
+
   const schema = mode === "login" ? loginSchema : registerSchema;
-  const defaultValues =
-    mode === "login"
-      ? { email: "", password: "" }
-      : {
-          firstName: "",
-          lastName: "",
-          email: "",
-          phone: "",
-          password: "",
-          companyName: "",
-          role: mode
-        };
+  const defaultValues = useMemo(
+    () =>
+      mode === "login"
+        ? { email: "", password: "" }
+        : {
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: "",
+            password: "",
+            companyName: "",
+            role: mode
+          },
+    [mode]
+  );
 
   const {
     register,
@@ -37,10 +46,38 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
     defaultValues
   });
 
+  const mutation = mode === "login" ? loginMutation : registerMutation;
+
   const onSubmit = async (values) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    console.log("Auth submit", values);
+    const payload =
+      mode === "login"
+        ? {
+            email: values.email,
+            password: values.password
+          }
+        : {
+            firstName: values.firstName,
+            lastName: values.lastName,
+            email: values.email,
+            phone: values.phone,
+            password: values.password,
+            role: values.role
+          };
+
+    const result = await mutation.mutateAsync(payload);
+    const fallbackPath = resolveRedirectPath(result.user);
+    const intendedPath = location.state?.from?.pathname;
+    navigate(intendedPath || fallbackPath, { replace: true });
   };
+
+  const mutationError = mutation.isError
+    ? extractApiErrorMessage(
+        mutation.error,
+        mode === "login"
+          ? "La connexion a echoue."
+          : "La creation du compte a echoue."
+      )
+    : null;
 
   return (
     <Card className="border-none bg-transparent p-0 shadow-none">
@@ -66,16 +103,35 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
           />
         ) : null}
 
-        <Input label="Email" type="email" placeholder="contact@yopii.app" error={errors.email?.message} {...register("email")} />
+        <Input
+          label="Email"
+          type="email"
+          placeholder="contact@yopii.app"
+          error={errors.email?.message}
+          {...register("email")}
+        />
 
         {mode !== "login" ? (
-          <Input label="Telephone" placeholder="+225 07 00 00 00 00" error={errors.phone?.message} {...register("phone")} />
+          <Input
+            label="Telephone"
+            placeholder="+225 07 00 00 00 00"
+            error={errors.phone?.message}
+            {...register("phone")}
+          />
         ) : null}
 
-        <Input label="Mot de passe" type="password" placeholder="********" error={errors.password?.message} {...register("password")} />
+        <Input
+          label="Mot de passe"
+          type="password"
+          placeholder="********"
+          error={errors.password?.message}
+          {...register("password")}
+        />
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Chargement..." : submitLabelByMode[mode]}
+        {mutationError ? <p className="text-sm text-red-300">{mutationError}</p> : null}
+
+        <Button type="submit" className="w-full" disabled={isSubmitting || mutation.isPending}>
+          {isSubmitting || mutation.isPending ? "Chargement..." : submitLabelByMode[mode]}
         </Button>
       </form>
 

@@ -1,5 +1,7 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useSessionStore } from "../../app/store/session.store.js";
+import { Button } from "../ui/Button.jsx";
+import { performLogout } from "../../features/auth/utils/logout.js";
 
 const sidebarItems = [
   { to: "/dashboard/user", label: "Vue globale" },
@@ -10,7 +12,14 @@ const sidebarItems = [
 ];
 
 export const DashboardLayout = () => {
+  const navigate = useNavigate();
   const user = useSessionStore((state) => state.user);
+  const logout = useSessionStore((state) => state.logout);
+
+  const handleLogout = () => {
+    performLogout(logout);
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100">
@@ -36,6 +45,11 @@ export const DashboardLayout = () => {
               </NavLink>
             ))}
           </nav>
+          <div className="mt-8">
+            <Button type="button" variant="secondary" className="w-full" onClick={handleLogout}>
+              Se deconnecter
+            </Button>
+          </div>
         </aside>
         <section>
           <Outlet />
