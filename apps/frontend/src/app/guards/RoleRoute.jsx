@@ -1,8 +1,9 @@
+import { useSelector } from "react-redux";
 import { Navigate, Outlet } from "react-router-dom";
-import { useSessionStore } from "../store/session.store.js";
+import { selectCurrentUser } from "../store/session.store.js";
 
 export const RoleRoute = ({ allowedRoles }) => {
-  const user = useSessionStore((state) => state.user);
+  const user = useSelector(selectCurrentUser);
 
   if (!user || !allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard/user" replace />;

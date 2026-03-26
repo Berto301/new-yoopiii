@@ -1,4 +1,6 @@
+import { Provider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { store } from "../store/session.store.js";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -11,5 +13,7 @@ const queryClient = new QueryClient({
 });
 
 export const AppProviders = ({ children }) => (
-  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  <Provider store={store}>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  </Provider>
 );

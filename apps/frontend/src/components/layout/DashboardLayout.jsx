@@ -1,7 +1,8 @@
+import { useDispatch, useSelector } from "react-redux";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useSessionStore } from "../../app/store/session.store.js";
 import { Button } from "../ui/Button.jsx";
 import { performLogout } from "../../features/auth/utils/logout.js";
+import { logoutSuccess, selectCurrentUser } from "../../app/store/session.store.js";
 
 const sidebarItems = [
   { to: "/dashboard/user", label: "Vue globale" },
@@ -13,11 +14,11 @@ const sidebarItems = [
 
 export const DashboardLayout = () => {
   const navigate = useNavigate();
-  const user = useSessionStore((state) => state.user);
-  const logout = useSessionStore((state) => state.logout);
+  const dispatch = useDispatch();
+  const user = useSelector(selectCurrentUser);
 
   const handleLogout = () => {
-    performLogout(logout);
+    performLogout(dispatch, logoutSuccess);
     navigate("/login", { replace: true });
   };
 

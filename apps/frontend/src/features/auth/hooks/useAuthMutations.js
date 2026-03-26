@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { useSessionStore } from "../../../app/store/session.store.js";
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "../../../app/store/session.store.js";
 import { loginRequest, registerRequest } from "../services/auth.service.js";
 
 const resolveRedirectPath = (user) => {
@@ -18,19 +19,19 @@ const extractApiErrorMessage = (error, fallbackMessage) =>
   error?.response?.data?.message || fallbackMessage;
 
 export const useAuthMutations = () => {
-  const loginToSession = useSessionStore((state) => state.login);
+  const dispatch = useDispatch();
 
   const loginMutation = useMutation({
     mutationFn: loginRequest,
     onSuccess: (data) => {
-      loginToSession(data);
+      dispatch(loginSuccess(data));
     }
   });
 
   const registerMutation = useMutation({
     mutationFn: registerRequest,
     onSuccess: (data) => {
-      loginToSession(data);
+      dispatch(loginSuccess(data));
     }
   });
 

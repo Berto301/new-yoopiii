@@ -1,8 +1,9 @@
+import { useSelector } from "react-redux";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useSessionStore } from "../store/session.store.js";
+import { selectIsAuthenticated } from "../store/session.store.js";
 
 export const PrivateRoute = () => {
-  const { isAuthenticated } = useSessionStore();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
   const location = useLocation();
 
   if (!isAuthenticated) {

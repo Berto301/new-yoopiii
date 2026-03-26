@@ -1,9 +1,9 @@
 import { socket } from "../../../lib/socket/socket.js";
 
-export const performLogout = (logout) => {
+export const performLogout = (dispatch, logoutAction) => {
   if (socket.connected) {
     socket.disconnect();
   }
 
-  logout();
+  dispatch(logoutAction());
 };

@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { configureStore, createSlice } from "@reduxjs/toolkit";
 
 const STORAGE_KEY = "yopii-session";
 
@@ -26,12 +26,12 @@ const loadStoredSession = () => {
   }
 };
 
-const persistSession = ({ accessToken, user }) => {
+const persistSession = (state) => {
   if (typeof window === "undefined") {
     return;
   }
 
-  if (!accessToken || !user) {
+  if (!state.accessToken || !state.user) {
     window.localStorage.removeItem(STORAGE_KEY);
     return;
   }
@@ -39,52 +39,55 @@ const persistSession = ({ accessToken, user }) => {
   window.localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
-      accessToken,
-      user
+      accessToken: state.accessToken,
+      user: state.user
     })
   );
 };
 
-const initialSession = loadStoredSession();
+const initialState = loadStoredSession();
 
-export const useSessionStore = create((set) => ({
-  accessToken: initialSession.accessToken,
-  user: initialSession.user,
-  isAuthenticated: initialSession.isAuthenticated,
-  login: ({ user, accessToken }) => {
-    persistSession({ user, accessToken });
+const sessionSlice = createSlice({
+  name: "session",
+  initialState,
+  reducers: {
+    loginSuccess: (state, action) => {
+      state.user = action.payload.user;
+      state.accessToken = action.payload.accessToken;
+      state.isAuthenticated = true;
+      persistSession(state);
+    },
+    logoutSuccess: (state) => {
+      state.user = null;
+      state.accessToken = null;
+      state.isAuthenticated = false;
+      persistSession(state);
+    },
+    setRole: (state, action) => {
+      if (state.user) {
+        state.user.role = action.payload;
+        persistSession(state);
+      }
+    },
+    setAgencyId: (state, action) => {
+      if (state.user) {
+        state.user.agencyId = action.payload;
+        persistSession(state);
+      }
+    }
+  }
+});
 
-    set({
-      user,
-      accessToken,
-      isAuthenticated: true
-    });
-  },
-  logout: () => {
-    persistSession({ user: null, accessToken: null });
+export const { loginSuccess, logoutSuccess, setRole, setAgencyId } = sessionSlice.actions;
 
-    set({
-      user: null,
-      accessToken: null,
-      isAuthenticated: false
-    });
-  },
-  setRole: (role) =>
-    set((state) => {
-      const nextUser = state.user ? { ...state.user, role } : state.user;
-      persistSession({ user: nextUser, accessToken: state.accessToken });
+export const store = configureStore({
+  reducer: {
+    session: sessionSlice.reducer
+  }
+});
 
-      return {
-        user: nextUser
-      };
-    }),
-  setAgencyId: (agencyId) =>
-    set((state) => {
-      const nextUser = state.user ? { ...state.user, agencyId } : state.user;
-      persistSession({ user: nextUser, accessToken: state.accessToken });
-
-      return {
-        user: nextUser
-      };
-    })
-}));
+export const selectSession = (state) => state.session;
+export const selectCurrentUser = (state) => state.session.user;
+export const selectAccessToken = (state) => state.session.accessToken;
+export const selectIsAuthenticated = (state) => state.session.isAuthenticated;
+export const selectAgencyId = (state) => state.session.user?.agencyId || null;

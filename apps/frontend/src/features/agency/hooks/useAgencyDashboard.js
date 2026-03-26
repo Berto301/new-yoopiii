@@ -1,5 +1,6 @@
+import { useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
-import { useSessionStore } from "../../../app/store/session.store.js";
+import { selectAgencyId } from "../../../app/store/session.store.js";
 import {
   getAgencyCalendarEvents,
   getAgencyDashboardSummary,
@@ -8,7 +9,7 @@ import {
 } from "../services/agency.service.js";
 
 export const useAgencyDashboard = () => {
-  const agencyId = useSessionStore((state) => state.user?.agencyId);
+  const agencyId = useSelector(selectAgencyId);
 
   const summaryQuery = useQuery({
     queryKey: ["agency-dashboard-summary", agencyId],
