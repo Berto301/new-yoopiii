@@ -61,6 +61,7 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
             email: values.email,
             phone: values.phone,
             password: values.password,
+            companyName: values.companyName,
             role: values.role
           };
 

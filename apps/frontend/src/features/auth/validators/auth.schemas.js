@@ -5,12 +5,22 @@ export const loginSchema = z.object({
   password: z.string().min(8, "Minimum 8 caracteres")
 });
 
-export const registerSchema = z.object({
-  firstName: z.string().min(2, "Minimum 2 caracteres"),
-  lastName: z.string().min(2, "Minimum 2 caracteres"),
-  email: z.string().email("Adresse e-mail invalide"),
-  phone: z.string().min(8, "Numero invalide"),
-  password: z.string().min(8, "Minimum 8 caracteres"),
-  companyName: z.string().optional(),
-  role: z.enum(["user", "agency", "independent_agent"])
-});
+export const registerSchema = z
+  .object({
+    firstName: z.string().min(2, "Minimum 2 caracteres"),
+    lastName: z.string().min(2, "Minimum 2 caracteres"),
+    email: z.string().email("Adresse e-mail invalide"),
+    phone: z.string().min(8, "Numero invalide"),
+    password: z.string().min(8, "Minimum 8 caracteres"),
+    companyName: z.string().optional(),
+    role: z.enum(["user", "agency", "independent_agent"])
+  })
+  .superRefine((value, ctx) => {
+    if (value.role === "agency" && (!value.companyName || value.companyName.trim().length < 2)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["companyName"],
+        message: "Le nom de l'agence est obligatoire"
+      });
+    }
+  });
