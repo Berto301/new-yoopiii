@@ -8,6 +8,7 @@ import { Input } from "../../../components/ui/Input.jsx";
 import { PasswordInput } from "../../../components/ui/PasswordInput.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
+import { useNotification } from "../../../hooks/useNotification.js";
 
 const submitLabelByMode = {
   login: "Se connecter",
@@ -21,6 +22,7 @@ const normalizeValue = (value) => (typeof value === "string" ? value.trim() : va
 export const AuthForm = ({ mode = "login", title, subtitle }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { showSuccess, showError } = useNotification();
   const { loginMutation, registerMutation, resolveRedirectPath, extractApiErrorMessage } = useAuthMutations();
 
   const schema = mode === "login" ? loginSchema : registerSchema;
@@ -52,28 +54,38 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
   const mutation = mode === "login" ? loginMutation : registerMutation;
 
   const onSubmit = async (values) => {
-    const payload =
-      mode === "login"
-        ? {
-            email: normalizeValue(values.email),
-            password: values.password
-          }
-        : {
-            firstName: normalizeValue(values.firstName),
-            lastName: normalizeValue(values.lastName),
-            email: normalizeValue(values.email),
-            phone: normalizeValue(values.phone),
-            password: values.password,
-            role: values.role,
-            ...(normalizeValue(values.companyName)
-              ? { companyName: normalizeValue(values.companyName) }
-              : {})
-          };
+    try {
+      const payload =
+        mode === "login"
+          ? {
+              email: normalizeValue(values.email),
+              password: values.password
+            }
+          : {
+              firstName: normalizeValue(values.firstName),
+              lastName: normalizeValue(values.lastName),
+              email: normalizeValue(values.email),
+              phone: normalizeValue(values.phone),
+              password: values.password,
+              role: values.role,
+              ...(normalizeValue(values.companyName)
+                ? { companyName: normalizeValue(values.companyName) }
+                : {})
+            };
 
-    const result = await mutation.mutateAsync(payload);
-    const fallbackPath = resolveRedirectPath(result.user);
-    const intendedPath = location.state?.from?.pathname;
-    navigate(intendedPath || fallbackPath, { replace: true });
+      const result = await mutation.mutateAsync(payload);
+      showSuccess(mode === "login" ? "Connexion reussie." : "Compte cree avec succes.");
+      const fallbackPath = resolveRedirectPath(result.user);
+      const intendedPath = location.state?.from?.pathname;
+      navigate(intendedPath || fallbackPath, { replace: true });
+    } catch (error) {
+      showError(
+        extractApiErrorMessage(
+          error,
+          mode === "login" ? "La connexion a echoue." : "La creation du compte a echoue."
+        )
+      );
+    }
   };
 
   const mutationError = mutation.isError

@@ -19,8 +19,10 @@ import {
   approveAgencyExpenseHandler,
   deleteAgencyCalendarEventHandler,
   deleteAgencyExpenseHandler,
+  deleteAgencyHandler,
   deleteAgencyMemberHandler,
   deleteAgencyRoleHandler,
+  getAgencyById,
   getAgencyCalendarEvents,
   getAgencyDashboardSummary,
   getAgencyExpenses,
@@ -42,6 +44,8 @@ export const agencyRouter = Router();
 
 agencyRouter.get("/", asyncHandler(getAgencies));
 agencyRouter.use(asyncHandler(requireAuth));
+agencyRouter.get("/:agencyId", validate(agencyIdParamsSchema), asyncHandler(getAgencyById));
+agencyRouter.delete("/:agencyId", validate(agencyIdParamsSchema), asyncHandler(deleteAgencyHandler));
 agencyRouter.get("/:agencyId/dashboard/summary", validate(agencyIdParamsSchema), asyncHandler(getAgencyDashboardSummary));
 agencyRouter.get("/:agencyId/members", validate(agencyIdParamsSchema), asyncHandler(getAgencyMembers));
 agencyRouter.post("/:agencyId/members", validate(createAgencyMemberSchema), asyncHandler(postAgencyMember));

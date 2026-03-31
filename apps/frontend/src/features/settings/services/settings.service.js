@@ -15,8 +15,18 @@ export const changeMyPassword = async (payload) => {
   return response.data.data;
 };
 
+export const getAgencyDetail = async (agencyId) => {
+  const response = await apiClient.get(`/agencies/${agencyId}`);
+  return response.data.data;
+};
+
 export const updateAgencyProfile = async ({ agencyId, payload }) => {
   const response = await apiClient.patch(`/agencies/${agencyId}/profile`, payload);
+  return response.data.data;
+};
+
+export const deleteAgency = async (agencyId) => {
+  const response = await apiClient.delete(`/agencies/${agencyId}`);
   return response.data.data;
 };
 

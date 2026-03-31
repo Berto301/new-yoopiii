@@ -2,6 +2,11 @@ import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../../core/errors/app-error.js";
 import { Booking } from "../../bookings/booking.model.js";
+import { Conversation } from "../../conversations/conversation.model.js";
+import { Message } from "../../conversations/message.model.js";
+import { Notification } from "../../notifications/notification.model.js";
+import { PropertyFavorite } from "../../properties/models/property-favorite.model.js";
+import { PropertyView } from "../../properties/models/property-view.model.js";
 import { Property } from "../../properties/property.model.js";
 import { User } from "../../users/user.model.js";
 import { Agency } from "../agency.model.js";
@@ -448,6 +453,18 @@ export const getAgencyStatsOverview = async ({ agencyId, userId, permission }) =
   };
 };
 
+export const getAgencyDetail = async ({ agencyId, userId }) => {
+  await ensureAgencyAccess({ agencyId, userId });
+
+  const agency = await Agency.findById(agencyId).lean();
+
+  if (!agency) {
+    throw new AppError("Agency not found", StatusCodes.NOT_FOUND);
+  }
+
+  return agency;
+};
+
 export const updateAgencyProfile = async ({ agencyId, actorUserId, payload }) => {
   await ensureAgencyAccess({ agencyId, userId: actorUserId });
   const agency = await Agency.findById(agencyId);
@@ -466,4 +483,74 @@ export const updateAgencyProfile = async ({ agencyId, actorUserId, payload }) =>
 
   await agency.save();
   return agency.toObject();
+};
+
+export const deleteAgencyCascade = async ({ agencyId, actorUserId }) => {
+  const { agency } = await ensureAgencyAccess({ agencyId, userId: actorUserId });
+
+  if (String(agency.ownerUserId) !== String(actorUserId)) {
+    throw new AppError("Only the agency owner can delete the agency", StatusCodes.FORBIDDEN);
+  }
+
+  const memberUserIds = await AgencyMember.find({ agencyId }).distinct("userId");
+  const userIds = [...new Set([String(agency.ownerUserId), ...memberUserIds.map((item) => String(item))])].map(
+    (item) => toObjectId(item)
+  );
+  const propertyIds = await Property.find({ agencyId }).distinct("_id");
+  const conversationIds = await Conversation.find({
+    $or: [
+      { participantIds: { $in: userIds } },
+      ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])
+    ]
+  }).distinct("_id");
+
+  await Promise.all([
+    AgencyCalendarEvent.deleteMany({ agencyId }),
+    AgencyExpense.deleteMany({ agencyId }),
+    AgencyMember.deleteMany({ agencyId }),
+    AgencyStatsSnapshot.deleteMany({ agencyId }),
+    RoleTemplate.deleteMany({ agencyId }),
+    Notification.deleteMany({ userId: { $in: userIds } }),
+    Booking.deleteMany({
+      $or: [
+        { agencyId },
+        { agentId: { $in: userIds } },
+        ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])
+      ]
+    }),
+    PropertyFavorite.deleteMany({
+      $or: [
+        { userId: { $in: userIds } },
+        ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])
+      ]
+    }),
+    PropertyView.deleteMany({
+      $or: [
+        { userId: { $in: userIds } },
+        ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])
+      ]
+    }),
+    Message.deleteMany({
+      $or: [
+        { senderId: { $in: userIds } },
+        { receiverId: { $in: userIds } },
+        ...(conversationIds.length ? [{ conversationId: { $in: conversationIds } }] : [])
+      ]
+    }),
+    ...(conversationIds.length ? [Conversation.deleteMany({ _id: { $in: conversationIds } })] : []),
+    Property.deleteMany({
+      $or: [{ agencyId }, { agentId: { $in: userIds } }]
+    })
+  ]);
+
+  await User.deleteMany({ _id: { $in: userIds } });
+  await Agency.deleteOne({ _id: agencyId });
+
+  return {
+    success: true,
+    deletedAgencyId: agencyId,
+    deletedUsersCount: userIds.length,
+    deletedPropertiesCount: propertyIds.length,
+    deletedConversationsCount: conversationIds.length
+  };
 };

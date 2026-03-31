@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDispatch, useSelector } from "react-redux";
-import { selectAgencyId, selectCurrentUser, updateSessionUser } from "../../../app/store/session.store.js";
+import { logoutSuccess, selectAgencyId, selectCurrentUser, updateSessionUser } from "../../../app/store/session.store.js";
 import {
   changeMyPassword,
+  deleteAgency,
+  getAgencyDetail,
   getAgencyMembers,
   getAgencyRoles,
   getMyProfile,
@@ -20,6 +22,12 @@ export const useSettingsWorkspace = () => {
     queryKey: ["my-profile", user?.id],
     queryFn: getMyProfile,
     enabled: Boolean(user)
+  });
+
+  const agencyQuery = useQuery({
+    queryKey: ["agency-detail", agencyId],
+    queryFn: () => getAgencyDetail(agencyId),
+    enabled: Boolean(user?.role === "agency" && agencyId)
   });
 
   const rolesQuery = useQuery({
@@ -48,6 +56,15 @@ export const useSettingsWorkspace = () => {
     mutationFn: ({ payload }) => updateAgencyProfile({ agencyId, payload }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agency-dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["agency-detail", agencyId] });
+    }
+  });
+
+  const deleteAgencyMutation = useMutation({
+    mutationFn: () => deleteAgency(agencyId),
+    onSuccess: () => {
+      queryClient.clear();
+      dispatch(logoutSuccess());
     }
   });
 
@@ -55,10 +72,12 @@ export const useSettingsWorkspace = () => {
     user,
     agencyId,
     profileQuery,
+    agencyQuery,
     rolesQuery,
     membersQuery,
     updateProfileMutation,
     changePasswordMutation,
-    updateAgencyMutation
+    updateAgencyMutation,
+    deleteAgencyMutation
   };
 };

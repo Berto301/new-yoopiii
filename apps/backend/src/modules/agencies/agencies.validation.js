@@ -6,6 +6,8 @@ const numberFromQuery = (fieldName) =>
   z.coerce.number({
     invalid_type_error: `${fieldName} must be a number`
   });
+const emptyStringToUndefined = (schema) => z.preprocess((value) => (value === "" ? undefined : value), schema);
+const emptyStringToNull = (schema) => z.preprocess((value) => (value === "" ? null : value), schema);
 
 const permissionValues = Object.values(AGENCY_PERMISSIONS);
 const permissionSchema = z.string().refine((value) => permissionValues.includes(value), {
@@ -20,13 +22,13 @@ export const agencyIdParamsSchema = z.object({
 
 export const updateAgencyProfileSchema = z.object({
   body: z.object({
-    name: z.string().min(2).max(180).optional(),
-    logo: z.string().url().optional().nullable(),
-    coverImage: z.string().url().optional().nullable(),
-    description: z.string().max(3000).optional(),
-    contactEmail: z.string().email().optional(),
-    contactPhone: z.string().max(40).optional(),
-    address: z.string().max(255).optional()
+    name: emptyStringToUndefined(z.string().min(2).max(180).optional()),
+    logo: emptyStringToNull(z.string().url().nullable().optional()),
+    coverImage: emptyStringToNull(z.string().url().nullable().optional()),
+    description: emptyStringToUndefined(z.string().max(3000).optional()),
+    contactEmail: emptyStringToUndefined(z.string().email().optional()),
+    contactPhone: emptyStringToUndefined(z.string().max(40).optional()),
+    address: emptyStringToUndefined(z.string().max(255).optional())
   }),
   params: z.object({ agencyId: objectIdSchema }),
   query: z.object({}).default({})
