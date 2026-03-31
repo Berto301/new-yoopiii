@@ -1,30 +1,63 @@
+import { useSelector } from "react-redux";
 import { Link, Outlet } from "react-router-dom";
+import { selectCurrentUser, selectIsAuthenticated } from "../../app/store/session.store.js";
 
-const navigation = [
-  { to: "/", label: "Accueil" },
-  { to: "/properties", label: "Biens" },
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/messages", label: "Messages" }
-];
+const getDashboardPath = (user) => {
+  if (!user) {
+    return "/login";
+  }
 
-export const MainLayout = () => (
-  <div className="min-h-screen bg-stone-950 text-stone-100">
-    <header className="border-b border-white/10 bg-stone-950/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <Link to="/" className="text-2xl font-semibold tracking-wide text-brand-100">
-          Yopii
-        </Link>
-        <nav className="flex gap-5 text-sm text-stone-300">
-          {navigation.map((item) => (
-            <Link key={item.to} to={item.to} className="transition hover:text-white">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </div>
-    </header>
-    <main>
-      <Outlet />
-    </main>
-  </div>
-);
+  if (user.role === "agency" || user.role === "agency_agent") {
+    return "/dashboard/agency";
+  }
+
+  if (user.role === "independent_agent") {
+    return "/dashboard/agent";
+  }
+
+  return "/dashboard/user";
+};
+
+const getPropertyManagementPath = (user) => {
+  if (!user || !["agency", "agency_agent", "independent_agent"].includes(user.role)) {
+    return null;
+  }
+
+  return "/dashboard/properties";
+};
+
+export const MainLayout = () => {
+  const user = useSelector(selectCurrentUser);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const propertyManagementPath = getPropertyManagementPath(user);
+
+  const navigation = [
+    { to: "/", label: "Accueil" },
+    { to: "/properties", label: "Biens" },
+    { to: getDashboardPath(user), label: "Dashboard" },
+    ...(propertyManagementPath ? [{ to: propertyManagementPath, label: "Gestion biens" }] : []),
+    ...(isAuthenticated ? [{ to: "/messages", label: "Messages" }] : [])
+  ];
+
+  return (
+    <div className="min-h-screen bg-stone-950 text-stone-100">
+      <header className="border-b border-white/10 bg-stone-950/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <Link to="/" className="text-2xl font-semibold tracking-wide text-brand-100">
+            Yopii
+          </Link>
+          <nav className="flex gap-5 text-sm text-stone-300">
+            {navigation.map((item) => (
+              <Link key={item.to} to={item.to} className="transition hover:text-white">
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </header>
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
+};

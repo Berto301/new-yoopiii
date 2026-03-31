@@ -15,6 +15,8 @@ import { FavoritesPage } from "../../pages/private/FavoritesPage.jsx";
 import { BookingsPage } from "../../pages/private/BookingsPage.jsx";
 import { ChatPage } from "../../pages/private/ChatPage.jsx";
 import { NotificationsPage } from "../../pages/private/NotificationsPage.jsx";
+import { SettingsPage } from "../../pages/private/settings/index.jsx";
+import { PropertyManagementPage } from "../../pages/private/Property/index.jsx";
 import { UserDashboardPage } from "../../pages/dashboards/UserDashboardPage.jsx";
 import { AgentDashboardPage } from "../../pages/dashboards/AgentDashboardPage.jsx";
 import { AgencyDashboardPage } from "../../pages/dashboards/AgencyDashboardPage.jsx";
@@ -44,7 +46,12 @@ export const AppRouter = () => (
         <Route path="/bookings" element={<BookingsPage />} />
         <Route path="/messages" element={<ChatPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/dashboard/user" element={<UserDashboardPage />} />
+
+        <Route element={<RoleRoute allowedRoles={["agency", "agency_agent", "independent_agent"]} />}>
+          <Route path="/dashboard/properties" element={<PropertyManagementPage />} />
+        </Route>
 
         <Route element={<RoleRoute allowedRoles={["independent_agent"]} />}>
           <Route path="/dashboard/agent" element={<AgentDashboardPage />} />
@@ -63,3 +70,6 @@ export const AppRouter = () => (
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );
+
+
+

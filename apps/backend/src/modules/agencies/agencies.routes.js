@@ -10,6 +10,7 @@ import {
   createRoleTemplateSchema,
   listCalendarEventsSchema,
   updateAgencyMemberSchema,
+  updateAgencyProfileSchema,
   updateCalendarEventSchema,
   updateExpenseSchema,
   updateRoleTemplateSchema
@@ -29,6 +30,7 @@ import {
   patchAgencyCalendarEvent,
   patchAgencyExpense,
   patchAgencyMember,
+  patchAgencyProfile,
   patchAgencyRole,
   postAgencyCalendarEvent,
   postAgencyExpense,
@@ -49,6 +51,7 @@ agencyRouter.get("/:agencyId/roles", validate(agencyIdParamsSchema), asyncHandle
 agencyRouter.post("/:agencyId/roles", validate(createRoleTemplateSchema), asyncHandler(postAgencyRole));
 agencyRouter.patch("/:agencyId/roles/:roleId", validate(updateRoleTemplateSchema), asyncHandler(patchAgencyRole));
 agencyRouter.delete("/:agencyId/roles/:roleId", validate(updateRoleTemplateSchema), asyncHandler(deleteAgencyRoleHandler));
+agencyRouter.patch("/:agencyId/profile", validate(updateAgencyProfileSchema), asyncHandler(patchAgencyProfile));
 agencyRouter.get("/:agencyId/calendar/events", validate(listCalendarEventsSchema), asyncHandler(getAgencyCalendarEvents));
 agencyRouter.post("/:agencyId/calendar/events", validate(createCalendarEventSchema), asyncHandler(postAgencyCalendarEvent));
 agencyRouter.patch("/:agencyId/calendar/events/:eventId", validate(updateCalendarEventSchema), asyncHandler(patchAgencyCalendarEvent));

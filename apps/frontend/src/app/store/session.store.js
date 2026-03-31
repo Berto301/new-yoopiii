@@ -74,11 +74,17 @@ const sessionSlice = createSlice({
         state.user.agencyId = action.payload;
         persistSession(state);
       }
+    },
+    updateSessionUser: (state, action) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+        persistSession(state);
+      }
     }
   }
 });
 
-export const { loginSuccess, logoutSuccess, setRole, setAgencyId } = sessionSlice.actions;
+export const { loginSuccess, logoutSuccess, setRole, setAgencyId, updateSessionUser } = sessionSlice.actions;
 
 export const store = configureStore({
   reducer: {

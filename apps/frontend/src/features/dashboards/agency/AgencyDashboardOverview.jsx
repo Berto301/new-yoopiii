@@ -9,7 +9,7 @@ const formatCurrency = (value) =>
   }).format(value || 0);
 
 export const AgencyDashboardOverview = () => {
-  const { summaryQuery, membersQuery, expensesQuery, eventsQuery } = useAgencyDashboard();
+  const { summaryQuery, membersQuery, expensesQuery, eventsQuery, propertiesQuery } = useAgencyDashboard();
   const summary = summaryQuery.data;
 
   if (summaryQuery.isLoading) {
@@ -24,9 +24,9 @@ export const AgencyDashboardOverview = () => {
     { label: "Agents actifs", value: summary?.activeAgents ?? 0 },
     { label: "Biens actifs", value: summary?.activeProperties ?? 0 },
     { label: "Reservations", value: summary?.totalBookings ?? 0 },
-    { label: "Visites a venir", value: summary?.upcomingEvents ?? 0 },
+    { label: "Biens publies", value: propertiesQuery.data?.summary?.published ?? 0 },
     { label: "Depenses ce mois", value: formatCurrency(summary?.currentMonthExpensesTotal ?? 0) },
-    { label: "Depenses en attente", value: summary?.pendingExpenses ?? 0 }
+    { label: "En attente publication", value: propertiesQuery.data?.summary?.pendingApproval ?? 0 }
   ];
 
   return (
@@ -54,12 +54,28 @@ export const AgencyDashboardOverview = () => {
           </p>
         </Card>
         <Card>
-          <p className="text-sm text-stone-400">Depenses</p>
+          <p className="text-sm text-stone-400">Pipeline biens</p>
           <p className="mt-3 text-sm leading-7 text-stone-300">
-            {expensesQuery.data?.length || 0} lignes de depenses remontees depuis le backend.
+            {propertiesQuery.data?.summary?.total || 0} proprietes sous gestion et {propertiesQuery.data?.summary?.totalFavorites || 0} favoris cumules.
           </p>
         </Card>
       </div>
+
+      {propertiesQuery.data?.items?.length ? (
+        <Card>
+          <p className="text-sm text-stone-400">Derniers mouvements de proprietes</p>
+          <div className="mt-4 space-y-3">
+            {propertiesQuery.data.items.slice(0, 5).map((property) => (
+              <div key={property.id} className="flex items-center justify-between rounded-2xl border border-white/10 p-4 text-sm text-stone-200">
+                <span>{property.title}</span>
+                <span className="uppercase tracking-[0.2em] text-brand-100">
+                  {property.publicationStatus} / {property.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {summary?.expenseBreakdown?.length ? (
         <Card>

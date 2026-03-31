@@ -1,7 +1,14 @@
 import { Router } from "express";
+import { requireAuth } from "../../core/middleware/auth.middleware.js";
+import { validate } from "../../core/middleware/validate.middleware.js";
 import { asyncHandler } from "../../core/utils/async-handler.js";
-import { getUsers } from "./users.controller.js";
+import { changeMyPasswordHandler, getMyProfile, getUsers, patchMyProfile } from "./users.controller.js";
+import { changePasswordSchema, updateMyProfileSchema } from "./users.validation.js";
 
 export const userRouter = Router();
 
 userRouter.get("/", asyncHandler(getUsers));
+userRouter.use(asyncHandler(requireAuth));
+userRouter.get("/me", asyncHandler(getMyProfile));
+userRouter.patch("/me/profile", validate(updateMyProfileSchema), asyncHandler(patchMyProfile));
+userRouter.patch("/me/password", validate(changePasswordSchema), asyncHandler(changeMyPasswordHandler));

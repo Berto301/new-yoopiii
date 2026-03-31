@@ -1,6 +1,7 @@
 import { useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
 import { selectAgencyId } from "../../../app/store/session.store.js";
+import { getManagedProperties } from "../../properties/services/property.service.js";
 import {
   getAgencyCalendarEvents,
   getAgencyDashboardSummary,
@@ -35,11 +36,18 @@ export const useAgencyDashboard = () => {
     enabled: Boolean(agencyId)
   });
 
+  const propertiesQuery = useQuery({
+    queryKey: ["agency-managed-properties", agencyId],
+    queryFn: () => getManagedProperties({ scope: "agency", page: 1, limit: 8 }),
+    enabled: Boolean(agencyId)
+  });
+
   return {
     agencyId,
     summaryQuery,
     membersQuery,
     expensesQuery,
-    eventsQuery
+    eventsQuery,
+    propertiesQuery
   };
 };

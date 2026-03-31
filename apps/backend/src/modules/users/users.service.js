@@ -1,3 +1,70 @@
+import { StatusCodes } from "http-status-codes";
+import { AppError } from "../../core/errors/app-error.js";
 import { User } from "./user.model.js";
 
+const sanitizeUser = (user) => ({
+  id: user._id,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  email: user.email,
+  phone: user.phone || "",
+  avatar: user.avatar || null,
+  role: user.role,
+  agencyId: user.agencyId || null,
+  preferences: user.preferences,
+  location: user.location || null
+});
+
 export const listUsers = () => User.find().select("-passwordHash").limit(50).lean();
+
+export const getUserProfileById = async (userId) => {
+  const user = await User.findById(userId).select("-passwordHash").lean();
+
+  if (!user) {
+    throw new AppError("User not found", StatusCodes.NOT_FOUND);
+  }
+
+  return sanitizeUser(user);
+};
+
+export const updateMyProfile = async ({ userId, payload }) => {
+  const existingUser = await User.findOne({ email: payload.email, _id: { $ne: userId } }).lean();
+
+  if (existingUser) {
+    throw new AppError("Email already in use", StatusCodes.CONFLICT);
+  }
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new AppError("User not found", StatusCodes.NOT_FOUND);
+  }
+
+  user.firstName = payload.firstName;
+  user.lastName = payload.lastName;
+  user.email = payload.email;
+  user.phone = payload.phone || "";
+  user.avatar = payload.avatar || null;
+  await user.save();
+
+  return sanitizeUser(user.toObject());
+};
+
+export const changeMyPassword = async ({ userId, payload }) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new AppError("User not found", StatusCodes.NOT_FOUND);
+  }
+
+  const isCurrentPasswordValid = await user.comparePassword(payload.currentPassword);
+
+  if (!isCurrentPasswordValid) {
+    throw new AppError("Current password is invalid", StatusCodes.BAD_REQUEST);
+  }
+
+  user.passwordHash = await User.hashPassword(payload.newPassword);
+  await user.save();
+
+  return { updated: true };
+};

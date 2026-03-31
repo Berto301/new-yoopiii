@@ -18,6 +18,20 @@ export const agencyIdParamsSchema = z.object({
   query: z.object({}).default({})
 });
 
+export const updateAgencyProfileSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).max(180).optional(),
+    logo: z.string().url().optional().nullable(),
+    coverImage: z.string().url().optional().nullable(),
+    description: z.string().max(3000).optional(),
+    contactEmail: z.string().email().optional(),
+    contactPhone: z.string().max(40).optional(),
+    address: z.string().max(255).optional()
+  }),
+  params: z.object({ agencyId: objectIdSchema }),
+  query: z.object({}).default({})
+});
+
 export const createAgencyMemberSchema = z.object({
   body: z.object({
     userId: objectIdSchema,

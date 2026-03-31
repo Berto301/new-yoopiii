@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginSchema, registerSchema } from "../validators/auth.schemas.js";
 import { useAuthMutations } from "../hooks/useAuthMutations.js";
 import { Input } from "../../../components/ui/Input.jsx";
+import { PasswordInput } from "../../../components/ui/PasswordInput.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 
@@ -14,6 +15,8 @@ const submitLabelByMode = {
   agency: "Creer mon agence",
   independent_agent: "Creer mon profil agent"
 };
+
+const normalizeValue = (value) => (typeof value === "string" ? value.trim() : value);
 
 export const AuthForm = ({ mode = "login", title, subtitle }) => {
   const navigate = useNavigate();
@@ -38,7 +41,7 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
   );
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting }
   } = useForm({
@@ -52,17 +55,19 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
     const payload =
       mode === "login"
         ? {
-            email: values.email,
+            email: normalizeValue(values.email),
             password: values.password
           }
         : {
-            firstName: values.firstName,
-            lastName: values.lastName,
-            email: values.email,
-            phone: values.phone,
+            firstName: normalizeValue(values.firstName),
+            lastName: normalizeValue(values.lastName),
+            email: normalizeValue(values.email),
+            phone: normalizeValue(values.phone),
             password: values.password,
-            companyName: values.companyName,
-            role: values.role
+            role: values.role,
+            ...(normalizeValue(values.companyName)
+              ? { companyName: normalizeValue(values.companyName) }
+              : {})
           };
 
     const result = await mutation.mutateAsync(payload);
@@ -74,9 +79,7 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
   const mutationError = mutation.isError
     ? extractApiErrorMessage(
         mutation.error,
-        mode === "login"
-          ? "La connexion a echoue."
-          : "La creation du compte a echoue."
+        mode === "login" ? "La connexion a echoue." : "La creation du compte a echoue."
       )
     : null;
 
@@ -90,43 +93,78 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
       <form className="mt-8 space-y-4" onSubmit={handleSubmit(onSubmit)}>
         {mode !== "login" ? (
           <div className="grid gap-4 md:grid-cols-2">
-            <Input label="Prenom" placeholder="Aminata" error={errors.firstName?.message} {...register("firstName")} />
-            <Input label="Nom" placeholder="Kone" error={errors.lastName?.message} {...register("lastName")} />
+            <Controller
+              name="firstName"
+              control={control}
+              render={({ field }) => (
+                <Input label="Prenom" placeholder="Aminata" error={errors.firstName?.message} {...field} />
+              )}
+            />
+            <Controller
+              name="lastName"
+              control={control}
+              render={({ field }) => (
+                <Input label="Nom" placeholder="Kone" error={errors.lastName?.message} {...field} />
+              )}
+            />
           </div>
         ) : null}
 
         {mode !== "login" && mode === "agency" ? (
-          <Input
-            label="Nom de l'agence"
-            placeholder="Yopii Immo"
-            error={errors.companyName?.message}
-            {...register("companyName")}
+          <Controller
+            name="companyName"
+            control={control}
+            render={({ field }) => (
+              <Input
+                label="Nom de l'agence"
+                placeholder="Yopii Immo"
+                error={errors.companyName?.message}
+                {...field}
+              />
+            )}
           />
         ) : null}
 
-        <Input
-          label="Email"
-          type="email"
-          placeholder="contact@yopii.app"
-          error={errors.email?.message}
-          {...register("email")}
+        <Controller
+          name="email"
+          control={control}
+          render={({ field }) => (
+            <Input
+              label="Email"
+              type="email"
+              placeholder="contact@yopii.app"
+              error={errors.email?.message}
+              {...field}
+            />
+          )}
         />
 
         {mode !== "login" ? (
-          <Input
-            label="Telephone"
-            placeholder="+225 07 00 00 00 00"
-            error={errors.phone?.message}
-            {...register("phone")}
+          <Controller
+            name="phone"
+            control={control}
+            render={({ field }) => (
+              <Input
+                label="Telephone"
+                placeholder="+225 07 00 00 00 00"
+                error={errors.phone?.message}
+                {...field}
+              />
+            )}
           />
         ) : null}
 
-        <Input
-          label="Mot de passe"
-          type="password"
-          placeholder="********"
-          error={errors.password?.message}
-          {...register("password")}
+        <Controller
+          name="password"
+          control={control}
+          render={({ field }) => (
+            <PasswordInput
+              label="Mot de passe"
+              placeholder="********"
+              error={errors.password?.message}
+              {...field}
+            />
+          )}
         />
 
         {mutationError ? <p className="text-sm text-red-300">{mutationError}</p> : null}

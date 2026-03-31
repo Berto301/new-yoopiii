@@ -19,6 +19,7 @@ import {
   updateAgencyCalendarEvent,
   updateAgencyExpense,
   updateAgencyMember,
+  updateAgencyProfile,
   updateAgencyRole
 } from "./services/agency-management.service.js";
 
@@ -224,6 +225,16 @@ export const getAgencyDashboardSummary = async (req, res) => {
     agencyId: req.validated.params.agencyId,
     userId: req.user.id,
     permission: AGENCY_PERMISSIONS.STATS_READ
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const patchAgencyProfile = async (req, res) => {
+  const data = await updateAgencyProfile({
+    agencyId: req.validated.params.agencyId,
+    actorUserId: req.user.id,
+    payload: req.validated.body
   });
 
   res.status(StatusCodes.OK).json({ success: true, data });

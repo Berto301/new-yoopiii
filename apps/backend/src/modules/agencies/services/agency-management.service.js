@@ -447,3 +447,23 @@ export const getAgencyStatsOverview = async ({ agencyId, userId, permission }) =
     latestSnapshot: latestSnapshot || null
   };
 };
+
+export const updateAgencyProfile = async ({ agencyId, actorUserId, payload }) => {
+  await ensureAgencyAccess({ agencyId, userId: actorUserId });
+  const agency = await Agency.findById(agencyId);
+
+  if (!agency) {
+    throw new AppError("Agency not found", StatusCodes.NOT_FOUND);
+  }
+
+  if (payload.name !== undefined) agency.name = payload.name;
+  if (payload.logo !== undefined) agency.logo = payload.logo || null;
+  if (payload.coverImage !== undefined) agency.coverImage = payload.coverImage || null;
+  if (payload.description !== undefined) agency.description = payload.description || "";
+  if (payload.contactEmail !== undefined) agency.contactEmail = payload.contactEmail;
+  if (payload.contactPhone !== undefined) agency.contactPhone = payload.contactPhone || "";
+  if (payload.address !== undefined) agency.address = payload.address || "";
+
+  await agency.save();
+  return agency.toObject();
+};

@@ -19,3 +19,14 @@ test("GET /api/v1/properties/search/nearby validates coordinates", async () => {
   assert.equal(response.body.success, false);
   assert.equal(response.body.message, "Validation failed");
 });
+
+test("GET /api/v1/properties/search/bounds validates viewport", async () => {
+  const app = createApp();
+  const response = await request(app).get(
+    "/api/v1/properties/search/bounds?northEastLat=5.2&northEastLng=-3.9&southWestLat=5.4&southWestLng=-4.1"
+  );
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.equal(response.body.message, "Validation failed");
+});

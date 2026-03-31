@@ -20,7 +20,9 @@ export const requireAuth = async (req, _res, next) => {
     }
 
     const payload = verifyAccessToken(token);
-    const user = await User.findById(payload.sub).select("_id firstName lastName email role status").lean();
+    const user = await User.findById(payload.sub)
+      .select("_id firstName lastName email role status agencyId")
+      .lean();
 
     if (!user || user.status !== "active") {
       throw new AppError("Unauthorized user", StatusCodes.UNAUTHORIZED);
@@ -31,11 +33,12 @@ export const requireAuth = async (req, _res, next) => {
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
-      email: user.email
+      email: user.email,
+      agencyId: user.agencyId ? String(user.agencyId) : null
     };
 
     return next();
-  } catch (error) {
+  } catch (_error) {
     return next(new AppError("Authentication required", StatusCodes.UNAUTHORIZED));
   }
 };

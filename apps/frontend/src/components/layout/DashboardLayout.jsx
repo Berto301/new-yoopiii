@@ -4,18 +4,28 @@ import { Button } from "../ui/Button.jsx";
 import { performLogout } from "../../features/auth/utils/logout.js";
 import { logoutSuccess, selectCurrentUser } from "../../app/store/session.store.js";
 
-const sidebarItems = [
-  { to: "/dashboard/user", label: "Vue globale" },
-  { to: "/favorites", label: "Favoris" },
-  { to: "/bookings", label: "Reservations" },
-  { to: "/messages", label: "Messages" },
-  { to: "/notifications", label: "Notifications" }
-];
+const buildSidebarItems = (role) => {
+  const baseItems = [
+    { to: "/dashboard/user", label: "Vue globale" },
+    { to: "/favorites", label: "Favoris" },
+    { to: "/bookings", label: "Reservations" },
+    { to: "/messages", label: "Messages" },
+    { to: "/notifications", label: "Notifications" },
+    { to: "/settings", label: "Parametres" }
+  ];
+
+  if (["agency", "agency_agent", "independent_agent"].includes(role)) {
+    baseItems.splice(1, 0, { to: "/dashboard/properties", label: "Gestion biens" });
+  }
+
+  return baseItems;
+};
 
 export const DashboardLayout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
+  const sidebarItems = buildSidebarItems(user?.role);
 
   const handleLogout = () => {
     performLogout(dispatch, logoutSuccess);
