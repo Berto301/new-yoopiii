@@ -3,12 +3,16 @@ import { useDispatch, useSelector } from "react-redux";
 import { logoutSuccess, selectAgencyId, selectCurrentUser, updateSessionUser } from "../../../app/store/session.store.js";
 import {
   changeMyPassword,
+  createAgencyRole,
   deleteAgency,
+  deleteAgencyRole,
+  duplicateAgencyRole,
   getAgencyDetail,
   getAgencyMembers,
   getAgencyRoles,
   getMyProfile,
   updateAgencyProfile,
+  updateAgencyRole,
   updateMyProfile
 } from "../services/settings.service.js";
 
@@ -17,6 +21,7 @@ export const useSettingsWorkspace = () => {
   const queryClient = useQueryClient();
   const user = useSelector(selectCurrentUser);
   const agencyId = useSelector(selectAgencyId);
+  const isAgencyWorkspace = ["agency", "agency_agent"].includes(user?.role);
 
   const profileQuery = useQuery({
     queryKey: ["my-profile", user?.id],
@@ -33,13 +38,13 @@ export const useSettingsWorkspace = () => {
   const rolesQuery = useQuery({
     queryKey: ["agency-roles", agencyId],
     queryFn: () => getAgencyRoles(agencyId),
-    enabled: Boolean(user?.role === "agency" && agencyId)
+    enabled: Boolean(isAgencyWorkspace && agencyId)
   });
 
   const membersQuery = useQuery({
     queryKey: ["agency-members-settings", agencyId],
     queryFn: () => getAgencyMembers(agencyId),
-    enabled: Boolean(user?.role === "agency" && agencyId)
+    enabled: Boolean(isAgencyWorkspace && agencyId)
   });
 
   const updateProfileMutation = useMutation({
@@ -57,6 +62,34 @@ export const useSettingsWorkspace = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agency-dashboard-summary"] });
       queryClient.invalidateQueries({ queryKey: ["agency-detail", agencyId] });
+    }
+  });
+
+  const createRoleMutation = useMutation({
+    mutationFn: (payload) => createAgencyRole({ agencyId, payload }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agency-roles", agencyId] });
+    }
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ roleId, payload }) => updateAgencyRole({ agencyId, roleId, payload }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agency-roles", agencyId] });
+    }
+  });
+
+  const duplicateRoleMutation = useMutation({
+    mutationFn: ({ roleId, payload }) => duplicateAgencyRole({ agencyId, roleId, payload }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agency-roles", agencyId] });
+    }
+  });
+
+  const deleteRoleMutation = useMutation({
+    mutationFn: (roleId) => deleteAgencyRole({ agencyId, roleId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agency-roles", agencyId] });
     }
   });
 
@@ -78,6 +111,10 @@ export const useSettingsWorkspace = () => {
     updateProfileMutation,
     changePasswordMutation,
     updateAgencyMutation,
+    createRoleMutation,
+    updateRoleMutation,
+    duplicateRoleMutation,
+    deleteRoleMutation,
     deleteAgencyMutation
   };
 };

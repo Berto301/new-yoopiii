@@ -11,6 +11,7 @@ import {
   deleteAgencyCascade,
   deleteAgencyExpense,
   deleteAgencyRole,
+  duplicateAgencyRole,
   getAgencyDetail,
   getAgencyStatsOverview,
   listAgencyCalendarEvents,
@@ -118,6 +119,18 @@ export const patchAgencyRole = async (req, res) => {
   });
 
   res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const duplicateAgencyRoleHandler = async (req, res) => {
+  const data = await duplicateAgencyRole({
+    agencyId: req.validated.params.agencyId,
+    roleId: req.validated.params.roleId,
+    actorUserId: req.user.id,
+    payload: req.validated.body,
+    permission: AGENCY_PERMISSIONS.ROLES_DUPLICATE
+  });
+
+  res.status(StatusCodes.CREATED).json({ success: true, data });
 };
 
 export const deleteAgencyRoleHandler = async (req, res) => {

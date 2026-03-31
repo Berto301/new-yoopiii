@@ -19,7 +19,8 @@ export const BaseListBox = ({
   optionValueKey = "value",
   placeholder = "Selectionner",
   multiple = false,
-  error
+  error,
+  disabled = false
 }) => {
   const displayValue = multiple
     ? (Array.isArray(value) ? value : []).map((item) => resolveLabel(item, optionLabelKey)).join(", ") || placeholder
@@ -30,12 +31,13 @@ export const BaseListBox = ({
   return (
     <div className="space-y-2">
       {label ? <span className="text-sm font-medium text-stone-200">{label}</span> : null}
-      <Listbox value={value} onChange={onChange} multiple={multiple}>
+      <Listbox value={value} onChange={onChange} multiple={multiple} disabled={disabled}>
         <div className="relative">
           <Listbox.Button
             className={cn(
               "w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-left text-sm text-white transition focus:border-brand-500 focus:outline-none",
-              error && "border-red-400/60"
+              error && "border-red-400/60",
+              disabled && "cursor-not-allowed opacity-70"
             )}
           >
             <span className={cn(!value || (Array.isArray(value) && !value.length) ? "text-stone-500" : "text-white")}>{displayValue}</span>

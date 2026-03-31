@@ -2,7 +2,9 @@ import { signAccessToken } from "../../core/utils/jwt.js";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 import { Agency } from "../agencies/agency.model.js";
+import { AGENCY_ROLE_PERMISSIONS } from "../agencies/constants/agency-permissions.js";
 import { AgencyMember } from "../agencies/models/agency-member.model.js";
+import { RoleTemplate } from "../agencies/models/role-template.model.js";
 import { User } from "../users/user.model.js";
 
 const slugify = (value) =>
@@ -27,14 +29,58 @@ const buildUniqueAgencySlug = async (companyName) => {
   return slug;
 };
 
-const formatAuthUser = (user) => ({
-  id: user._id,
-  firstName: user.firstName,
-  lastName: user.lastName,
-  email: user.email,
-  role: user.role,
-  agencyId: user.agencyId || null
-});
+const resolveRoleTemplatePermissions = async (roleTemplateId) => {
+  if (!roleTemplateId) {
+    return [];
+  }
+
+  const roleTemplate = await RoleTemplate.findById(roleTemplateId).lean();
+  return roleTemplate?.permissions || [];
+};
+
+const resolveUserPermissionState = async (user) => {
+  if (user.role === "agency") {
+    return {
+      permissionIds: user.permissionIds ? String(user.permissionIds) : null,
+      permissions: await resolveRoleTemplatePermissions(user.permissionIds)
+    };
+  }
+
+  if (user.role === "agency_agent" && user.agencyId) {
+    const member = await AgencyMember.findOne({
+      agencyId: user.agencyId,
+      userId: user._id,
+      status: "active"
+    }).lean();
+
+    return {
+      permissionIds: member?.permissionIds ? String(member.permissionIds) : null,
+      permissions: member?.permissionIds
+        ? await resolveRoleTemplatePermissions(member.permissionIds)
+        : member?.permissions || []
+    };
+  }
+
+  return {
+    permissionIds: user.permissionIds ? String(user.permissionIds) : null,
+    permissions: []
+  };
+};
+
+const formatAuthUser = async (user) => {
+  const permissionState = await resolveUserPermissionState(user);
+
+  return {
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role,
+    agencyId: user.agencyId || null,
+    permissionIds: permissionState.permissionIds,
+    permissions: permissionState.permissions
+  };
+};
 
 export const registerUser = async (payload) => {
   const existingUser = await User.findOne({ email: payload.email });
@@ -51,6 +97,7 @@ export const registerUser = async (payload) => {
     email: payload.email,
     phone: payload.phone,
     role: payload.role,
+    permissionIds: null,
     passwordHash
   });
 
@@ -66,14 +113,25 @@ export const registerUser = async (payload) => {
       status: "active"
     });
 
+    const ownerRoleTemplate = await RoleTemplate.create({
+      agencyId: agency._id,
+      name: "owner",
+      key: "owner",
+      permissions: AGENCY_ROLE_PERMISSIONS.owner,
+      isSystem: true,
+      createdBy: user._id
+    });
+
     user.agencyId = agency._id;
+    user.permissionIds = ownerRoleTemplate._id;
     await user.save();
 
     await AgencyMember.create({
       agencyId: agency._id,
       userId: user._id,
       role: "owner",
-      permissions: [],
+      permissionIds: ownerRoleTemplate._id,
+      permissions: ownerRoleTemplate.permissions,
       status: "active",
       invitedBy: user._id,
       jobTitle: "Owner"
@@ -81,7 +139,7 @@ export const registerUser = async (payload) => {
   }
 
   return {
-    user: formatAuthUser(user),
+    user: await formatAuthUser(user),
     accessToken: signAccessToken(user)
   };
 };
@@ -103,7 +161,7 @@ export const loginUser = async ({ email, password }) => {
   await user.save();
 
   return {
-    user: formatAuthUser(user),
+    user: await formatAuthUser(user),
     accessToken: signAccessToken(user)
   };
 };

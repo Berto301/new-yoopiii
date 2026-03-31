@@ -9,6 +9,7 @@ const agencyMemberSchema = new mongoose.Schema(
       enum: ["owner", "manager", "supervisor", "agent", "assistant", "viewer"],
       required: true
     },
+    permissionIds: { type: mongoose.Schema.Types.ObjectId, ref: "RoleTemplate", default: null },
     permissions: { type: [String], default: [] },
     status: {
       type: String,

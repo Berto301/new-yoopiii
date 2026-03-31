@@ -1,6 +1,8 @@
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../errors/app-error.js";
 import { verifyAccessToken } from "../utils/jwt.js";
+import { AgencyMember } from "../../modules/agencies/models/agency-member.model.js";
+import { RoleTemplate } from "../../modules/agencies/models/role-template.model.js";
 import { User } from "../../modules/users/user.model.js";
 
 const extractBearerToken = (authorizationHeader = "") => {
@@ -9,6 +11,44 @@ const extractBearerToken = (authorizationHeader = "") => {
   }
 
   return authorizationHeader.slice(7).trim();
+};
+
+const resolveRoleTemplatePermissions = async (roleTemplateId) => {
+  if (!roleTemplateId) {
+    return [];
+  }
+
+  const roleTemplate = await RoleTemplate.findById(roleTemplateId).lean();
+  return roleTemplate?.permissions || [];
+};
+
+const resolveRequestPermissionState = async (user) => {
+  if (user.role === "agency") {
+    return {
+      permissionIds: user.permissionIds ? String(user.permissionIds) : null,
+      permissions: await resolveRoleTemplatePermissions(user.permissionIds)
+    };
+  }
+
+  if (user.role === "agency_agent" && user.agencyId) {
+    const member = await AgencyMember.findOne({
+      agencyId: user.agencyId,
+      userId: user._id,
+      status: "active"
+    }).lean();
+
+    return {
+      permissionIds: member?.permissionIds ? String(member.permissionIds) : null,
+      permissions: member?.permissionIds
+        ? await resolveRoleTemplatePermissions(member.permissionIds)
+        : member?.permissions || []
+    };
+  }
+
+  return {
+    permissionIds: user.permissionIds ? String(user.permissionIds) : null,
+    permissions: []
+  };
 };
 
 export const requireAuth = async (req, _res, next) => {
@@ -21,12 +61,14 @@ export const requireAuth = async (req, _res, next) => {
 
     const payload = verifyAccessToken(token);
     const user = await User.findById(payload.sub)
-      .select("_id firstName lastName email role status agencyId")
+      .select("_id firstName lastName email role status agencyId permissionIds")
       .lean();
 
     if (!user || user.status !== "active") {
       throw new AppError("Unauthorized user", StatusCodes.UNAUTHORIZED);
     }
+
+    const permissionState = await resolveRequestPermissionState(user);
 
     req.user = {
       id: String(user._id),
@@ -34,7 +76,9 @@ export const requireAuth = async (req, _res, next) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      agencyId: user.agencyId ? String(user.agencyId) : null
+      agencyId: user.agencyId ? String(user.agencyId) : null,
+      permissionIds: permissionState.permissionIds,
+      permissions: permissionState.permissions
     };
 
     return next();

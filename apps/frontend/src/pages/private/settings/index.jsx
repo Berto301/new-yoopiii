@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
+import { PERMISSION_IDS } from "../../../helpers/constants.js";
+import { hasPermission } from "../../../helpers/_functions.js";
 import { useNotification } from "../../../hooks/useNotification.js";
 import { useSettingsWorkspace } from "../../../features/settings/hooks/useSettingsWorkspace.js";
 import { DeleteAgencyModal } from "./DeleteAgencyModal.jsx";
@@ -12,10 +14,10 @@ import { SectionRoles } from "./SectionRoles.jsx";
 import { SettingsTabButton } from "./SettingsTabButton.jsx";
 
 const tabItems = [
-  { id: "profile", label: "Profil" },
-  { id: "roles", label: "Roles" },
-  { id: "members", label: "Agents" },
-  { id: "agency", label: "Agence" }
+  { id: "profile", label: "Profil", permission: PERMISSION_IDS.UI_TAB_SETTINGS_PROFILE },
+  { id: "roles", label: "Roles", permission: PERMISSION_IDS.UI_TAB_SETTINGS_ROLES },
+  { id: "members", label: "Agents", permission: PERMISSION_IDS.UI_TAB_SETTINGS_MEMBERS },
+  { id: "agency", label: "Agence", permission: PERMISSION_IDS.UI_TAB_SETTINGS_AGENCY }
 ];
 
 const extractErrorMessage = (error, fallback) => error?.response?.data?.message || fallback;
@@ -32,6 +34,10 @@ export const SettingsPage = () => {
     updateProfileMutation,
     changePasswordMutation,
     updateAgencyMutation,
+    createRoleMutation,
+    updateRoleMutation,
+    duplicateRoleMutation,
+    deleteRoleMutation,
     deleteAgencyMutation
   } = useSettingsWorkspace();
   const { showSuccess, showError } = useNotification();
@@ -101,6 +107,51 @@ export const SettingsPage = () => {
     }
   }, [agencyForm, agencyProfile]);
 
+  const allowedTabs = useMemo(() => {
+    if (user?.role !== "agency" && user?.role !== "agency_agent") {
+      return [tabItems[0]];
+    }
+
+    return tabItems.filter((tab) => hasPermission(user?.permissions, tab.permission));
+  }, [user?.permissions, user?.role]);
+
+  const currentAgencyMembership = useMemo(() => {
+    if (!membersQuery.data?.length || !user?.id) {
+      return null;
+    }
+
+    return membersQuery.data.find((member) => String(member.userId) === String(user.id)) || null;
+  }, [membersQuery.data, user?.id]);
+
+  const currentRoleKey = useMemo(() => {
+    if (user?.role === "agency") {
+      return "owner";
+    }
+
+    if (currentAgencyMembership?.role) {
+      return currentAgencyMembership.role;
+    }
+
+    return user?.role || "";
+  }, [currentAgencyMembership?.role, user?.role]);
+
+  const currentRoleLabel = useMemo(() => {
+    if (user?.role === "agency") {
+      return "owner";
+    }
+
+    const matchingRole = (rolesQuery.data || []).find((role) => role._id === user?.permissionIds || role.key === currentRoleKey);
+    return matchingRole?.name || currentRoleKey || user?.role || "";
+  }, [currentRoleKey, rolesQuery.data, user?.permissionIds, user?.role]);
+
+  const currentPermissionDetails = useMemo(() => user?.permissions || profileQuery.data?.permissions || [], [profileQuery.data?.permissions, user?.permissions]);
+
+  useEffect(() => {
+    if (!allowedTabs.find((tab) => tab.id === activeTab)) {
+      setActiveTab(allowedTabs[0]?.id || "profile");
+    }
+  }, [activeTab, allowedTabs]);
+
   const handleProfileSubmit = async (values) => {
     try {
       await updateProfileMutation.mutateAsync(values);
@@ -126,9 +177,7 @@ export const SettingsPage = () => {
         name: normalizeText(values.name),
         contactEmail: normalizeText(values.contactEmail),
         ...(normalizeText(values.logo) ? { logo: normalizeText(values.logo) } : { logo: null }),
-        ...(normalizeText(values.coverImage)
-          ? { coverImage: normalizeText(values.coverImage) }
-          : { coverImage: null }),
+        ...(normalizeText(values.coverImage) ? { coverImage: normalizeText(values.coverImage) } : { coverImage: null }),
         ...(normalizeText(values.description) ? { description: normalizeText(values.description) } : {}),
         ...(normalizeText(values.contactPhone) ? { contactPhone: normalizeText(values.contactPhone) } : {}),
         ...(normalizeText(values.address) ? { address: normalizeText(values.address) } : {})
@@ -165,9 +214,22 @@ export const SettingsPage = () => {
         changePasswordMutation={changePasswordMutation}
         onProfileSubmit={handleProfileSubmit}
         onPasswordSubmit={handlePasswordSubmit}
+        roleOptions={rolesQuery.data || []}
+        currentRoleKey={currentRoleKey}
+        currentRoleLabel={currentRoleLabel}
+        permissionDetails={currentPermissionDetails}
+        roleMode={user?.role === "agency" || user?.role === "agency_agent" ? "select" : "input"}
       />
     ),
-    roles: <SectionRoles roles={rolesQuery.data || []} />,
+    roles: (
+      <SectionRoles
+        roles={rolesQuery.data || []}
+        createRoleMutation={createRoleMutation}
+        updateRoleMutation={updateRoleMutation}
+        duplicateRoleMutation={duplicateRoleMutation}
+        deleteRoleMutation={deleteRoleMutation}
+      />
+    ),
     members: <SectionMembers members={membersQuery.data || []} />,
     agency: (
       <SectionAgency
@@ -180,7 +242,7 @@ export const SettingsPage = () => {
     )
   };
 
-  if (user?.role !== "agency") {
+  if (user?.role !== "agency" && user?.role !== "agency_agent") {
     return (
       <section className="space-y-8">
         <SectionTitle eyebrow="Parametres" title="Gestion de profile" description="Mettez a jour votre profile connecte et votre mot de passe." />
@@ -195,7 +257,7 @@ export const SettingsPage = () => {
         <SectionTitle eyebrow="Parametres" title="Administration agence" description="Profil connecte, mot de passe, roles, agents et informations agence centralises dans un seul espace." />
 
         <nav className="flex flex-wrap gap-3" aria-label="Navigation des parametres">
-          {tabItems.map((tab) => (
+          {allowedTabs.map((tab) => (
             <SettingsTabButton
               key={tab.id}
               label={tab.label}

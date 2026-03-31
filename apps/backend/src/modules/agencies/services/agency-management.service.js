@@ -19,6 +19,26 @@ import { RoleTemplate } from "../models/role-template.model.js";
 
 const toObjectId = (value) => new mongoose.Types.ObjectId(value);
 
+const resolveRolePermissions = async (roleTemplateId, fallbackPermissions = []) => {
+  if (!roleTemplateId) {
+    return fallbackPermissions;
+  }
+
+  const roleTemplate = await RoleTemplate.findById(roleTemplateId).lean();
+  return roleTemplate?.permissions?.length ? roleTemplate.permissions : fallbackPermissions;
+};
+
+const syncUserRolePermission = async ({ userId, roleTemplateId }) => {
+  await User.updateOne(
+    { _id: userId },
+    {
+      $set: {
+        permissionIds: roleTemplateId || null
+      }
+    }
+  );
+};
+
 export const ensureAgencyAccess = async ({ agencyId, userId, permission = null }) => {
   const agency = await Agency.findById(agencyId).lean();
 
@@ -27,11 +47,15 @@ export const ensureAgencyAccess = async ({ agencyId, userId, permission = null }
   }
 
   if (String(agency.ownerUserId) === String(userId)) {
+    const ownerRole = await RoleTemplate.findOne({ agencyId, key: "owner" }).lean();
+    const ownerPermissions = ownerRole?.permissions || AGENCY_ROLE_PERMISSIONS.owner;
+
     return {
       agency,
       member: {
         role: "owner",
-        permissions: AGENCY_ROLE_PERMISSIONS.owner
+        permissionIds: ownerRole?._id ? String(ownerRole._id) : null,
+        permissions: ownerPermissions
       }
     };
   }
@@ -42,9 +66,10 @@ export const ensureAgencyAccess = async ({ agencyId, userId, permission = null }
     throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
   }
 
-  const effectivePermissions = member.permissions?.length
-    ? member.permissions
-    : AGENCY_ROLE_PERMISSIONS[member.role] || [];
+  const effectivePermissions = await resolveRolePermissions(
+    member.permissionIds,
+    member.permissions?.length ? member.permissions : AGENCY_ROLE_PERMISSIONS[member.role] || []
+  );
 
   if (permission && !effectivePermissions.includes(permission)) {
     throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
@@ -54,6 +79,7 @@ export const ensureAgencyAccess = async ({ agencyId, userId, permission = null }
     agency,
     member: {
       ...member,
+      permissionIds: member.permissionIds ? String(member.permissionIds) : null,
       permissions: effectivePermissions
     }
   };
@@ -72,14 +98,22 @@ export const createAgencyMember = async ({ agencyId, actorUserId, payload, permi
     throw new AppError("Target user not found", StatusCodes.NOT_FOUND);
   }
 
+  const assignedRoleId = payload.permissionIds || null;
+  const resolvedPermissions = payload.permissions?.length
+    ? payload.permissions
+    : await resolveRolePermissions(assignedRoleId, AGENCY_ROLE_PERMISSIONS[payload.role] || []);
+
   const member = await AgencyMember.create({
     agencyId,
     userId: payload.userId,
     role: payload.role,
-    permissions: payload.permissions?.length ? payload.permissions : AGENCY_ROLE_PERMISSIONS[payload.role] || [],
+    permissionIds: assignedRoleId,
+    permissions: resolvedPermissions,
     invitedBy: actorUserId,
     jobTitle: payload.jobTitle || ""
   });
+
+  await syncUserRolePermission({ userId: payload.userId, roleTemplateId: assignedRoleId });
 
   return member.toObject();
 };
@@ -99,8 +133,15 @@ export const updateAgencyMember = async ({ agencyId, memberId, actorUserId, payl
   if (payload.role) member.role = payload.role;
   if (payload.status) member.status = payload.status;
   if (payload.jobTitle !== undefined) member.jobTitle = payload.jobTitle;
-  if (payload.permissions) member.permissions = payload.permissions;
-  if (!payload.permissions && payload.role) member.permissions = AGENCY_ROLE_PERMISSIONS[payload.role] || [];
+  if (payload.permissionIds !== undefined) member.permissionIds = payload.permissionIds;
+
+  if (payload.permissions || payload.permissionIds || payload.role) {
+    member.permissions = payload.permissions?.length
+      ? payload.permissions
+      : await resolveRolePermissions(member.permissionIds, AGENCY_ROLE_PERMISSIONS[member.role] || []);
+
+    await syncUserRolePermission({ userId: member.userId, roleTemplateId: member.permissionIds });
+  }
 
   await member.save();
   return member.toObject();
@@ -116,6 +157,7 @@ export const removeAgencyMember = async ({ agencyId, memberId, actorUserId, perm
 
   member.status = "removed";
   await member.save();
+  await syncUserRolePermission({ userId: member.userId, roleTemplateId: null });
   return { success: true };
 };
 
@@ -124,12 +166,31 @@ export const listAgencyRoles = async ({ agencyId, userId, permission }) => {
   return RoleTemplate.find({ agencyId }).sort({ createdAt: -1 }).lean();
 };
 
+const buildRoleTemplateKey = async ({ agencyId, baseKey }) => {
+  const normalizedBaseKey =
+    String(baseKey || "role")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || `role-${Date.now()}`;
+
+  let key = normalizedBaseKey;
+  let counter = 1;
+
+  while (await RoleTemplate.findOne({ agencyId, key }).lean()) {
+    counter += 1;
+    key = `${normalizedBaseKey}-${counter}`;
+  }
+
+  return key;
+};
+
 export const createAgencyRole = async ({ agencyId, actorUserId, payload, permission }) => {
   await ensureAgencyAccess({ agencyId, userId: actorUserId, permission });
+  const key = await buildRoleTemplateKey({ agencyId, baseKey: payload.key || payload.name });
   const role = await RoleTemplate.create({
     agencyId,
     name: payload.name,
-    key: payload.key,
+    key,
     permissions: payload.permissions,
     isSystem: payload.isSystem || false,
     createdBy: actorUserId
@@ -146,10 +207,38 @@ export const updateAgencyRole = async ({ agencyId, roleId, actorUserId, payload,
     throw new AppError("Role template not found", StatusCodes.NOT_FOUND);
   }
 
+  if (role.isSystem || role.key === "owner") {
+    throw new AppError("Owner role cannot be modified", StatusCodes.BAD_REQUEST);
+  }
+
   if (payload.name !== undefined) role.name = payload.name;
   if (payload.permissions) role.permissions = payload.permissions;
   await role.save();
   return role.toObject();
+};
+
+export const duplicateAgencyRole = async ({ agencyId, roleId, actorUserId, payload, permission }) => {
+  await ensureAgencyAccess({ agencyId, userId: actorUserId, permission });
+  const sourceRole = await RoleTemplate.findOne({ _id: roleId, agencyId }).lean();
+
+  if (!sourceRole) {
+    throw new AppError("Role template not found", StatusCodes.NOT_FOUND);
+  }
+
+  if (sourceRole.isSystem || sourceRole.key === "owner") {
+    throw new AppError("Owner role cannot be duplicated", StatusCodes.BAD_REQUEST);
+  }
+
+  const duplicatedRole = await RoleTemplate.create({
+    agencyId,
+    name: payload.name || `${sourceRole.name} copie`,
+    key: await buildRoleTemplateKey({ agencyId, baseKey: payload.key || `${sourceRole.key}-copy` }),
+    permissions: sourceRole.permissions || [],
+    isSystem: false,
+    createdBy: actorUserId
+  });
+
+  return duplicatedRole.toObject();
 };
 
 export const deleteAgencyRole = async ({ agencyId, roleId, actorUserId, permission }) => {
@@ -160,8 +249,8 @@ export const deleteAgencyRole = async ({ agencyId, roleId, actorUserId, permissi
     throw new AppError("Role template not found", StatusCodes.NOT_FOUND);
   }
 
-  if (role.isSystem) {
-    throw new AppError("System role cannot be deleted", StatusCodes.BAD_REQUEST);
+  if (role.isSystem || role.key === "owner") {
+    throw new AppError("Owner role cannot be deleted", StatusCodes.BAD_REQUEST);
   }
 
   await role.deleteOne();
@@ -342,19 +431,7 @@ export const getAgencyStatsOverview = async ({ agencyId, userId, permission }) =
   const weekEnd = new Date(now);
   weekEnd.setDate(now.getDate() + 7);
 
-  const [
-    latestSnapshot,
-    activeAgents,
-    totalMembers,
-    activeProperties,
-    totalBookings,
-    completedBookings,
-    upcomingEvents,
-    currentMonthEvents,
-    currentMonthExpenseTotals,
-    expenseBreakdown,
-    topAgents
-  ] = await Promise.all([
+  const [latestSnapshot, activeAgents, totalMembers, activeProperties, totalBookings, completedBookings, upcomingEvents, currentMonthEvents, currentMonthExpenseTotals, expenseBreakdown, topAgents] = await Promise.all([
     AgencyStatsSnapshot.findOne({ agencyId }).sort({ periodStart: -1 }).lean(),
     AgencyMember.countDocuments({ agencyId, status: "active" }),
     AgencyMember.countDocuments({ agencyId, status: { $ne: "removed" } }),
@@ -365,57 +442,27 @@ export const getAgencyStatsOverview = async ({ agencyId, userId, permission }) =
     AgencyCalendarEvent.countDocuments({ agencyId, startAt: { $gte: monthStart, $lt: nextMonthStart } }),
     AgencyExpense.aggregate([
       { $match: { agencyId: agencyObjectId, expenseDate: { $gte: monthStart, $lt: nextMonthStart } } },
-      {
-        $group: {
-          _id: "$status",
-          total: { $sum: "$amount" }
-        }
-      }
+      { $group: { _id: "$status", total: { $sum: "$amount" } } }
     ]),
     AgencyExpense.aggregate([
       { $match: { agencyId: agencyObjectId, expenseDate: { $gte: monthStart, $lt: nextMonthStart } } },
-      {
-        $group: {
-          _id: "$category",
-          total: { $sum: "$amount" },
-          count: { $sum: 1 }
-        }
-      },
+      { $group: { _id: "$category", total: { $sum: "$amount" }, count: { $sum: 1 } } },
       { $sort: { total: -1 } }
     ]),
     AgencyMember.aggregate([
       { $match: { agencyId: agencyObjectId, status: "active", role: { $in: ["agent", "supervisor", "manager"] } } },
-      {
-        $lookup: {
-          from: "bookings",
-          localField: "userId",
-          foreignField: "agentId",
-          as: "bookings"
-        }
-      },
+      { $lookup: { from: "bookings", localField: "userId", foreignField: "agentId", as: "bookings" } },
       {
         $addFields: {
           bookingsCount: { $size: "$bookings" },
           completedBookings: {
             $size: {
-              $filter: {
-                input: "$bookings",
-                as: "booking",
-                cond: { $eq: ["$$booking.status", "completed"] }
-              }
+              $filter: { input: "$bookings", as: "booking", cond: { $eq: ["$$booking.status", "completed"] } }
             }
           }
         }
       },
-      {
-        $project: {
-          userId: 1,
-          role: 1,
-          jobTitle: 1,
-          bookingsCount: 1,
-          completedBookings: 1
-        }
-      },
+      { $project: { userId: 1, role: 1, jobTitle: 1, bookingsCount: 1, completedBookings: 1 } },
       { $sort: { completedBookings: -1, bookingsCount: -1 } },
       { $limit: 5 }
     ])
@@ -439,16 +486,9 @@ export const getAgencyStatsOverview = async ({ agencyId, userId, permission }) =
     approvedExpensesTotal,
     rejectedExpensesTotal,
     currentMonthExpensesTotal,
-    expenseBreakdown: expenseBreakdown.map((item) => ({
-      category: item._id,
-      total: item.total,
-      count: item.count
-    })),
+    expenseBreakdown: expenseBreakdown.map((item) => ({ category: item._id, total: item.total, count: item.count })),
     topAgents,
-    weeklyWindow: {
-      from: now.toISOString(),
-      to: weekEnd.toISOString()
-    },
+    weeklyWindow: { from: now.toISOString(), to: weekEnd.toISOString() },
     latestSnapshot: latestSnapshot || null
   };
 };
@@ -493,15 +533,10 @@ export const deleteAgencyCascade = async ({ agencyId, actorUserId }) => {
   }
 
   const memberUserIds = await AgencyMember.find({ agencyId }).distinct("userId");
-  const userIds = [...new Set([String(agency.ownerUserId), ...memberUserIds.map((item) => String(item))])].map(
-    (item) => toObjectId(item)
-  );
+  const userIds = [...new Set([String(agency.ownerUserId), ...memberUserIds.map((item) => String(item))])].map((item) => toObjectId(item));
   const propertyIds = await Property.find({ agencyId }).distinct("_id");
   const conversationIds = await Conversation.find({
-    $or: [
-      { participantIds: { $in: userIds } },
-      ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])
-    ]
+    $or: [{ participantIds: { $in: userIds } }, ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])]
   }).distinct("_id");
 
   await Promise.all([
@@ -512,23 +547,13 @@ export const deleteAgencyCascade = async ({ agencyId, actorUserId }) => {
     RoleTemplate.deleteMany({ agencyId }),
     Notification.deleteMany({ userId: { $in: userIds } }),
     Booking.deleteMany({
-      $or: [
-        { agencyId },
-        { agentId: { $in: userIds } },
-        ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])
-      ]
+      $or: [{ agencyId }, { agentId: { $in: userIds } }, ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])]
     }),
     PropertyFavorite.deleteMany({
-      $or: [
-        { userId: { $in: userIds } },
-        ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])
-      ]
+      $or: [{ userId: { $in: userIds } }, ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])]
     }),
     PropertyView.deleteMany({
-      $or: [
-        { userId: { $in: userIds } },
-        ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])
-      ]
+      $or: [{ userId: { $in: userIds } }, ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])]
     }),
     Message.deleteMany({
       $or: [
@@ -538,9 +563,7 @@ export const deleteAgencyCascade = async ({ agencyId, actorUserId }) => {
       ]
     }),
     ...(conversationIds.length ? [Conversation.deleteMany({ _id: { $in: conversationIds } })] : []),
-    Property.deleteMany({
-      $or: [{ agencyId }, { agentId: { $in: userIds } }]
-    })
+    Property.deleteMany({ $or: [{ agencyId }, { agentId: { $in: userIds } }] })
   ]);
 
   await User.deleteMany({ _id: { $in: userIds } });

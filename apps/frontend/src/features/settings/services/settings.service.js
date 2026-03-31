@@ -35,6 +35,26 @@ export const getAgencyRoles = async (agencyId) => {
   return response.data.data;
 };
 
+export const createAgencyRole = async ({ agencyId, payload }) => {
+  const response = await apiClient.post(`/agencies/${agencyId}/roles`, payload);
+  return response.data.data;
+};
+
+export const updateAgencyRole = async ({ agencyId, roleId, payload }) => {
+  const response = await apiClient.patch(`/agencies/${agencyId}/roles/${roleId}`, payload);
+  return response.data.data;
+};
+
+export const duplicateAgencyRole = async ({ agencyId, roleId, payload }) => {
+  const response = await apiClient.post(`/agencies/${agencyId}/roles/${roleId}/duplicate`, payload || {});
+  return response.data.data;
+};
+
+export const deleteAgencyRole = async ({ agencyId, roleId }) => {
+  const response = await apiClient.delete(`/agencies/${agencyId}/roles/${roleId}`, { data: {} });
+  return response.data.data;
+};
+
 export const getAgencyMembers = async (agencyId) => {
   const response = await apiClient.get(`/agencies/${agencyId}/members`);
   return response.data.data;

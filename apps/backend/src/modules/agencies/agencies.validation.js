@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AGENCY_MEMBER_ROLES, AGENCY_PERMISSIONS } from "./constants/agency-permissions.js";
+import { AGENCY_MEMBER_ROLES } from "./constants/agency-permissions.js";
 
 const objectIdSchema = z.string().regex(/^[a-fA-F0-9]{24}$/u, "Invalid object id");
 const numberFromQuery = (fieldName) =>
@@ -8,11 +8,6 @@ const numberFromQuery = (fieldName) =>
   });
 const emptyStringToUndefined = (schema) => z.preprocess((value) => (value === "" ? undefined : value), schema);
 const emptyStringToNull = (schema) => z.preprocess((value) => (value === "" ? null : value), schema);
-
-const permissionValues = Object.values(AGENCY_PERMISSIONS);
-const permissionSchema = z.string().refine((value) => permissionValues.includes(value), {
-  message: "Invalid agency permission"
-});
 
 export const agencyIdParamsSchema = z.object({
   body: z.object({}).default({}),
@@ -38,7 +33,8 @@ export const createAgencyMemberSchema = z.object({
   body: z.object({
     userId: objectIdSchema,
     role: z.enum(AGENCY_MEMBER_ROLES),
-    permissions: z.array(permissionSchema).default([]),
+    permissionIds: objectIdSchema.optional(),
+    permissions: z.array(z.string()).optional(),
     jobTitle: z.string().max(120).optional()
   }),
   params: z.object({ agencyId: objectIdSchema }),
@@ -48,7 +44,8 @@ export const createAgencyMemberSchema = z.object({
 export const updateAgencyMemberSchema = z.object({
   body: z.object({
     role: z.enum(AGENCY_MEMBER_ROLES).optional(),
-    permissions: z.array(permissionSchema).optional(),
+    permissionIds: objectIdSchema.optional(),
+    permissions: z.array(z.string()).optional(),
     status: z.enum(["invited", "active", "inactive", "removed"]).optional(),
     jobTitle: z.string().max(120).optional()
   }),
@@ -60,7 +57,7 @@ export const createRoleTemplateSchema = z.object({
   body: z.object({
     name: z.string().min(2).max(120),
     key: z.string().min(2).max(80),
-    permissions: z.array(permissionSchema).min(1),
+    permissions: z.array(z.string()).min(1),
     isSystem: z.boolean().optional()
   }),
   params: z.object({ agencyId: objectIdSchema }),
@@ -70,8 +67,17 @@ export const createRoleTemplateSchema = z.object({
 export const updateRoleTemplateSchema = z.object({
   body: z.object({
     name: z.string().min(2).max(120).optional(),
-    permissions: z.array(permissionSchema).optional()
+    permissions: z.array(z.string()).optional()
   }),
+  params: z.object({ agencyId: objectIdSchema, roleId: objectIdSchema }),
+  query: z.object({}).default({})
+});
+
+export const duplicateRoleTemplateSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).max(120).optional(),
+    key: z.string().min(2).max(80).optional()
+  }).default({}),
   params: z.object({ agencyId: objectIdSchema, roleId: objectIdSchema }),
   query: z.object({}).default({})
 });

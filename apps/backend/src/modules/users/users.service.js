@@ -1,8 +1,36 @@
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 import { User } from "./user.model.js";
+import { AgencyMember } from "../agencies/models/agency-member.model.js";
+import { RoleTemplate } from "../agencies/models/role-template.model.js";
 
-const sanitizeUser = (user) => ({
+const resolveUserPermissions = async (user) => {
+  if (user.role === "agency" && user.permissionIds) {
+    const roleTemplate = await RoleTemplate.findById(user.permissionIds).lean();
+    return roleTemplate?.permissions || [];
+  }
+
+  if (user.role === "agency_agent" && user.agencyId) {
+    const member = await AgencyMember.findOne({
+      agencyId: user.agencyId,
+      userId: user._id,
+      status: "active"
+    }).lean();
+
+    if (member?.permissionIds) {
+      const roleTemplate = await RoleTemplate.findById(member.permissionIds).lean();
+      if (roleTemplate?.permissions?.length) {
+        return roleTemplate.permissions;
+      }
+    }
+
+    return member?.permissions || [];
+  }
+
+  return [];
+};
+
+const sanitizeUser = async (user) => ({
   id: user._id,
   firstName: user.firstName,
   lastName: user.lastName,
@@ -11,6 +39,8 @@ const sanitizeUser = (user) => ({
   avatar: user.avatar || null,
   role: user.role,
   agencyId: user.agencyId || null,
+  permissionIds: user.permissionIds ? String(user.permissionIds) : null,
+  permissions: await resolveUserPermissions(user),
   preferences: user.preferences,
   location: user.location || null
 });

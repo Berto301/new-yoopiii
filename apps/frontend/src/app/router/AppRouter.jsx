@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { PrivateRoute } from "../guards/PrivateRoute.jsx";
 import { RoleRoute } from "../guards/RoleRoute.jsx";
+import { PERMISSION_IDS } from "../../helpers/constants.js";
 import { PublicLayout } from "../../components/layout/PublicLayout.jsx";
 import { AuthLayout } from "../../components/layout/AuthLayout.jsx";
 import { DashboardLayout } from "../../components/layout/DashboardLayout.jsx";
@@ -49,7 +50,9 @@ export const AppRouter = () => (
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/dashboard/user" element={<UserDashboardPage />} />
 
-        <Route element={<RoleRoute allowedRoles={["agency", "agency_agent", "independent_agent"]} />}>
+        <Route
+          element={<RoleRoute allowedRoles={["agency", "agency_agent", "independent_agent"]} requiredPermission={PERMISSION_IDS.UI_ROUTE_PROPERTIES} />}
+        >
           <Route path="/dashboard/properties" element={<PropertyManagementPage />} />
         </Route>
 
@@ -58,7 +61,9 @@ export const AppRouter = () => (
           <Route path="/dashboard/agent/scoring" element={<AgentScoringPage />} />
         </Route>
 
-        <Route element={<RoleRoute allowedRoles={["agency", "agency_agent"]} />}>
+        <Route
+          element={<RoleRoute allowedRoles={["agency", "agency_agent"]} requiredPermission={PERMISSION_IDS.UI_ROUTE_AGENCY_DASHBOARD} />}
+        >
           <Route path="/dashboard/agency" element={<AgencyDashboardPage />} />
           <Route path="/dashboard/agency/agents" element={<AgencyMembersPage />} />
           <Route path="/dashboard/agency/calendar" element={<AgencyCalendarPage />} />
@@ -70,6 +75,3 @@ export const AppRouter = () => (
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );
-
-
-

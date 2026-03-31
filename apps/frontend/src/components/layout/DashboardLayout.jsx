@@ -1,21 +1,29 @@
 import { useDispatch, useSelector } from "react-redux";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { PERMISSION_IDS } from "../../helpers/constants.js";
+import { hasPermission } from "../../helpers/_functions.js";
 import { Button } from "../ui/Button.jsx";
 import { performLogout } from "../../features/auth/utils/logout.js";
 import { logoutSuccess, selectCurrentUser } from "../../app/store/session.store.js";
 
-const buildSidebarItems = (role) => {
+const buildSidebarItems = (user) => {
+  const role = user?.role;
+  const permissions = user?.permissions || [];
   const baseItems = [
-    { to: "/dashboard/user", label: "Vue globale" },
-    { to: "/favorites", label: "Favoris" },
-    { to: "/bookings", label: "Reservations" },
-    { to: "/messages", label: "Messages" },
-    { to: "/notifications", label: "Notifications" },
-    { to: "/settings", label: "Parametres" }
+    { to: "/dashboard/user", label: "Vue globale", permission: PERMISSION_IDS.UI_ROUTE_DASHBOARD_USER },
+    { to: "/favorites", label: "Favoris", permission: PERMISSION_IDS.UI_ROUTE_FAVORITES },
+    { to: "/bookings", label: "Reservations", permission: PERMISSION_IDS.UI_ROUTE_BOOKINGS },
+    { to: "/messages", label: "Messages", permission: PERMISSION_IDS.UI_ROUTE_MESSAGES },
+    { to: "/notifications", label: "Notifications", permission: PERMISSION_IDS.UI_ROUTE_NOTIFICATIONS },
+    { to: "/settings", label: "Parametres", permission: PERMISSION_IDS.UI_ROUTE_SETTINGS }
   ];
 
   if (["agency", "agency_agent", "independent_agent"].includes(role)) {
-    baseItems.splice(1, 0, { to: "/dashboard/properties", label: "Gestion biens" });
+    baseItems.splice(1, 0, { to: "/dashboard/properties", label: "Gestion biens", permission: PERMISSION_IDS.UI_ROUTE_PROPERTIES });
+  }
+
+  if (role === "agency_agent") {
+    return baseItems.filter((item) => hasPermission(permissions, item.permission));
   }
 
   return baseItems;
@@ -25,7 +33,7 @@ export const DashboardLayout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
-  const sidebarItems = buildSidebarItems(user?.role);
+  const sidebarItems = buildSidebarItems(user);
 
   const handleLogout = () => {
     performLogout(dispatch, logoutSuccess);

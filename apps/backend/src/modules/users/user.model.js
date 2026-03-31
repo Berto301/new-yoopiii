@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "independent_agent", "agency", "agency_agent", "admin"],
       default: "user"
     },
+    permissionIds: { type: mongoose.Schema.Types.ObjectId, ref: "RoleTemplate", default: null },
     avatar: { type: String, default: null },
     isVerified: { type: Boolean, default: false },
     status: {
