@@ -47,6 +47,7 @@ export const PublicationsPage = () => {
   }, [items]);
 
   const canManageReservation = ["agency", "agency_agent", "independent_agent"].includes(user?.role);
+  const canFavoriteProperties = user?.role === "user";
 
   const handleOpenConversation = async (property) => {
     if (!property.agentId || !user) {
@@ -187,10 +188,10 @@ export const PublicationsPage = () => {
                         <Button
                           type="button"
                           variant={property.isFavorite ? "secondary" : "primary"}
-                          disabled={favoriteMutation.isPending}
+                          disabled={favoriteMutation.isPending || !canFavoriteProperties}
                           onClick={() => favoriteMutation.mutate({ propertyId: property.id, isFavorite: property.isFavorite })}
                         >
-                          {property.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
+                          {!canFavoriteProperties ? "Favori indisponible" : property.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
                         </Button>
 
                         {!canManageReservation ? (

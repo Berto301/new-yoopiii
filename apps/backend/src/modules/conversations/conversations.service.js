@@ -114,12 +114,16 @@ export const createOrGetPrivateConversation = async ({ userId, participantId, pr
   const existingConversation = await Conversation.findOne({
     type: "private",
     participantIds: { $all: normalizedParticipants, $size: 2 },
-    propertyId,
     isActive: true
   }).populate("participantIds", "firstName lastName email");
 
   if (existingConversation) {
-  return formatConversation(existingConversation.toObject());
+    if (!existingConversation.propertyId && propertyId) {
+      existingConversation.propertyId = propertyId;
+      await existingConversation.save();
+    }
+
+    return formatConversation(existingConversation.toObject());
   }
 
   const conversation = await Conversation.create({
