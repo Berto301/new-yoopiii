@@ -41,8 +41,8 @@ const resolveRoleTemplatePermissions = async (roleTemplateId) => {
 const resolveUserPermissionState = async (user) => {
   if (user.role === "agency") {
     return {
-      permissionIds: user.permissionIds ? String(user.permissionIds) : null,
-      permissions: await resolveRoleTemplatePermissions(user.permissionIds)
+      permissionId: user.permissionId ? String(user.permissionId) : null,
+      permissions: await resolveRoleTemplatePermissions(user.permissionId)
     };
   }
 
@@ -54,15 +54,15 @@ const resolveUserPermissionState = async (user) => {
     }).lean();
 
     return {
-      permissionIds: member?.permissionIds ? String(member.permissionIds) : null,
-      permissions: member?.permissionIds
-        ? await resolveRoleTemplatePermissions(member.permissionIds)
+      permissionId: member?.permissionId ? String(member.permissionId) : null,
+      permissions: member?.permissionId
+        ? await resolveRoleTemplatePermissions(member.permissionId)
         : member?.permissions || []
     };
   }
 
   return {
-    permissionIds: user.permissionIds ? String(user.permissionIds) : null,
+    permissionId: user.permissionId ? String(user.permissionId) : null,
     permissions: []
   };
 };
@@ -77,7 +77,7 @@ const formatAuthUser = async (user) => {
     email: user.email,
     role: user.role,
     agencyId: user.agencyId || null,
-    permissionIds: permissionState.permissionIds,
+    permissionId: permissionState.permissionId,
     permissions: permissionState.permissions
   };
 };
@@ -97,7 +97,7 @@ export const registerUser = async (payload) => {
     email: payload.email,
     phone: payload.phone,
     role: payload.role,
-    permissionIds: null,
+    permissionId: null,
     passwordHash
   });
 
@@ -123,14 +123,14 @@ export const registerUser = async (payload) => {
     });
 
     user.agencyId = agency._id;
-    user.permissionIds = ownerRoleTemplate._id;
+    user.permissionId = ownerRoleTemplate._id;
     await user.save();
 
     await AgencyMember.create({
       agencyId: agency._id,
       userId: user._id,
       role: "owner",
-      permissionIds: ownerRoleTemplate._id,
+      permissionId: ownerRoleTemplate._id,
       permissions: ownerRoleTemplate.permissions,
       status: "active",
       invitedBy: user._id,

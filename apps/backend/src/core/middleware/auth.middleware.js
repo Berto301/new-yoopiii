@@ -25,8 +25,8 @@ const resolveRoleTemplatePermissions = async (roleTemplateId) => {
 const resolveRequestPermissionState = async (user) => {
   if (user.role === "agency") {
     return {
-      permissionIds: user.permissionIds ? String(user.permissionIds) : null,
-      permissions: await resolveRoleTemplatePermissions(user.permissionIds)
+      permissionId: user.permissionId ? String(user.permissionId) : null,
+      permissions: await resolveRoleTemplatePermissions(user.permissionId)
     };
   }
 
@@ -38,15 +38,15 @@ const resolveRequestPermissionState = async (user) => {
     }).lean();
 
     return {
-      permissionIds: member?.permissionIds ? String(member.permissionIds) : null,
-      permissions: member?.permissionIds
-        ? await resolveRoleTemplatePermissions(member.permissionIds)
+      permissionId: member?.permissionId ? String(member.permissionId) : null,
+      permissions: member?.permissionId
+        ? await resolveRoleTemplatePermissions(member.permissionId)
         : member?.permissions || []
     };
   }
 
   return {
-    permissionIds: user.permissionIds ? String(user.permissionIds) : null,
+    permissionId: user.permissionId ? String(user.permissionId) : null,
     permissions: []
   };
 };
@@ -61,7 +61,7 @@ export const requireAuth = async (req, _res, next) => {
 
     const payload = verifyAccessToken(token);
     const user = await User.findById(payload.sub)
-      .select("_id firstName lastName email role status agencyId permissionIds")
+      .select("_id firstName lastName email role status agencyId permissionId")
       .lean();
 
     if (!user || user.status !== "active") {
@@ -77,7 +77,7 @@ export const requireAuth = async (req, _res, next) => {
       lastName: user.lastName,
       email: user.email,
       agencyId: user.agencyId ? String(user.agencyId) : null,
-      permissionIds: permissionState.permissionIds,
+      permissionId: permissionState.permissionId,
       permissions: permissionState.permissions
     };
 

@@ -33,7 +33,7 @@ const syncUserRolePermission = async ({ userId, roleTemplateId }) => {
     { _id: userId },
     {
       $set: {
-        permissionIds: roleTemplateId || null
+        permissionId: roleTemplateId || null
       }
     }
   );
@@ -54,7 +54,7 @@ export const ensureAgencyAccess = async ({ agencyId, userId, permission = null }
       agency,
       member: {
         role: "owner",
-        permissionIds: ownerRole?._id ? String(ownerRole._id) : null,
+        permissionId: ownerRole?._id ? String(ownerRole._id) : null,
         permissions: ownerPermissions
       }
     };
@@ -67,7 +67,7 @@ export const ensureAgencyAccess = async ({ agencyId, userId, permission = null }
   }
 
   const effectivePermissions = await resolveRolePermissions(
-    member.permissionIds,
+    member.permissionId,
     member.permissions?.length ? member.permissions : AGENCY_ROLE_PERMISSIONS[member.role] || []
   );
 
@@ -79,7 +79,7 @@ export const ensureAgencyAccess = async ({ agencyId, userId, permission = null }
     agency,
     member: {
       ...member,
-      permissionIds: member.permissionIds ? String(member.permissionIds) : null,
+      permissionId: member.permissionId ? String(member.permissionId) : null,
       permissions: effectivePermissions
     }
   };
@@ -98,7 +98,7 @@ export const createAgencyMember = async ({ agencyId, actorUserId, payload, permi
     throw new AppError("Target user not found", StatusCodes.NOT_FOUND);
   }
 
-  const assignedRoleId = payload.permissionIds || null;
+  const assignedRoleId = payload.permissionId || null;
   const resolvedPermissions = payload.permissions?.length
     ? payload.permissions
     : await resolveRolePermissions(assignedRoleId, AGENCY_ROLE_PERMISSIONS[payload.role] || []);
@@ -107,7 +107,7 @@ export const createAgencyMember = async ({ agencyId, actorUserId, payload, permi
     agencyId,
     userId: payload.userId,
     role: payload.role,
-    permissionIds: assignedRoleId,
+    permissionId: assignedRoleId,
     permissions: resolvedPermissions,
     invitedBy: actorUserId,
     jobTitle: payload.jobTitle || ""
@@ -133,14 +133,14 @@ export const updateAgencyMember = async ({ agencyId, memberId, actorUserId, payl
   if (payload.role) member.role = payload.role;
   if (payload.status) member.status = payload.status;
   if (payload.jobTitle !== undefined) member.jobTitle = payload.jobTitle;
-  if (payload.permissionIds !== undefined) member.permissionIds = payload.permissionIds;
+  if (payload.permissionId !== undefined) member.permissionId = payload.permissionId;
 
-  if (payload.permissions || payload.permissionIds || payload.role) {
+  if (payload.permissions || payload.permissionId || payload.role) {
     member.permissions = payload.permissions?.length
       ? payload.permissions
-      : await resolveRolePermissions(member.permissionIds, AGENCY_ROLE_PERMISSIONS[member.role] || []);
+      : await resolveRolePermissions(member.permissionId, AGENCY_ROLE_PERMISSIONS[member.role] || []);
 
-    await syncUserRolePermission({ userId: member.userId, roleTemplateId: member.permissionIds });
+    await syncUserRolePermission({ userId: member.userId, roleTemplateId: member.permissionId });
   }
 
   await member.save();

@@ -140,9 +140,9 @@ export const SettingsPage = () => {
       return "owner";
     }
 
-    const matchingRole = (rolesQuery.data || []).find((role) => role._id === user?.permissionIds || role.key === currentRoleKey);
+    const matchingRole = (rolesQuery.data || []).find((role) => role._id === user?.permissionId || role.key === currentRoleKey);
     return matchingRole?.name || currentRoleKey || user?.role || "";
-  }, [currentRoleKey, rolesQuery.data, user?.permissionIds, user?.role]);
+  }, [currentRoleKey, rolesQuery.data, user?.permissionId, user?.role]);
 
   const currentPermissionDetails = useMemo(() => user?.permissions || profileQuery.data?.permissions || [], [profileQuery.data?.permissions, user?.permissions]);
 

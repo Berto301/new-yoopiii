@@ -33,7 +33,7 @@ export const createAgencyMemberSchema = z.object({
   body: z.object({
     userId: objectIdSchema,
     role: z.enum(AGENCY_MEMBER_ROLES),
-    permissionIds: objectIdSchema.optional(),
+    permissionId: objectIdSchema.optional(),
     permissions: z.array(z.string()).optional(),
     jobTitle: z.string().max(120).optional()
   }),
@@ -44,7 +44,7 @@ export const createAgencyMemberSchema = z.object({
 export const updateAgencyMemberSchema = z.object({
   body: z.object({
     role: z.enum(AGENCY_MEMBER_ROLES).optional(),
-    permissionIds: objectIdSchema.optional(),
+    permissionId: objectIdSchema.optional(),
     permissions: z.array(z.string()).optional(),
     status: z.enum(["invited", "active", "inactive", "removed"]).optional(),
     jobTitle: z.string().max(120).optional()

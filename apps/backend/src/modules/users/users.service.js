@@ -5,8 +5,8 @@ import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { RoleTemplate } from "../agencies/models/role-template.model.js";
 
 const resolveUserPermissions = async (user) => {
-  if (user.role === "agency" && user.permissionIds) {
-    const roleTemplate = await RoleTemplate.findById(user.permissionIds).lean();
+  if (user.role === "agency" && user.permissionId) {
+    const roleTemplate = await RoleTemplate.findById(user.permissionId).lean();
     return roleTemplate?.permissions || [];
   }
 
@@ -17,8 +17,8 @@ const resolveUserPermissions = async (user) => {
       status: "active"
     }).lean();
 
-    if (member?.permissionIds) {
-      const roleTemplate = await RoleTemplate.findById(member.permissionIds).lean();
+    if (member?.permissionId) {
+      const roleTemplate = await RoleTemplate.findById(member.permissionId).lean();
       if (roleTemplate?.permissions?.length) {
         return roleTemplate.permissions;
       }
@@ -39,7 +39,7 @@ const sanitizeUser = async (user) => ({
   avatar: user.avatar || null,
   role: user.role,
   agencyId: user.agencyId || null,
-  permissionIds: user.permissionIds ? String(user.permissionIds) : null,
+  permissionId: user.permissionId ? String(user.permissionId) : null,
   permissions: await resolveUserPermissions(user),
   preferences: user.preferences,
   location: user.location || null
