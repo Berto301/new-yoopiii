@@ -30,6 +30,11 @@ export const getFavoriteProperties = async (params = {}) => {
   return response.data.data;
 };
 
+export const getPropertyPublications = async (params = {}) => {
+  const response = await apiClient.get("/properties/publications/feed", { params });
+  return response.data.data;
+};
+
 export const getPropertyHistory = async (params = {}) => {
   const response = await apiClient.get("/properties/history/me", { params });
   return response.data.data;
@@ -42,6 +47,16 @@ export const addPropertyToFavorites = async (propertyId) => {
 
 export const removePropertyFromFavorites = async (propertyId) => {
   const response = await apiClient.delete(`/properties/${propertyId}/favorite`);
+  return response.data.data;
+};
+
+export const reserveProperty = async (propertyId) => {
+  const response = await apiClient.post(`/properties/${propertyId}/reserve`);
+  return response.data.data;
+};
+
+export const releasePropertyReservation = async (propertyId) => {
+  const response = await apiClient.post(`/properties/${propertyId}/release-reservation`);
   return response.data.data;
 };
 

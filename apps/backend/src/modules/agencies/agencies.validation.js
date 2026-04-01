@@ -31,18 +31,34 @@ export const updateAgencyProfileSchema = z.object({
 
 export const createAgencyMemberSchema = z.object({
   body: z.object({
-    userId: objectIdSchema,
+    userId: objectIdSchema.optional(),
+    user: z.object({
+      firstName: z.string().trim().min(2).max(80),
+      lastName: z.string().trim().min(2).max(80),
+      email: z.string().trim().email(),
+      phone: emptyStringToUndefined(z.string().max(40).optional())
+    }).optional(),
     role: z.enum(AGENCY_MEMBER_ROLES),
     permissionId: objectIdSchema.optional(),
     permissions: z.array(z.string()).optional(),
+    status: z.enum(["invited", "active", "inactive"]).optional(),
     jobTitle: z.string().max(120).optional()
   }),
   params: z.object({ agencyId: objectIdSchema }),
   query: z.object({}).default({})
+}).refine((value) => Boolean(value.body.userId || value.body.user), {
+  message: "userId or user is required",
+  path: ["body", "user"]
 });
 
 export const updateAgencyMemberSchema = z.object({
   body: z.object({
+    user: z.object({
+      firstName: z.string().trim().min(2).max(80).optional(),
+      lastName: z.string().trim().min(2).max(80).optional(),
+      email: z.string().trim().email().optional(),
+      phone: emptyStringToUndefined(z.string().max(40).optional())
+    }).optional(),
     role: z.enum(AGENCY_MEMBER_ROLES).optional(),
     permissionId: objectIdSchema.optional(),
     permissions: z.array(z.string()).optional(),

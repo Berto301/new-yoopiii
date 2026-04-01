@@ -9,16 +9,22 @@ import { logoutSuccess, selectCurrentUser } from "../../app/store/session.store.
 const buildSidebarItems = (user) => {
   const role = user?.role;
   const permissions = user?.permissions || [];
+  const isManagementRole = ["agency", "agency_agent", "independent_agent"].includes(role);
   const baseItems = [
     { to: "/dashboard/user", label: "Vue globale", permission: PERMISSION_IDS.UI_ROUTE_DASHBOARD_USER },
-    { to: "/favorites", label: "Favoris", permission: PERMISSION_IDS.UI_ROUTE_FAVORITES },
-    { to: "/bookings", label: "Reservations", permission: PERMISSION_IDS.UI_ROUTE_BOOKINGS },
+    { to: "/dashboard/publications", label: "Publication des biens", permission: PERMISSION_IDS.UI_ROUTE_PUBLICATIONS },
+    ...(!isManagementRole
+      ? [
+          { to: "/favorites", label: "Favoris", permission: PERMISSION_IDS.UI_ROUTE_FAVORITES },
+          { to: "/bookings", label: "Reservations", permission: PERMISSION_IDS.UI_ROUTE_BOOKINGS }
+        ]
+      : []),
     { to: "/messages", label: "Messages", permission: PERMISSION_IDS.UI_ROUTE_MESSAGES },
     { to: "/notifications", label: "Notifications", permission: PERMISSION_IDS.UI_ROUTE_NOTIFICATIONS },
     { to: "/settings", label: "Parametres", permission: PERMISSION_IDS.UI_ROUTE_SETTINGS }
   ];
 
-  if (["agency", "agency_agent", "independent_agent"].includes(role)) {
+  if (isManagementRole) {
     baseItems.splice(1, 0, { to: "/dashboard/properties", label: "Gestion biens", permission: PERMISSION_IDS.UI_ROUTE_PROPERTIES });
   }
 

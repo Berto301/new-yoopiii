@@ -4,6 +4,7 @@ export const AGENCY_PERMISSION_CATALOG = [
   { code: "ui.route.bookings", label: "Reservations", groupKey: "ui.routes", groupLabel: "Routes accessibles" },
   { code: "ui.route.messages", label: "Messages", groupKey: "ui.routes", groupLabel: "Routes accessibles" },
   { code: "ui.route.notifications", label: "Notifications", groupKey: "ui.routes", groupLabel: "Routes accessibles" },
+  { code: "ui.route.dashboard.publications", label: "Publication des biens", groupKey: "ui.routes", groupLabel: "Routes accessibles" },
   { code: "ui.route.settings", label: "Parametres", groupKey: "ui.routes", groupLabel: "Routes accessibles" },
   { code: "ui.route.dashboard.properties", label: "Gestion biens", groupKey: "ui.routes", groupLabel: "Routes accessibles" },
   { code: "ui.route.dashboard.agent", label: "Dashboard agent", groupKey: "ui.routes", groupLabel: "Routes accessibles" },
@@ -82,6 +83,7 @@ export const AGENCY_PERMISSIONS = {
   UI_ROUTE_BOOKINGS: "ui.route.bookings",
   UI_ROUTE_MESSAGES: "ui.route.messages",
   UI_ROUTE_NOTIFICATIONS: "ui.route.notifications",
+  UI_ROUTE_PUBLICATIONS: "ui.route.dashboard.publications",
   UI_ROUTE_SETTINGS: "ui.route.settings",
   UI_ROUTE_PROPERTIES: "ui.route.dashboard.properties",
   UI_ROUTE_AGENT_DASHBOARD: "ui.route.dashboard.agent",
@@ -128,6 +130,7 @@ export const AGENCY_ROLE_PERMISSIONS = {
     AGENCY_PERMISSIONS.UI_ROUTE_BOOKINGS,
     AGENCY_PERMISSIONS.UI_ROUTE_MESSAGES,
     AGENCY_PERMISSIONS.UI_ROUTE_NOTIFICATIONS,
+    AGENCY_PERMISSIONS.UI_ROUTE_PUBLICATIONS,
     AGENCY_PERMISSIONS.UI_ROUTE_SETTINGS,
     AGENCY_PERMISSIONS.UI_ROUTE_PROPERTIES,
     AGENCY_PERMISSIONS.UI_ROUTE_AGENCY_DASHBOARD,
@@ -154,6 +157,7 @@ export const AGENCY_ROLE_PERMISSIONS = {
     AGENCY_PERMISSIONS.UI_ROUTE_DASHBOARD_USER,
     AGENCY_PERMISSIONS.UI_ROUTE_MESSAGES,
     AGENCY_PERMISSIONS.UI_ROUTE_NOTIFICATIONS,
+    AGENCY_PERMISSIONS.UI_ROUTE_PUBLICATIONS,
     AGENCY_PERMISSIONS.UI_ROUTE_SETTINGS,
     AGENCY_PERMISSIONS.UI_ROUTE_PROPERTIES,
     AGENCY_PERMISSIONS.UI_ROUTE_AGENCY_DASHBOARD,
@@ -175,6 +179,7 @@ export const AGENCY_ROLE_PERMISSIONS = {
     AGENCY_PERMISSIONS.UI_ROUTE_BOOKINGS,
     AGENCY_PERMISSIONS.UI_ROUTE_MESSAGES,
     AGENCY_PERMISSIONS.UI_ROUTE_NOTIFICATIONS,
+    AGENCY_PERMISSIONS.UI_ROUTE_PUBLICATIONS,
     AGENCY_PERMISSIONS.UI_ROUTE_SETTINGS,
     AGENCY_PERMISSIONS.UI_ROUTE_PROPERTIES,
     AGENCY_PERMISSIONS.UI_TAB_SETTINGS_PROFILE
@@ -192,6 +197,7 @@ export const AGENCY_ROLE_PERMISSIONS = {
     AGENCY_PERMISSIONS.UI_ROUTE_BOOKINGS,
     AGENCY_PERMISSIONS.UI_ROUTE_MESSAGES,
     AGENCY_PERMISSIONS.UI_ROUTE_NOTIFICATIONS,
+    AGENCY_PERMISSIONS.UI_ROUTE_PUBLICATIONS,
     AGENCY_PERMISSIONS.UI_ROUTE_SETTINGS,
     AGENCY_PERMISSIONS.UI_TAB_SETTINGS_PROFILE
   ],
@@ -204,6 +210,7 @@ export const AGENCY_ROLE_PERMISSIONS = {
     AGENCY_PERMISSIONS.TEAM_PERFORMANCE_READ,
     AGENCY_PERMISSIONS.UI_ROUTE_DASHBOARD_USER,
     AGENCY_PERMISSIONS.UI_ROUTE_NOTIFICATIONS,
+    AGENCY_PERMISSIONS.UI_ROUTE_PUBLICATIONS,
     AGENCY_PERMISSIONS.UI_ROUTE_SETTINGS,
     AGENCY_PERMISSIONS.UI_TAB_SETTINGS_PROFILE
   ]

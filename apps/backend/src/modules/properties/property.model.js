@@ -60,6 +60,8 @@ const propertySchema = new mongoose.Schema(
     },
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     agencyId: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", default: null },
+    reservedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    reservedAt: { type: Date, default: null },
     viewCount: { type: Number, default: 0 },
     favoriteCount: { type: Number, default: 0 },
     averageRating: { type: Number, default: 0 }

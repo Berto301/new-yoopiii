@@ -137,6 +137,7 @@ export const propertyCollectionSchema = z.object({
   body: z.object({}).default({}),
   params: z.object({}).default({}),
   query: z.object({
+    agentId: objectIdSchema.optional(),
     limit: numberFromQuery("limit").min(1).max(100).default(20),
     page: numberFromQuery("page").min(1).default(1)
   })

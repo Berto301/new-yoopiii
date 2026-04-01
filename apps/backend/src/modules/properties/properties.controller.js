@@ -6,10 +6,13 @@ import {
   deleteManagedProperty,
   duplicateManagedProperty,
   getManagedProperties,
+  getPropertyPublications,
   getPropertyFavorites,
   getPropertyHistory,
   markPropertyAsViewed,
+  releasePropertyReservation,
   removePropertyFromFavorites,
+  reserveProperty,
   searchNearbyProperties,
   searchPropertiesInBounds,
   updateManagedProperty,
@@ -52,6 +55,15 @@ export const getPropertiesInBounds = async (req, res) => {
 
 export const getManagedPropertiesHandler = async (req, res) => {
   const data = await getManagedProperties({
+    user: req.user,
+    filters: req.validated.query
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const getPropertyPublicationsHandler = async (req, res) => {
+  const data = await getPropertyPublications({
     user: req.user,
     filters: req.validated.query
   });
@@ -120,6 +132,24 @@ export const deletePropertyFavoriteHandler = async (req, res) => {
   const data = await removePropertyFromFavorites({
     propertyId: req.validated.params.propertyId,
     userId: req.user.id
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const postPropertyReservationHandler = async (req, res) => {
+  const data = await reserveProperty({
+    propertyId: req.validated.params.propertyId,
+    user: req.user
+  });
+
+  res.status(StatusCodes.CREATED).json({ success: true, data });
+};
+
+export const postPropertyReservationReleaseHandler = async (req, res) => {
+  const data = await releasePropertyReservation({
+    propertyId: req.validated.params.propertyId,
+    actor: req.user
   });
 
   res.status(StatusCodes.OK).json({ success: true, data });

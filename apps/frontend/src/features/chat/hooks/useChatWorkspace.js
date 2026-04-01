@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
+import { useSearchParams } from "react-router-dom";
 import { selectAccessToken, selectCurrentUser } from "../../../app/store/session.store.js";
 import { connectSocketWithToken, socket } from "../../../lib/socket/socket.js";
 import {
@@ -23,6 +24,7 @@ export const useChatWorkspace = () => {
   const user = useSelector(selectCurrentUser);
   const accessToken = useSelector(selectAccessToken);
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [draftMessage, setDraftMessage] = useState("");
   const [typingByConversation, setTypingByConversation] = useState({});
@@ -39,6 +41,14 @@ export const useChatWorkspace = () => {
     queryFn: getUnreadConversationCount,
     enabled: Boolean(user)
   });
+
+  useEffect(() => {
+    const conversationIdFromQuery = searchParams.get("conversationId");
+
+    if (conversationIdFromQuery) {
+      setSelectedConversationId(conversationIdFromQuery);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!selectedConversationId && conversationsQuery.data?.length) {

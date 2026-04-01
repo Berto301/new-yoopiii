@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../../core/errors/app-error.js";
 import { Booking } from "../../bookings/booking.model.js";
@@ -28,12 +29,14 @@ const resolveRolePermissions = async (roleTemplateId, fallbackPermissions = []) 
   return roleTemplate?.permissions?.length ? roleTemplate.permissions : fallbackPermissions;
 };
 
-const syncUserRolePermission = async ({ userId, roleTemplateId }) => {
+const syncAgencyMemberUserAccess = async ({ userId, agencyId = null, roleTemplateId = null, isActiveMember = true }) => {
   await User.updateOne(
     { _id: userId },
     {
       $set: {
-        permissionId: roleTemplateId || null
+        role: isActiveMember ? "agency_agent" : "user",
+        agencyId: isActiveMember ? agencyId : null,
+        permissionId: isActiveMember ? roleTemplateId || null : null
       }
     }
   );
@@ -87,12 +90,53 @@ export const ensureAgencyAccess = async ({ agencyId, userId, permission = null }
 
 export const listAgencyMembers = async ({ agencyId, userId, permission }) => {
   await ensureAgencyAccess({ agencyId, userId, permission });
-  return AgencyMember.find({ agencyId, status: { $ne: "removed" } }).sort({ createdAt: -1 }).lean();
+  const members = await AgencyMember.find({ agencyId, status: { $ne: "removed" } })
+    .populate("userId", "firstName lastName email phone status")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return members.map((member) => {
+    const linkedUser = member.userId && typeof member.userId === "object" ? member.userId : null;
+
+    return {
+      ...member,
+      userId: linkedUser?._id || member.userId,
+      firstName: linkedUser?.firstName || "",
+      lastName: linkedUser?.lastName || "",
+      email: linkedUser?.email || "",
+      phone: linkedUser?.phone || "",
+      userStatus: linkedUser?.status || null
+    };
+  });
 };
 
 export const createAgencyMember = async ({ agencyId, actorUserId, payload, permission }) => {
   await ensureAgencyAccess({ agencyId, userId: actorUserId, permission });
-  const targetUser = await User.findById(payload.userId).select("_id status").lean();
+  let targetUser = null;
+
+  if (payload.userId) {
+    targetUser = await User.findById(payload.userId).select("_id status").lean();
+  } else if (payload.user) {
+    const existingUser = await User.findOne({ email: payload.user.email }).lean();
+
+    if (existingUser) {
+      throw new AppError("Email already in use", StatusCodes.CONFLICT);
+    }
+
+    const generatedPasswordHash = await User.hashPassword(crypto.randomUUID());
+
+    targetUser = await User.create({
+      firstName: payload.user.firstName,
+      lastName: payload.user.lastName,
+      email: payload.user.email,
+      phone: payload.user.phone || "",
+      role: "agency_agent",
+      agencyId,
+      permissionId: payload.permissionId || null,
+      passwordHash: generatedPasswordHash,
+      status: "active"
+    });
+  }
 
   if (!targetUser || targetUser.status !== "active") {
     throw new AppError("Target user not found", StatusCodes.NOT_FOUND);
@@ -105,15 +149,21 @@ export const createAgencyMember = async ({ agencyId, actorUserId, payload, permi
 
   const member = await AgencyMember.create({
     agencyId,
-    userId: payload.userId,
+    userId: targetUser._id,
     role: payload.role,
     permissionId: assignedRoleId,
     permissions: resolvedPermissions,
+    status: payload.status || "invited",
     invitedBy: actorUserId,
     jobTitle: payload.jobTitle || ""
   });
 
-  await syncUserRolePermission({ userId: payload.userId, roleTemplateId: assignedRoleId });
+  await syncAgencyMemberUserAccess({
+    userId: targetUser._id,
+    agencyId,
+    roleTemplateId: assignedRoleId,
+    isActiveMember: true
+  });
 
   return member.toObject();
 };
@@ -130,6 +180,29 @@ export const updateAgencyMember = async ({ agencyId, memberId, actorUserId, payl
     throw new AppError("Owner membership cannot be modified here", StatusCodes.BAD_REQUEST);
   }
 
+  if (payload.user) {
+    const existingUser = await User.findById(member.userId);
+
+    if (!existingUser) {
+      throw new AppError("Target user not found", StatusCodes.NOT_FOUND);
+    }
+
+    if (payload.user.email && payload.user.email !== existingUser.email) {
+      const duplicateUser = await User.findOne({ email: payload.user.email, _id: { $ne: existingUser._id } }).lean();
+
+      if (duplicateUser) {
+        throw new AppError("Email already in use", StatusCodes.CONFLICT);
+      }
+    }
+
+    if (payload.user.firstName !== undefined) existingUser.firstName = payload.user.firstName;
+    if (payload.user.lastName !== undefined) existingUser.lastName = payload.user.lastName;
+    if (payload.user.email !== undefined) existingUser.email = payload.user.email;
+    if (payload.user.phone !== undefined) existingUser.phone = payload.user.phone || "";
+
+    await existingUser.save();
+  }
+
   if (payload.role) member.role = payload.role;
   if (payload.status) member.status = payload.status;
   if (payload.jobTitle !== undefined) member.jobTitle = payload.jobTitle;
@@ -139,11 +212,17 @@ export const updateAgencyMember = async ({ agencyId, memberId, actorUserId, payl
     member.permissions = payload.permissions?.length
       ? payload.permissions
       : await resolveRolePermissions(member.permissionId, AGENCY_ROLE_PERMISSIONS[member.role] || []);
-
-    await syncUserRolePermission({ userId: member.userId, roleTemplateId: member.permissionId });
   }
 
   await member.save();
+
+  await syncAgencyMemberUserAccess({
+    userId: member.userId,
+    agencyId,
+    roleTemplateId: member.permissionId,
+    isActiveMember: member.status !== "removed"
+  });
+
   return member.toObject();
 };
 
@@ -157,7 +236,11 @@ export const removeAgencyMember = async ({ agencyId, memberId, actorUserId, perm
 
   member.status = "removed";
   await member.save();
-  await syncUserRolePermission({ userId: member.userId, roleTemplateId: null });
+  await syncAgencyMemberUserAccess({
+    userId: member.userId,
+    roleTemplateId: null,
+    isActiveMember: false
+  });
   return { success: true };
 };
 

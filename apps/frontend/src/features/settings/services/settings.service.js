@@ -5,6 +5,11 @@ export const getMyProfile = async () => {
   return response.data.data;
 };
 
+export const getUsers = async () => {
+  const response = await apiClient.get("/users");
+  return response.data.data;
+};
+
 export const updateMyProfile = async (payload) => {
   const response = await apiClient.patch("/users/me/profile", payload);
   return response.data.data;
@@ -57,5 +62,20 @@ export const deleteAgencyRole = async ({ agencyId, roleId }) => {
 
 export const getAgencyMembers = async (agencyId) => {
   const response = await apiClient.get(`/agencies/${agencyId}/members`);
+  return response.data.data;
+};
+
+export const createAgencyMember = async ({ agencyId, payload }) => {
+  const response = await apiClient.post(`/agencies/${agencyId}/members`, payload);
+  return response.data.data;
+};
+
+export const updateAgencyMember = async ({ agencyId, memberId, payload }) => {
+  const response = await apiClient.patch(`/agencies/${agencyId}/members/${memberId}`, payload);
+  return response.data.data;
+};
+
+export const deleteAgencyMember = async ({ agencyId, memberId }) => {
+  const response = await apiClient.delete(`/agencies/${agencyId}/members/${memberId}`, { data: {} });
   return response.data.data;
 };

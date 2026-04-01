@@ -7,6 +7,7 @@ import { hasPermission } from "../../../helpers/_functions.js";
 import { useNotification } from "../../../hooks/useNotification.js";
 import { useSettingsWorkspace } from "../../../features/settings/hooks/useSettingsWorkspace.js";
 import { DeleteAgencyModal } from "./DeleteAgencyModal.jsx";
+import { ModalManageMember } from "./ModalManageMember.jsx";
 import { SectionAgency } from "./SectionAgency.jsx";
 import { SectionMembers } from "./SectionMembers.jsx";
 import { SectionProfile } from "./SectionProfile.jsx";
@@ -38,11 +39,16 @@ export const SettingsPage = () => {
     updateRoleMutation,
     duplicateRoleMutation,
     deleteRoleMutation,
+    createMemberMutation,
+    updateMemberMutation,
+    deleteMemberMutation,
     deleteAgencyMutation
   } = useSettingsWorkspace();
   const { showSuccess, showError } = useNotification();
   const [activeTab, setActiveTab] = useState("profile");
   const [isDeleteAgencyModalOpen, setIsDeleteAgencyModalOpen] = useState(false);
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
 
   const profileForm = useForm({
     defaultValues: {
@@ -122,6 +128,17 @@ export const SettingsPage = () => {
 
     return membersQuery.data.find((member) => String(member.userId) === String(user.id)) || null;
   }, [membersQuery.data, user?.id]);
+
+  const membersWithUserDetails = useMemo(() => {
+    return (membersQuery.data || []).map((member) => {
+      const matchingRole = (rolesQuery.data || []).find((role) => String(role._id) === String(member.permissionId) || role.key === member.role);
+
+      return {
+        ...member,
+        roleLabel: matchingRole?.name || member.role
+      };
+    });
+  }, [membersQuery.data, rolesQuery.data]);
 
   const currentRoleKey = useMemo(() => {
     if (user?.role === "agency") {
@@ -205,6 +222,72 @@ export const SettingsPage = () => {
     }
   };
 
+  const openCreateMemberModal = () => {
+    setEditingMember(null);
+    setIsMemberModalOpen(true);
+  };
+
+  const openEditMemberModal = (member) => {
+    setEditingMember(member);
+    setIsMemberModalOpen(true);
+  };
+
+  const closeMemberModal = () => {
+    setEditingMember(null);
+    setIsMemberModalOpen(false);
+  };
+
+  const handleSubmitMember = async (values) => {
+    const payload = {
+      user: {
+        firstName: normalizeText(values.firstName),
+        lastName: normalizeText(values.lastName),
+        email: normalizeText(values.email),
+        ...(normalizeText(values.phone) ? { phone: normalizeText(values.phone) } : {})
+      },
+      role: values.role,
+      ...(values.permissionId ? { permissionId: values.permissionId } : {}),
+      ...(values.status ? { status: values.status } : {}),
+      ...(values.jobTitle ? { jobTitle: normalizeText(values.jobTitle) } : { jobTitle: "" })
+    };
+
+    try {
+      if (editingMember?._id) {
+        await updateMemberMutation.mutateAsync({
+          memberId: editingMember._id,
+          payload
+        });
+        showSuccess("Agent mis a jour avec succes.");
+      } else {
+        await createMemberMutation.mutateAsync({
+          userId: values.userId,
+          ...payload
+        });
+        showSuccess("Agent ajoute avec succes.");
+      }
+
+      closeMemberModal();
+    } catch (error) {
+      showError(extractErrorMessage(error, "La gestion de l'agent a echoue."));
+    }
+  };
+
+  const handleDeleteMember = async (member) => {
+    const memberLabel = [member.firstName, member.lastName].filter(Boolean).join(" ").trim() || member.email || member.jobTitle || "cet agent";
+    const confirmed = window.confirm(`Supprimer ${memberLabel} ?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteMemberMutation.mutateAsync(member._id);
+      showSuccess("Agent supprime avec succes.");
+    } catch (error) {
+      showError(extractErrorMessage(error, "La suppression de l'agent a echoue."));
+    }
+  };
+
   const sections = {
     profile: (
       <SectionProfile
@@ -230,7 +313,15 @@ export const SettingsPage = () => {
         deleteRoleMutation={deleteRoleMutation}
       />
     ),
-    members: <SectionMembers members={membersQuery.data || []} />,
+    members: (
+      <SectionMembers
+        members={membersWithUserDetails}
+        onAddMember={openCreateMemberModal}
+        onEditMember={openEditMemberModal}
+        onDeleteMember={handleDeleteMember}
+        isDeletingMember={deleteMemberMutation.isPending}
+      />
+    ),
     agency: (
       <SectionAgency
         agencyForm={agencyForm}
@@ -275,6 +366,16 @@ export const SettingsPage = () => {
         isDeleting={deleteAgencyMutation.isPending}
         onClose={() => setIsDeleteAgencyModalOpen(false)}
         onConfirm={handleDeleteAgency}
+      />
+
+      <ModalManageMember
+        open={isMemberModalOpen}
+        mode={editingMember ? "edit" : "create"}
+        initialMember={editingMember}
+        roleOptions={rolesQuery.data || []}
+        isSaving={createMemberMutation.isPending || updateMemberMutation.isPending}
+        onClose={closeMemberModal}
+        onSubmit={handleSubmitMember}
       />
     </>
   );

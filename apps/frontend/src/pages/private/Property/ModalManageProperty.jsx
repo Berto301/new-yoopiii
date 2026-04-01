@@ -108,7 +108,6 @@ export const ModalManageProperty = ({
 }) => {
   const defaultValues = useMemo(() => mapPropertyToFormValues(property), [property]);
   const {
-    register,
     control,
     handleSubmit,
     reset,
@@ -141,8 +140,18 @@ export const ModalManageProperty = ({
     >
       <form className="space-y-6" onSubmit={(event) => event.preventDefault()}>
         <div className="grid gap-4 md:grid-cols-2">
-          <Input label="Titre" {...register("title", { required: "Le titre est requis" })} error={errors.title?.message} />
-          <Input label="Prix" type="number" {...register("price", { required: "Le prix est requis" })} error={errors.price?.message} />
+          <Controller
+            name="title"
+            control={control}
+            rules={{ required: "Le titre est requis" }}
+            render={({ field }) => <Input label="Titre" error={errors.title?.message} {...field} />}
+          />
+          <Controller
+            name="price"
+            control={control}
+            rules={{ required: "Le prix est requis" }}
+            render={({ field }) => <Input label="Prix" type="number" error={errors.price?.message} {...field} />}
+          />
           <Controller
             name="type"
             control={control}
@@ -157,26 +166,76 @@ export const ModalManageProperty = ({
               <BaseListBox label="Objectif" options={purposeOptions} value={field.value} onChange={field.onChange} error={errors.purpose?.message} />
             )}
           />
-          <Input label="Adresse" {...register("address", { required: "L'adresse est requise" })} error={errors.address?.message} />
-          <Input label="Google Place ID" {...register("googlePlaceId")} placeholder="Autocomplete Google Maps a brancher ici" />
-          <Input label="Latitude" type="number" step="any" {...register("location.lat", { required: "Latitude requise" })} error={errors.location?.lat?.message} />
-          <Input label="Longitude" type="number" step="any" {...register("location.lng", { required: "Longitude requise" })} error={errors.location?.lng?.message} />
-          <Input label="Surface (m2)" type="number" {...register("area")} />
-          <Input label="Pieces" type="number" {...register("rooms")} />
-          <Input label="Chambres" type="number" {...register("bedrooms")} />
-          <Input label="Salles de bain" type="number" {...register("bathrooms")} />
-          <Input label="Devise" {...register("currency")} />
-          <Input label="Image de couverture" {...register("coverImage")} placeholder="https://..." />
+          <Controller
+            name="address"
+            control={control}
+            rules={{ required: "L'adresse est requise" }}
+            render={({ field }) => <Input label="Adresse" error={errors.address?.message} {...field} />}
+          />
+          <Controller
+            name="googlePlaceId"
+            control={control}
+            render={({ field }) => <Input label="Google Place ID" placeholder="Autocomplete Google Maps a brancher ici" {...field} />}
+          />
+          <Controller
+            name="location.lat"
+            control={control}
+            rules={{ required: "Latitude requise" }}
+            render={({ field }) => <Input label="Latitude" type="number" step="any" error={errors.location?.lat?.message} {...field} />}
+          />
+          <Controller
+            name="location.lng"
+            control={control}
+            rules={{ required: "Longitude requise" }}
+            render={({ field }) => <Input label="Longitude" type="number" step="any" error={errors.location?.lng?.message} {...field} />}
+          />
+          <Controller
+            name="area"
+            control={control}
+            render={({ field }) => <Input label="Surface (m2)" type="number" {...field} />}
+          />
+          <Controller
+            name="rooms"
+            control={control}
+            render={({ field }) => <Input label="Pieces" type="number" {...field} />}
+          />
+          <Controller
+            name="bedrooms"
+            control={control}
+            render={({ field }) => <Input label="Chambres" type="number" {...field} />}
+          />
+          <Controller
+            name="bathrooms"
+            control={control}
+            render={({ field }) => <Input label="Salles de bain" type="number" {...field} />}
+          />
+          <Controller
+            name="currency"
+            control={control}
+            render={({ field }) => <Input label="Devise" {...field} />}
+          />
+          <Controller
+            name="coverImage"
+            control={control}
+            render={({ field }) => <Input label="Image de couverture" placeholder="https://..." {...field} />}
+          />
         </div>
 
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-stone-200">Description</span>
-          <textarea
-            className="min-h-32 w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500"
-            {...register("description", { required: "La description est requise" })}
-          />
-          {errors.description ? <span className="text-xs text-red-300">{errors.description.message}</span> : null}
-        </label>
+        <Controller
+          name="description"
+          control={control}
+          rules={{ required: "La description est requise" }}
+          render={({ field }) => (
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-stone-200">Description</span>
+              <textarea
+                className="min-h-32 w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500"
+                {...field}
+              />
+              {errors.description ? <span className="text-xs text-red-300">{errors.description.message}</span> : null}
+            </label>
+          )}
+        />
 
         <Controller
           name="features"
@@ -214,8 +273,16 @@ export const ModalManageProperty = ({
                     <BaseListBox label="Type" options={mediaTypeOptions} value={field.value} onChange={field.onChange} />
                   )}
                 />
-                <Input label="URL" {...register(`media.${index}.url`)} placeholder="https://..." />
-                <Input label="Thumbnail" {...register(`media.${index}.thumbnailUrl`)} placeholder="https://..." />
+                <Controller
+                  name={`media.${index}.url`}
+                  control={control}
+                  render={({ field }) => <Input label="URL" placeholder="https://..." {...field} />}
+                />
+                <Controller
+                  name={`media.${index}.thumbnailUrl`}
+                  control={control}
+                  render={({ field }) => <Input label="Thumbnail" placeholder="https://..." {...field} />}
+                />
                 <div className="flex items-end">
                   <Button type="button" variant="ghost" className="px-4 py-2" onClick={() => remove(index)}>
                     Supprimer
@@ -227,11 +294,28 @@ export const ModalManageProperty = ({
         </div>
 
         <div className="space-y-4 rounded-3xl border border-white/10 p-4">
-          <label className="flex items-center gap-3 text-sm text-stone-200">
-            <input type="checkbox" className="h-4 w-4 rounded border-white/10 bg-stone-900/70" {...register("has3DView")} />
-            Activer la version 3D du bien
-          </label>
-          {has3DView ? <Input label="URL visite 3D" {...register("threeDUrl")} placeholder="https://my.matterport.com/..." /> : null}
+          <Controller
+            name="has3DView"
+            control={control}
+            render={({ field }) => (
+              <label className="flex items-center gap-3 text-sm text-stone-200">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-white/10 bg-stone-900/70"
+                  checked={Boolean(field.value)}
+                  onChange={(event) => field.onChange(event.target.checked)}
+                />
+                Activer la version 3D du bien
+              </label>
+            )}
+          />
+          {has3DView ? (
+            <Controller
+              name="threeDUrl"
+              control={control}
+              render={({ field }) => <Input label="URL visite 3D" placeholder="https://my.matterport.com/..." {...field} />}
+            />
+          ) : null}
         </div>
       </form>
     </ModalLayout>

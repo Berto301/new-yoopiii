@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 import { Agency } from "../agencies/agency.model.js";
 import { AgencyMember } from "../agencies/models/agency-member.model.js";
+import { Booking } from "../bookings/booking.model.js";
 import { createNotifications } from "../notifications/notifications.service.js";
 import { PropertyFavorite } from "./models/property-favorite.model.js";
 import { PropertyView } from "./models/property-view.model.js";
@@ -162,7 +163,7 @@ const buildMapMarker = (property) => ({
 });
 
 const mapPropertyListItem = (property, favoriteIds = new Set()) => ({
-  id: String(property._id),
+  id: String(property._id || property.id),
   title: property.title,
   slug: property.slug,
   description: property.description,
@@ -185,12 +186,20 @@ const mapPropertyListItem = (property, favoriteIds = new Set()) => ({
   publicationStatus: property.publicationStatus,
   averageRating: property.averageRating,
   favoriteCount: property.favoriteCount || 0,
-  agentId: property.agentId,
-  agencyId: property.agencyId,
+  agentId: property.agentId?._id ? String(property.agentId._id) : property.agentId,
+  agentName:
+    property.agentName ||
+    [property.agentId?.firstName, property.agentId?.lastName].filter(Boolean).join(" ").trim() ||
+    "Agent",
+  agencyId: property.agencyId?._id ? String(property.agencyId._id) : property.agencyId,
+  agencyName: property.agencyName || property.agencyId?.name || null,
   ownerType: property.ownerType,
+  reservedByUserId: property.reservedByUserId?._id ? String(property.reservedByUserId._id) : property.reservedByUserId || null,
+  reservedAt: property.reservedAt || null,
   distanceInMeters: property.distanceInMeters ?? null,
   distanceInKm: property.distanceInKm ?? null,
   isFavorite: favoriteIds.has(String(property._id)),
+  isReserved: property.status === "reserved",
   mapMarker: buildMapMarker(property),
   createdAt: property.createdAt,
   updatedAt: property.updatedAt
@@ -297,6 +306,43 @@ const createFavoriteNotification = async ({ userId, property, action }) => {
       channel: "in_app"
     }
   ]);
+};
+
+const createReservationNotifications = async ({ property, userId, action }) => {
+  const recipientIds = new Set();
+
+  if (property.agentId) {
+    recipientIds.add(String(property.agentId?._id || property.agentId));
+  }
+
+  if (property.agencyId) {
+    const agency = await Agency.findById(property.agencyId).select("ownerUserId").lean();
+    if (agency?.ownerUserId) {
+      recipientIds.add(String(agency.ownerUserId));
+    }
+  }
+
+  if (userId) {
+    recipientIds.add(String(userId));
+  }
+
+  await createNotifications(
+    [...recipientIds].map((recipientId) => ({
+      userId: recipientId,
+      type: action === "reserved" ? "property_reserved" : "property_reservation_released",
+      title: action === "reserved" ? "Bien reserve" : "Reservation annulee",
+      body:
+        action === "reserved"
+          ? `${property.title} est maintenant reserve.`
+          : `${property.title} n'est plus reserve et redevient disponible.`,
+      data: {
+        propertyId: property._id,
+        slug: property.slug,
+        reservedByUserId: userId
+      },
+      channel: "in_app"
+    }))
+  );
 };
 
 const ensurePropertyExists = async (propertyId) => {
@@ -450,6 +496,39 @@ export const getManagedProperties = async ({ user, filters }) => {
   return { items: items.map((item) => mapPropertyListItem(item)), summary, pagination: buildPagination({ page, limit, total, itemsLength: items.length }), appliedFilters: { scope: filters.scope || (user.role === "agency" ? "agency" : "own"), status: filters.status || null, publicationStatus: filters.publicationStatus || null } };
 };
 
+export const getPropertyPublications = async ({ user, filters }) => {
+  const page = filters.page || 1;
+  const limit = filters.limit || 20;
+  const skip = (page - 1) * limit;
+  const query = {
+    publicationStatus: "approved",
+    status: { $in: ["published", "reserved"] },
+    ...(filters.agentId ? { agentId: filters.agentId } : {})
+  };
+
+  const [items, total] = await Promise.all([
+    Property.find(query)
+      .populate("agentId", "firstName lastName")
+      .populate("agencyId", "name")
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Property.countDocuments(query)
+  ]);
+
+  const favoriteIds = await loadFavoriteIdsForUser(user?.id, items.map((item) => item._id));
+
+  return {
+    items: items.map((item) => ({
+      ...mapPropertyListItem(item, favoriteIds),
+      isReservedByCurrentUser: String(item.reservedByUserId || "") === String(user?.id || "")
+    })),
+    pagination: buildPagination({ page, limit, total, itemsLength: items.length }),
+    appliedFilters: { agentId: filters.agentId || null }
+  };
+};
+
 export const createManagedProperty = async ({ actor, payload }) => {
   if (!["agency", "agency_agent", "independent_agent"].includes(actor.role)) throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
   const data = await buildManagedPropertyPayload({ actor, payload });
@@ -497,6 +576,10 @@ export const updatePropertyWorkflow = async ({ propertyId, actor, payload }) => 
   const previousPublicationStatus = property.publicationStatus;
   if (payload.status) property.status = payload.status;
   if (payload.publicationStatus) property.publicationStatus = payload.publicationStatus;
+  if (payload.status && payload.status !== "reserved") {
+    property.reservedByUserId = null;
+    property.reservedAt = null;
+  }
   await property.save();
   if (previousStatus !== property.status || previousPublicationStatus !== property.publicationStatus) {
     await createPropertyWorkflowNotifications({ property, actor, previousStatus, previousPublicationStatus });
@@ -525,6 +608,121 @@ export const removePropertyFromFavorites = async ({ propertyId, userId }) => {
   }
   const refreshed = await Property.findById(propertyId).lean();
   return { property: mapPropertyListItem(refreshed), favoriteState: false };
+};
+
+export const reserveProperty = async ({ propertyId, user }) => {
+  const property = await ensurePropertyExists(propertyId);
+
+  if (property.publicationStatus !== "approved" || property.status === "draft" || property.status === "archived") {
+    throw new AppError("Property is not available for reservation", StatusCodes.BAD_REQUEST);
+  }
+
+  if (String(property.agentId) === String(user.id)) {
+    throw new AppError("Agents cannot reserve their own property", StatusCodes.BAD_REQUEST);
+  }
+
+  if (property.status === "reserved") {
+    if (String(property.reservedByUserId || "") === String(user.id)) {
+      return {
+        property: {
+          ...mapPropertyListItem(property.toObject()),
+          isReservedByCurrentUser: true
+        },
+        reservationState: true
+      };
+    }
+
+    throw new AppError("Property already reserved", StatusCodes.CONFLICT);
+  }
+
+  property.status = "reserved";
+  property.reservedByUserId = user.id;
+  property.reservedAt = new Date();
+  await property.save();
+
+  await Booking.findOneAndUpdate(
+    {
+      propertyId: property._id,
+      userId: user.id,
+      status: { $in: ["pending", "confirmed"] }
+    },
+    {
+      $set: {
+        agentId: property.agentId,
+        agencyId: property.agencyId || null,
+        requestedDate: new Date(),
+        timeSlot: "Reservation immediate",
+        message: "Reservation effectuee depuis les publications.",
+        status: "confirmed",
+        source: "property_page"
+      }
+    },
+    {
+      upsert: true,
+      new: true
+    }
+  );
+
+  await createReservationNotifications({ property, userId: user.id, action: "reserved" });
+
+  return {
+    property: {
+      ...mapPropertyListItem(property.toObject()),
+      isReservedByCurrentUser: true
+    },
+    reservationState: true
+  };
+};
+
+export const releasePropertyReservation = async ({ propertyId, actor }) => {
+  const property = await ensurePropertyExists(propertyId);
+  ensurePropertyManagementAccess(property, actor);
+
+  if (property.status !== "reserved") {
+    return {
+      property: mapPropertyListItem(property.toObject()),
+      reservationState: false
+    };
+  }
+
+  const previousStatus = property.status;
+  const previousPublicationStatus = property.publicationStatus;
+  const reservedByUserId = property.reservedByUserId;
+
+  property.status = "published";
+  property.reservedByUserId = null;
+  property.reservedAt = null;
+  await property.save();
+
+  if (reservedByUserId) {
+    await Booking.updateMany(
+      {
+        propertyId: property._id,
+        userId: reservedByUserId,
+        status: { $in: ["pending", "confirmed"] }
+      },
+      {
+        $set: {
+          status: "cancelled",
+          message: "Reservation annulee manuellement par l'agent."
+        }
+      }
+    );
+  }
+
+  await createReservationNotifications({ property, userId: reservedByUserId, action: "released" });
+  await createPropertyWorkflowNotifications({
+    property,
+    actor,
+    previousStatus,
+    previousPublicationStatus,
+    eventType: "property_reservation_released"
+  });
+
+  return {
+    property: mapPropertyListItem(property.toObject()),
+    reservationState: false
+  };
 };
 
 export const getPropertyFavorites = async ({ userId, filters }) => {

@@ -6,19 +6,40 @@ import { User } from "../users/user.model.js";
 import { Conversation } from "./conversation.model.js";
 import { Message } from "./message.model.js";
 
-const formatConversation = (conversation) => ({
-  id: conversation._id,
-  type: conversation.type,
-  participantIds: conversation.participantIds,
-  propertyId: conversation.propertyId,
-  lastMessageId: conversation.lastMessageId,
-  lastMessageAt: conversation.lastMessageAt,
-  lastMessagePreview: conversation.lastMessagePreview,
-  createdBy: conversation.createdBy,
-  isActive: conversation.isActive,
-  createdAt: conversation.createdAt,
-  updatedAt: conversation.updatedAt
-});
+const formatConversation = (conversation) => {
+  const participantProfiles = (conversation.participantIds || []).map((participant) => {
+    if (participant && typeof participant === "object" && participant._id) {
+      return {
+        id: String(participant._id),
+        firstName: participant.firstName || "",
+        lastName: participant.lastName || "",
+        email: participant.email || ""
+      };
+    }
+
+    return {
+      id: String(participant),
+      firstName: "",
+      lastName: "",
+      email: ""
+    };
+  });
+
+  return {
+    id: conversation._id,
+    type: conversation.type,
+    participantIds: participantProfiles.map((participant) => participant.id),
+    participantProfiles,
+    propertyId: conversation.propertyId,
+    lastMessageId: conversation.lastMessageId,
+    lastMessageAt: conversation.lastMessageAt,
+    lastMessagePreview: conversation.lastMessagePreview,
+    createdBy: conversation.createdBy,
+    isActive: conversation.isActive,
+    createdAt: conversation.createdAt,
+    updatedAt: conversation.updatedAt
+  };
+};
 
 const formatMessage = (message) => ({
   id: message._id,
@@ -54,6 +75,7 @@ export const listUserConversations = async (userId) => {
     participantIds: userId,
     isActive: true
   })
+    .populate("participantIds", "firstName lastName email")
     .sort({ lastMessageAt: -1, updatedAt: -1 })
     .limit(100)
     .lean();
@@ -62,8 +84,19 @@ export const listUserConversations = async (userId) => {
 };
 
 export const getConversationById = async (conversationId, userId) => {
-  const conversation = await ensureConversationParticipant(conversationId, userId);
-  return formatConversation(conversation.toObject());
+  const conversation = await Conversation.findOne({
+    _id: conversationId,
+    participantIds: userId,
+    isActive: true
+  })
+    .populate("participantIds", "firstName lastName email")
+    .lean();
+
+  if (!conversation) {
+    throw new AppError("Conversation not found or forbidden", StatusCodes.FORBIDDEN);
+  }
+
+  return formatConversation(conversation);
 };
 
 export const createOrGetPrivateConversation = async ({ userId, participantId, propertyId = null }) => {
@@ -83,10 +116,10 @@ export const createOrGetPrivateConversation = async ({ userId, participantId, pr
     participantIds: { $all: normalizedParticipants, $size: 2 },
     propertyId,
     isActive: true
-  });
+  }).populate("participantIds", "firstName lastName email");
 
   if (existingConversation) {
-    return formatConversation(existingConversation.toObject());
+  return formatConversation(existingConversation.toObject());
   }
 
   const conversation = await Conversation.create({
@@ -96,7 +129,11 @@ export const createOrGetPrivateConversation = async ({ userId, participantId, pr
     createdBy: userId
   });
 
-  return formatConversation(conversation.toObject());
+  const populatedConversation = await Conversation.findById(conversation._id)
+    .populate("participantIds", "firstName lastName email")
+    .lean();
+
+  return formatConversation(populatedConversation);
 };
 
 export const listConversationMessages = async ({ conversationId, userId, page = 1, limit = 30 }) => {

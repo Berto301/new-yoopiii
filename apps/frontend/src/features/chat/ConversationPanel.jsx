@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+ï»¿import { useMemo } from "react";
 import { Button } from "../../components/ui/Button.jsx";
 import { Input } from "../../components/ui/Input.jsx";
 import { useChatWorkspace } from "./hooks/useChatWorkspace.js";
@@ -14,6 +14,11 @@ const formatTimestamp = (value) => {
     day: "2-digit",
     month: "2-digit"
   }).format(new Date(value));
+};
+
+const formatParticipantName = (participant) => {
+  const fullName = [participant?.firstName, participant?.lastName].filter(Boolean).join(" ").trim();
+  return fullName || participant?.email || participant?.id || "-";
 };
 
 export const ConversationPanel = () => {
@@ -41,9 +46,9 @@ export const ConversationPanel = () => {
       return "Selectionnez une conversation";
     }
 
-    return selectedConversation.participantIds
-      .filter((participantId) => participantId !== user?.id)
-      .map((participantId) => `${participantId}${onlineUsers[participantId] ? " • en ligne" : " • hors ligne"}`)
+    return (selectedConversation.participantProfiles || [])
+      .filter((participant) => participant.id !== user?.id)
+      .map((participant) => `${formatParticipantName(participant)}${onlineUsers[participant.id] ? " â€¢ en ligne" : " â€¢ hors ligne"}`)
       .join(", ");
   }, [onlineUsers, selectedConversation, user?.id]);
 
@@ -63,7 +68,9 @@ export const ConversationPanel = () => {
         <div className="mt-4 space-y-3">
           {conversations.map((conversation) => {
             const isActive = conversation.id === selectedConversationId;
-            const peerIds = conversation.participantIds.filter((participantId) => participantId !== user?.id);
+            const peerNames = (conversation.participantProfiles || [])
+              .filter((participant) => participant.id !== user?.id)
+              .map((participant) => formatParticipantName(participant));
 
             return (
               <button
@@ -76,7 +83,7 @@ export const ConversationPanel = () => {
                 }
               >
                 <p className="text-sm font-semibold text-white">{conversation.lastMessagePreview || "Nouvelle conversation"}</p>
-                <p className="mt-1 text-xs text-stone-400">Participants: {peerIds.join(", ") || "-"}</p>
+                <p className="mt-1 text-xs text-stone-400">Participants: {peerNames.join(", ") || "-"}</p>
                 <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-500">
                   {conversation.lastMessageAt ? formatTimestamp(conversation.lastMessageAt) : "Aucun message"}
                 </p>
@@ -108,7 +115,7 @@ export const ConversationPanel = () => {
               >
                 <p className="text-sm text-white">{message.content}</p>
                 <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">
-                  {message.status} • {formatTimestamp(message.readAt || message.deliveredAt || message.createdAt)}
+                  {message.status} â€¢ {formatTimestamp(message.readAt || message.deliveredAt || message.createdAt)}
                 </p>
               </div>
             );

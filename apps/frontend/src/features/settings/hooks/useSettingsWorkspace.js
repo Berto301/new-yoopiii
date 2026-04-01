@@ -3,7 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { logoutSuccess, selectAgencyId, selectCurrentUser, updateSessionUser } from "../../../app/store/session.store.js";
 import {
   changeMyPassword,
+  createAgencyMember,
   createAgencyRole,
+  deleteAgencyMember,
   deleteAgency,
   deleteAgencyRole,
   duplicateAgencyRole,
@@ -12,6 +14,7 @@ import {
   getAgencyRoles,
   getMyProfile,
   updateAgencyProfile,
+  updateAgencyMember,
   updateAgencyRole,
   updateMyProfile
 } from "../services/settings.service.js";
@@ -93,6 +96,33 @@ export const useSettingsWorkspace = () => {
     }
   });
 
+  const createMemberMutation = useMutation({
+    mutationFn: (payload) => createAgencyMember({ agencyId, payload }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agency-members-settings", agencyId] });
+      queryClient.invalidateQueries({ queryKey: ["agency-members", agencyId] });
+      queryClient.invalidateQueries({ queryKey: ["agency-dashboard-summary"] });
+    }
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: ({ memberId, payload }) => updateAgencyMember({ agencyId, memberId, payload }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agency-members-settings", agencyId] });
+      queryClient.invalidateQueries({ queryKey: ["agency-members", agencyId] });
+      queryClient.invalidateQueries({ queryKey: ["agency-dashboard-summary"] });
+    }
+  });
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: (memberId) => deleteAgencyMember({ agencyId, memberId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agency-members-settings", agencyId] });
+      queryClient.invalidateQueries({ queryKey: ["agency-members", agencyId] });
+      queryClient.invalidateQueries({ queryKey: ["agency-dashboard-summary"] });
+    }
+  });
+
   const deleteAgencyMutation = useMutation({
     mutationFn: () => deleteAgency(agencyId),
     onSuccess: () => {
@@ -115,6 +145,9 @@ export const useSettingsWorkspace = () => {
     updateRoleMutation,
     duplicateRoleMutation,
     deleteRoleMutation,
+    createMemberMutation,
+    updateMemberMutation,
+    deleteMemberMutation,
     deleteAgencyMutation
   };
 };

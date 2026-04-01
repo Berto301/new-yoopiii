@@ -8,14 +8,17 @@ import {
   duplicateManagedPropertyHandler,
   getFavoritePropertiesHandler,
   getManagedPropertiesHandler,
+  getPropertyPublicationsHandler,
   getNearbyProperties,
   getProperties,
   getPropertiesInBounds,
   getPropertyHistoryHandler,
   patchManagedPropertyHandler,
   patchPropertyWorkflowHandler,
+  postPropertyReservationHandler,
   postManagedPropertyHandler,
   postPropertyFavoriteHandler,
+  postPropertyReservationReleaseHandler,
   postPropertyViewHandler
 } from "./properties.controller.js";
 import {
@@ -37,6 +40,7 @@ propertyRouter.get("/search/nearby", validate(nearbyPropertiesSchema), asyncHand
 propertyRouter.get("/search/bounds", validate(boundedPropertiesSchema), asyncHandler(getPropertiesInBounds));
 propertyRouter.get("/", asyncHandler(getProperties));
 propertyRouter.use(asyncHandler(requireAuth));
+propertyRouter.get("/publications/feed", validate(propertyCollectionSchema), asyncHandler(getPropertyPublicationsHandler));
 propertyRouter.get("/management/mine", validate(managedPropertiesSchema), asyncHandler(getManagedPropertiesHandler));
 propertyRouter.post("/management", validate(createManagedPropertySchema), asyncHandler(postManagedPropertyHandler));
 propertyRouter.patch("/management/:propertyId", validate(updateManagedPropertySchema), asyncHandler(patchManagedPropertyHandler));
@@ -47,4 +51,6 @@ propertyRouter.get("/history/me", validate(propertyCollectionSchema), asyncHandl
 propertyRouter.patch("/:propertyId/workflow", validate(propertyWorkflowSchema), asyncHandler(patchPropertyWorkflowHandler));
 propertyRouter.post("/:propertyId/favorite", validate(propertyIdParamsSchema), asyncHandler(postPropertyFavoriteHandler));
 propertyRouter.delete("/:propertyId/favorite", validate(propertyIdParamsSchema), asyncHandler(deletePropertyFavoriteHandler));
+propertyRouter.post("/:propertyId/reserve", validate(propertyIdParamsSchema), asyncHandler(postPropertyReservationHandler));
+propertyRouter.post("/:propertyId/release-reservation", validate(propertyIdParamsSchema), asyncHandler(postPropertyReservationReleaseHandler));
 propertyRouter.post("/:propertyId/view", validate(propertyHistoryCreateSchema), asyncHandler(postPropertyViewHandler));

@@ -6,10 +6,13 @@ import {
   createManagedProperty,
   deleteManagedProperty,
   duplicateManagedProperty,
+  getPropertyPublications,
   getFavoriteProperties,
   getManagedProperties,
   getPropertyHistory,
+  releasePropertyReservation,
   removePropertyFromFavorites,
+  reserveProperty,
   updateManagedProperty,
   updatePropertyWorkflow
 } from "../services/property.service.js";
@@ -35,6 +38,12 @@ export const usePropertyWorkspace = () => {
     enabled: Boolean(user)
   });
 
+  const propertyPublicationsQuery = useQuery({
+    queryKey: ["property-publications", user?.id],
+    queryFn: () => getPropertyPublications({ page: 1, limit: 30 }),
+    enabled: Boolean(user)
+  });
+
   const propertyHistoryQuery = useQuery({
     queryKey: ["property-history", user?.id],
     queryFn: () => getPropertyHistory({ page: 1, limit: 10 }),
@@ -51,6 +60,20 @@ export const usePropertyWorkspace = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["favorite-properties"] });
       queryClient.invalidateQueries({ queryKey: ["property-history"] });
+      queryClient.invalidateQueries({ queryKey: ["property-publications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      invalidateManaged();
+    }
+  });
+
+  const reservationMutation = useMutation({
+    mutationFn: ({ propertyId, action }) =>
+      action === "release" ? releasePropertyReservation(propertyId) : reserveProperty(propertyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["property-publications"] });
+      queryClient.invalidateQueries({ queryKey: ["favorite-properties"] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
       invalidateManaged();
     }
   });
@@ -94,8 +117,10 @@ export const usePropertyWorkspace = () => {
     user,
     managedPropertiesQuery,
     favoritePropertiesQuery,
+    propertyPublicationsQuery,
     propertyHistoryQuery,
     favoriteMutation,
+    reservationMutation,
     workflowMutation,
     createManagedPropertyMutation,
     updateManagedPropertyMutation,
