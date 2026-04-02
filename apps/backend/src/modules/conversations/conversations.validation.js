@@ -23,6 +23,14 @@ export const conversationIdParamsSchema = z.object({
   query: z.object({}).default({})
 });
 
+export const conversationParticipantParamsSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({
+    participantId: objectIdSchema
+  }),
+  query: z.object({}).default({})
+});
+
 export const conversationMessagesQuerySchema = z.object({
   body: z.object({}).default({}),
   params: z.object({

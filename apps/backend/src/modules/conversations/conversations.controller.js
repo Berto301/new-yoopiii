@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import {
   createConversationMessage,
   createOrGetPrivateConversation,
+  deletePrivateConversationsBetweenUsers,
   getConversationById,
   getUnreadMessagesCount,
   listConversationMessages,
@@ -84,6 +85,18 @@ export const readMessage = async (req, res) => {
 
 export const getUnreadCount = async (req, res) => {
   const result = await getUnreadMessagesCount(req.user.id);
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data: result
+  });
+};
+
+export const deleteConversationWithParticipant = async (req, res) => {
+  const result = await deletePrivateConversationsBetweenUsers({
+    userId: req.user.id,
+    participantId: req.validated.params.participantId
+  });
 
   res.status(StatusCodes.OK).json({
     success: true,

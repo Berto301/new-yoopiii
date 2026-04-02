@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useFieldArray, useForm, Controller } from "react-hook-form";
 import { Input } from "../../../components/ui/Input.jsx";
 import { ModalLayout } from "../../../components/layout/modals/ModalLayout.jsx";
@@ -107,6 +107,7 @@ export const ModalManageProperty = ({
   isSaving = false
 }) => {
   const defaultValues = useMemo(() => mapPropertyToFormValues(property), [property]);
+  console.log({property, defaultValues})
   const {
     control,
     handleSubmit,
@@ -119,6 +120,12 @@ export const ModalManageProperty = ({
   const { fields, append, remove } = useFieldArray({ control, name: "media" });
 
   const title = mode === "edit" ? "Modifier le Bien" : "Ajout de Bien";
+
+  useEffect(() => {
+    if (property?.id && open) {
+      reset(defaultValues);
+    }
+  }, [defaultValues, open, property?.id, reset]);
 
   const closeModal = () => {
     reset(defaultValues);

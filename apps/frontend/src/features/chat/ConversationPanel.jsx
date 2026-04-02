@@ -1,6 +1,9 @@
-﻿import { useMemo } from "react";
+import { useMemo } from "react";
 import { Button } from "../../components/ui/Button.jsx";
 import { Input } from "../../components/ui/Input.jsx";
+import { Menu } from "../../components/ui/Menu.jsx";
+import { Status } from "../../components/ui/Status.jsx";
+import { SvgDotsMenu, SvgPlus } from "../../helpers/iconeSvg.js";
 import { useChatWorkspace } from "./hooks/useChatWorkspace.js";
 
 const formatTimestamp = (value) => {
@@ -35,22 +38,54 @@ export const ConversationPanel = () => {
     draftMessage,
     setDraftMessage,
     submitMessage,
-    sendMessageMutation
+    sendMessageMutation,
+    deleteConversationMutation
   } = useChatWorkspace();
 
   const conversations = conversationsQuery.data || [];
   const messages = messagesQuery.data?.items || [];
+  const isConversationDisabled = !selectedConversationId;
+  const selectedParticipant = selectedConversation?.participantProfiles?.find((participant) => participant.id !== user?.id) || null;
 
-  const participantsLabel = useMemo(() => {
+  const participantStatusItems = useMemo(() => {
     if (!selectedConversation) {
-      return "Selectionnez une conversation";
+      return [];
     }
 
     return (selectedConversation.participantProfiles || [])
       .filter((participant) => participant.id !== user?.id)
-      .map((participant) => `${formatParticipantName(participant)}${onlineUsers[participant.id] ? " • en ligne" : " • hors ligne"}`)
-      .join(", ");
+      .map((participant) => ({
+        id: participant.id,
+        label: formatParticipantName(participant),
+        isOnline: Boolean(onlineUsers[participant.id])
+      }));
   }, [onlineUsers, selectedConversation, user?.id]);
+
+  const creationMenuItems = [
+    {
+      label: "Prise de rendez-vous",
+      action: () => {}
+    }
+  ];
+
+  const conversationMenuItems = [
+    {
+      label: "Supprimer la conversation",
+      action: async () => {
+        if (!selectedParticipant?.id || deleteConversationMutation.isPending) {
+          return;
+        }
+
+        const confirmed = window.confirm(`Supprimer toutes les conversations avec ${formatParticipantName(selectedParticipant)} ?`);
+
+        if (!confirmed) {
+          return;
+        }
+
+        await deleteConversationMutation.mutateAsync({ participantId: selectedParticipant.id });
+      }
+    }
+  ];
 
   return (
     <section className="grid gap-4 lg:grid-cols-[320px_1fr]">
@@ -97,7 +132,15 @@ export const ConversationPanel = () => {
       <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
         <div className="border-b border-white/10 pb-4">
           <p className="text-lg font-semibold text-white">Messagerie privee</p>
-          <p className="mt-1 text-sm text-stone-400">{participantsLabel}</p>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2 text-sm text-stone-400">
+            {participantStatusItems.length ? participantStatusItems.map((participant) => (
+              <span key={participant.id} className="inline-flex items-center gap-2">
+                <span>{participant.label}</span>
+                <Status color={participant.isOnline ? "#22c55e" : "#ef4444"} />
+                <span>{participant.isOnline ? "en ligne" : "hors ligne"}</span>
+              </span>
+            )) : <span>Selectionnez une conversation</span>}
+          </div>
           {typingUserId ? <p className="mt-2 text-xs text-brand-100">Votre interlocuteur est en train d'ecrire...</p> : null}
         </div>
 
@@ -114,9 +157,11 @@ export const ConversationPanel = () => {
                 }
               >
                 <p className="text-sm text-white">{message.content}</p>
-                <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">
-                  {message.status} • {formatTimestamp(message.readAt || message.deliveredAt || message.createdAt)}
-                </p>
+                <div className="mt-2 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">
+                  <span>{message.status}</span>
+                  <Status color="#78716c" />
+                  <span>{formatTimestamp(message.readAt || message.deliveredAt || message.createdAt)}</span>
+                </div>
               </div>
             );
           })}
@@ -124,6 +169,13 @@ export const ConversationPanel = () => {
         </div>
 
         <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-end">
+          <Menu
+            icon={<SvgPlus />}
+            items={creationMenuItems}
+            disabled={isConversationDisabled}
+            aria-label="Ouvrir les actions de creation"
+          />
+
           <div className="flex-1">
             <Input
               label="Votre message"
@@ -133,6 +185,7 @@ export const ConversationPanel = () => {
               disabled={!selectedConversationId || sendMessageMutation.isPending}
             />
           </div>
+
           <Button
             type="button"
             className="px-6"
@@ -141,6 +194,14 @@ export const ConversationPanel = () => {
           >
             Envoyer
           </Button>
+
+          <Menu
+            icon={<SvgDotsMenu color="currentColor" />}
+            items={conversationMenuItems}
+            disabled={isConversationDisabled || deleteConversationMutation.isPending || !selectedParticipant?.id}
+            align="right"
+            aria-label="Ouvrir les actions de conversation"
+          />
         </div>
       </div>
     </section>

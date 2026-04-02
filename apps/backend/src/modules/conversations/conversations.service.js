@@ -258,3 +258,36 @@ export const getUnreadMessagesCount = async (userId) => {
 
   return { total };
 };
+
+export const deletePrivateConversationsBetweenUsers = async ({ userId, participantId }) => {
+  if (userId === participantId) {
+    throw new AppError("You cannot delete a conversation with yourself", StatusCodes.BAD_REQUEST);
+  }
+
+  const normalizedParticipants = [userId, participantId].sort();
+  const conversations = await Conversation.find({
+    type: "private",
+    participantIds: { $all: normalizedParticipants, $size: 2 }
+  })
+    .select("_id")
+    .lean();
+
+  const conversationIds = conversations.map((conversation) => conversation._id);
+
+  if (!conversationIds.length) {
+    return {
+      deletedConversationsCount: 0,
+      deletedMessagesCount: 0
+    };
+  }
+
+  const [deletedMessagesResult, deletedConversationsResult] = await Promise.all([
+    Message.deleteMany({ conversationId: { $in: conversationIds } }),
+    Conversation.deleteMany({ _id: { $in: conversationIds } })
+  ]);
+
+  return {
+    deletedConversationsCount: deletedConversationsResult.deletedCount || 0,
+    deletedMessagesCount: deletedMessagesResult.deletedCount || 0
+  };
+};

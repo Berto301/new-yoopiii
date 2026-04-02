@@ -5,6 +5,7 @@ import { asyncHandler } from "../../core/utils/async-handler.js";
 import {
   createConversation,
   createMessage,
+  deleteConversationWithParticipant,
   getConversation,
   getConversations,
   getMessages,
@@ -14,6 +15,7 @@ import {
 import {
   conversationIdParamsSchema,
   conversationMessagesQuerySchema,
+  conversationParticipantParamsSchema,
   createConversationSchema,
   createMessageSchema,
   readMessageSchema
@@ -25,6 +27,7 @@ conversationRouter.use(asyncHandler(requireAuth));
 conversationRouter.get("/unread-count", asyncHandler(getUnreadCount));
 conversationRouter.get("/", asyncHandler(getConversations));
 conversationRouter.post("/", validate(createConversationSchema), asyncHandler(createConversation));
+conversationRouter.delete("/with/:participantId", validate(conversationParticipantParamsSchema), asyncHandler(deleteConversationWithParticipant));
 conversationRouter.get("/:conversationId", validate(conversationIdParamsSchema), asyncHandler(getConversation));
 conversationRouter.get("/:conversationId/messages", validate(conversationMessagesQuerySchema), asyncHandler(getMessages));
 conversationRouter.post("/:conversationId/messages", validate(createMessageSchema), asyncHandler(createMessage));

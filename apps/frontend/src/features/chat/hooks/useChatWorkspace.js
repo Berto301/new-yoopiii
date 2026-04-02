@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { selectAccessToken, selectCurrentUser } from "../../../app/store/session.store.js";
 import { connectSocketWithToken, socket } from "../../../lib/socket/socket.js";
 import {
+  deleteConversationsWithParticipant,
   getConversationMessages,
   getConversations,
   getUnreadConversationCount,
@@ -230,6 +231,18 @@ export const useChatWorkspace = () => {
     }
   });
 
+  const deleteConversationMutation = useMutation({
+    mutationFn: ({ participantId }) => deleteConversationsWithParticipant({ participantId }),
+    onSuccess: async () => {
+      setSelectedConversationId(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+        queryClient.invalidateQueries({ queryKey: ["conversations-unread"] }),
+        queryClient.invalidateQueries({ queryKey: ["conversation-messages"] })
+      ]);
+    }
+  });
+
   const selectedConversation = useMemo(
     () => conversationsQuery.data?.find((conversation) => conversation.id === selectedConversationId) || null,
     [conversationsQuery.data, selectedConversationId]
@@ -278,6 +291,7 @@ export const useChatWorkspace = () => {
     setDraftMessage: handleTypingChange,
     submitMessage,
     sendMessageMutation,
-    markReadMutation
+    markReadMutation,
+    deleteConversationMutation
   };
 };

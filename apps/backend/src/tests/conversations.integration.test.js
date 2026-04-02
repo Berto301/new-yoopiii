@@ -4,6 +4,7 @@ import request from "supertest";
 import { createApp } from "../app.js";
 import { signAccessToken } from "../core/utils/jwt.js";
 import { Conversation } from "../modules/conversations/conversation.model.js";
+import { Message } from "../modules/conversations/message.model.js";
 import { User } from "../modules/users/user.model.js";
 import {
   clearTestDatabase,
@@ -122,4 +123,53 @@ test("conversation access is restricted to participants", async () => {
 
   assert.equal(forbiddenResponse.statusCode, 403);
   assert.equal(forbiddenResponse.body.success, false);
+});
+
+test("deleting conversations with a participant removes all shared private conversations and messages", async () => {
+  const client = await createUser({ firstName: "Client", role: "user" });
+  const agent = await createUser({ firstName: "Agent", role: "independent_agent" });
+  const clientToken = signAccessToken(client);
+  const app = createApp();
+
+  const firstConversation = await Conversation.create({
+    type: "private",
+    participantIds: [client._id, agent._id],
+    createdBy: client._id,
+    propertyId: null
+  });
+
+  const secondConversation = await Conversation.create({
+    type: "private",
+    participantIds: [client._id, agent._id],
+    createdBy: agent._id,
+    propertyId: null
+  });
+
+  await Message.create([
+    {
+      conversationId: firstConversation._id,
+      senderId: client._id,
+      receiverId: agent._id,
+      content: "Bonjour 1",
+      messageType: "text"
+    },
+    {
+      conversationId: secondConversation._id,
+      senderId: agent._id,
+      receiverId: client._id,
+      content: "Bonjour 2",
+      messageType: "text"
+    }
+  ]);
+
+  const response = await request(app)
+    .delete(`/api/v1/conversations/with/${agent._id}`)
+    .set("Authorization", `Bearer ${clientToken}`);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.deletedConversationsCount, 2);
+  assert.equal(response.body.data.deletedMessagesCount, 2);
+  assert.equal(await Conversation.countDocuments({}), 0);
+  assert.equal(await Message.countDocuments({}), 0);
 });

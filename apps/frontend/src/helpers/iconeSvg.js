@@ -45,3 +45,34 @@ export function SVGViewPassWord(props) {
     ]
   });
 }
+
+export function SvgPlus({ color = "currentColor" } = {}) {
+  return jsx("svg", {
+    width: "14",
+    height: "14",
+    viewBox: "0 0 14 14",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M7 1.16699V12.8337M1.16699 7.00033H12.8337",
+      stroke: color,
+      strokeWidth: "1.5",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    })
+  });
+}
+
+export function SvgDotsMenu({ color = "#292929" } = {}) {
+  return jsx("svg", {
+    width: "4",
+    height: "15",
+    viewBox: "0 0 4 15",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M3.5 12.5039C3.5 13.4704 2.7165 14.2539 1.75 14.2539C0.783502 14.2539 0 13.4704 0 12.5039C0 11.5374 0.783502 10.7539 1.75 10.7539C2.7165 10.7539 3.5 11.5374 3.5 12.5039ZM1.75 9.00391C0.783502 9.00391 0 8.2204 0 7.25391C0 6.28741 0.783502 5.50391 1.75 5.50391C2.7165 5.50391 3.5 6.28741 3.5 7.25391C3.5 7.71804 3.31563 8.16315 2.98744 8.49134C2.65925 8.81953 2.21413 9.00391 1.75 9.00391ZM3.5 2.00391C3.5 2.9704 2.7165 3.75391 1.75 3.75391C0.783502 3.75391 0 2.9704 0 2.00391C0 1.03741 0.783502 0.253906 1.75 0.253906C2.7165 0.253906 3.5 1.03741 3.5 2.00391Z",
+      fill: color
+    })
+  });
+}

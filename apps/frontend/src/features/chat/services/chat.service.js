@@ -37,3 +37,8 @@ export const getUnreadConversationCount = async () => {
   const response = await apiClient.get("/conversations/unread-count");
   return response.data.data;
 };
+
+export const deleteConversationsWithParticipant = async ({ participantId }) => {
+  const response = await apiClient.delete(`/conversations/with/${participantId}`);
+  return response.data.data;
+};
