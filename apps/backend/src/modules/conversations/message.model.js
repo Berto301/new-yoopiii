@@ -8,10 +8,11 @@ const messageSchema = new mongoose.Schema(
     content: { type: String, required: true },
     messageType: {
       type: String,
-      enum: ["text", "image", "file"],
+      enum: ["text", "image", "file", "appointment"],
       default: "text"
     },
     attachments: { type: [String], default: [] },
+    appointment: { type: mongoose.Schema.Types.Mixed, default: null },
     status: {
       type: String,
       enum: ["sent", "delivered", "read"],

@@ -50,21 +50,24 @@ export const createMessage = async (req, res) => {
     senderId: req.user.id,
     content: req.validated.body.content,
     messageType: req.validated.body.messageType,
-    attachments: req.validated.body.attachments
+    attachments: req.validated.body.attachments,
+    appointment: req.validated.body.appointment || null
   });
 
   res.status(StatusCodes.CREATED).json({ success: true, data: result });
 };
 
 export const updateMessage = async (req, res) => {
-  const message = await updateConversationMessage({
+  const result = await updateConversationMessage({
     conversationId: req.validated.params.conversationId,
     messageId: req.validated.params.messageId,
     userId: req.user.id,
-    content: req.validated.body.content
+    content: req.validated.body.content,
+    messageType: req.validated.body.messageType,
+    appointment: req.validated.body.appointment
   });
 
-  res.status(StatusCodes.OK).json({ success: true, data: message });
+  res.status(StatusCodes.OK).json({ success: true, data: result });
 };
 
 export const deleteMessage = async (req, res) => {

@@ -3,11 +3,35 @@ import {
   createConversationMessage,
   ensureConversationParticipant,
   markMessageAsDelivered,
-  markMessageAsRead
+  markMessageAsRead,
+  updateConversationMessage
 } from "../../../modules/conversations/conversations.service.js";
 import { conversationRoomName, userRoomName } from "../rooms/room-names.js";
 
 export const registerChatHandlers = (io, socket) => {
+  const buildRealtimeNotification = ({ conversationId, message, senderId, isUpdate = false }) => ({
+    type: message.messageType === "appointment"
+      ? message.appointment?.status === "closed_won"
+        ? "appointment_closed_won"
+        : (isUpdate ? "appointment_updated" : "appointment_created")
+      : "new_message",
+    title: message.messageType === "appointment"
+      ? message.appointment?.status === "closed_won"
+        ? "Rendez-vous conclu"
+        : (isUpdate ? "Rendez-vous mis a jour" : "Nouveau rendez-vous")
+      : (isUpdate ? "Message modifie" : "Nouveau message"),
+    body: message.content.slice(0, 120),
+    data: {
+      conversationId,
+      messageId: message.id,
+      senderId,
+      appointmentId: message.appointment?.appointmentId || null,
+      propertyId: message.appointment?.propertyId || null,
+      propertyTitle: message.appointment?.propertyTitle || null,
+      appointmentStatus: message.appointment?.status || null
+    }
+  });
+
   socket.on("conversation:join", async ({ conversationId }, callback = () => {}) => {
     try {
       await ensureConversationParticipant(conversationId, socket.data.user.id);
@@ -31,7 +55,8 @@ export const registerChatHandlers = (io, socket) => {
         senderId: socket.data.user.id,
         content: payload.content,
         messageType: payload.messageType,
-        attachments: payload.attachments || []
+        attachments: payload.attachments || [],
+        appointment: payload.appointment || null
       });
 
       io.to(conversationRoomName(payload.conversationId)).emit("message:new", {
@@ -39,24 +64,20 @@ export const registerChatHandlers = (io, socket) => {
         message: result.message
       });
 
-      io.to(userRoomName(String(result.message.receiverId))).emit("notification:new", {
-        type: "new_message",
-        title: "Nouveau message",
-        body: result.message.content.slice(0, 120),
-        data: {
-          conversationId: payload.conversationId,
-          messageId: result.message.id,
-          senderId: result.message.senderId
-        }
-      });
+      io.to(userRoomName(String(result.recipientId))).emit("notification:new", buildRealtimeNotification({
+        conversationId: payload.conversationId,
+        message: result.message,
+        senderId: result.message.senderId,
+        isUpdate: false
+      }));
 
-      const recipientRoom = io.sockets.adapter.rooms.get(userRoomName(String(result.message.receiverId)));
+      const recipientRoom = io.sockets.adapter.rooms.get(userRoomName(String(result.recipientId)));
 
       if (recipientRoom && recipientRoom.size > 0) {
         const deliveredMessage = await markMessageAsDelivered({
           conversationId: payload.conversationId,
           messageId: result.message.id,
-          receiverId: String(result.message.receiverId)
+          receiverId: String(result.recipientId)
         });
 
         if (deliveredMessage) {
@@ -76,6 +97,40 @@ export const registerChatHandlers = (io, socket) => {
     } catch (error) {
       callback({ ok: false, message: error.message });
       socket.emit("socket:error", { code: "MESSAGE_SEND_FAILED", message: error.message });
+    }
+  });
+
+  socket.on("message:update", async (payload, callback = () => {}) => {
+    try {
+      const result = await updateConversationMessage({
+        conversationId: payload.conversationId,
+        messageId: payload.messageId,
+        userId: socket.data.user.id,
+        content: payload.content,
+        messageType: payload.messageType,
+        appointment: payload.appointment
+      });
+
+      io.to(conversationRoomName(payload.conversationId)).emit("message:updated", {
+        conversationId: payload.conversationId,
+        message: result.message
+      });
+
+      io.to(userRoomName(String(result.recipientId))).emit("notification:new", buildRealtimeNotification({
+        conversationId: payload.conversationId,
+        message: result.message,
+        senderId: socket.data.user.id,
+        isUpdate: true
+      }));
+
+      io.to(conversationRoomName(payload.conversationId)).emit("conversation:updated", {
+        conversation: result.conversation
+      });
+
+      callback({ ok: true, data: result });
+    } catch (error) {
+      callback({ ok: false, message: error.message });
+      socket.emit("socket:error", { code: "MESSAGE_UPDATE_FAILED", message: error.message });
     }
   });
 

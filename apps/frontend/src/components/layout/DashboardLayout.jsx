@@ -19,6 +19,7 @@ const buildSidebarItems = (user) => {
           { to: "/bookings", label: "Reservations", permission: PERMISSION_IDS.UI_ROUTE_BOOKINGS }
         ]
       : []),
+    { to: "/calendar", label: "Calendrier", permission: null },
     { to: "/messages", label: "Messages", permission: PERMISSION_IDS.UI_ROUTE_MESSAGES },
     { to: "/notifications", label: "Notifications", permission: PERMISSION_IDS.UI_ROUTE_NOTIFICATIONS },
     { to: "/settings", label: "Parametres", permission: PERMISSION_IDS.UI_ROUTE_SETTINGS }

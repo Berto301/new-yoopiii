@@ -18,19 +18,30 @@ export const getConversationMessages = async ({ conversationId, page = 1, limit 
   return response.data.data;
 };
 
-export const sendConversationMessage = async ({ conversationId, content, messageType = "text", attachments = [] }) => {
+export const sendConversationMessage = async ({
+  conversationId,
+  content,
+  messageType = "text",
+  attachments = [],
+  appointment = null
+}) => {
   const response = await apiClient.post(`/conversations/${conversationId}/messages`, {
     content,
     messageType,
-    attachments
+    attachments,
+    appointment
   });
 
   return response.data.data;
 };
 
-export const updateConversationMessage = async ({ conversationId, messageId, content }) => {
-  const response = await apiClient.patch(`/conversations/${conversationId}/messages/${messageId}`, { content });
-  return response.data.data;
+export const updateConversationMessage = async ({ conversationId, messageId, content, messageType, appointment }) => {
+  const response = await apiClient.patch(`/conversations/${conversationId}/messages/${messageId}`, {
+    content,
+    ...(messageType ? { messageType } : {}),
+    ...(appointment !== undefined ? { appointment } : {})
+  });
+  return response.data.data?.message || response.data.data;
 };
 
 export const deleteConversationMessage = async ({ conversationId, messageId }) => {

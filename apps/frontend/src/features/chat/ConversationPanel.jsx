@@ -1,10 +1,23 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ModalDelete } from "../../components/layout/modals/ModalDelete.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Menu } from "../../components/ui/Menu.jsx";
 import { Status } from "../../components/ui/Status.jsx";
+import { useNotification } from "../../hooks/useNotification.js";
 import { SvgDotsMenu, SvgPlus } from "../../helpers/iconeSvg.js";
+import { getManagedProperties } from "../properties/services/property.service.js";
+import { ModalManageAppointment } from "./ModalManageAppointment.jsx";
+import {
+  APPOINTMENT_STATUS,
+  buildAppointmentSummary,
+  createAppointmentPayload,
+  formatParticipantName,
+  isAgentRole
+} from "./appointment.utils.js";
 import { useChatWorkspace } from "./hooks/useChatWorkspace.js";
+
+const extractErrorMessage = (error, fallback) => error?.response?.data?.message || error?.message || fallback;
 
 const formatTimestamp = (value) => {
   if (!value) {
@@ -19,9 +32,38 @@ const formatTimestamp = (value) => {
   }).format(new Date(value));
 };
 
-const formatParticipantName = (participant) => {
-  const fullName = [participant?.firstName, participant?.lastName].filter(Boolean).join(" ").trim();
-  return fullName || participant?.email || participant?.id || "-";
+const renderAppointmentDetails = (appointment) => {
+  if (!appointment) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3 text-left">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-emerald-100">
+          Rendez-vous
+        </span>
+        <span className="text-xs uppercase tracking-[0.2em] text-stone-400">
+          {APPOINTMENT_STATUS[appointment.status] || appointment.status || "En attente"}
+        </span>
+      </div>
+      <div className="grid gap-3 text-sm text-stone-200 md:grid-cols-2">
+        <p><span className="text-stone-400">Bien :</span> {appointment.propertyTitle || "-"}</p>
+        <p><span className="text-stone-400">Date :</span> {appointment.date}</p>
+        <p><span className="text-stone-400">Horaire :</span> {appointment.startTime} - {appointment.endTime}</p>
+        <p><span className="text-stone-400">Frais :</span> {Number(appointment.visitFee || 0).toLocaleString("fr-FR")} Ar</p>
+        <p><span className="text-stone-400">Client prend le bien :</span> {appointment.clientTakesProperty ? "Oui" : "Non"}</p>
+      </div>
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/10 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Description</p>
+        <p className="text-sm text-white">{appointment.description || "-"}</p>
+      </div>
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/10 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Retour client</p>
+        <p className="text-sm text-white">{appointment.clientFeedback || "-"}</p>
+      </div>
+    </div>
+  );
 };
 
 export const ConversationPanel = () => {
@@ -43,14 +85,35 @@ export const ConversationPanel = () => {
     deleteMessageMutation,
     deleteConversationMutation
   } = useChatWorkspace();
+  const { showError, showInfo, showSuccess } = useNotification();
 
   const conversations = conversationsQuery.data || [];
   const messages = messagesQuery.data?.items || [];
   const isConversationDisabled = !selectedConversationId;
+  const isAgentUser = isAgentRole(user?.role);
   const selectedParticipant = selectedConversation?.participantProfiles?.find((participant) => participant.id !== user?.id) || null;
+  const isSelectedParticipantAgent = isAgentRole(selectedParticipant?.role);
+  const isAppointmentCreationDisabled = isConversationDisabled || (isAgentUser && isSelectedParticipantAgent);
+  const agentParticipant = isAgentUser ? user : selectedParticipant;
+  const clientParticipant = isAgentUser ? selectedParticipant : user;
+  const appointmentPropertiesQuery = useQuery({
+    queryKey: ["chat-appointment-properties", user?.id, user?.role, user?.agencyId],
+    queryFn: () =>
+      getManagedProperties({
+        scope: user?.role === "agency" || user?.role === "agency_agent" ? "agency" : "own",
+        page: 1,
+        limit: 100
+      }),
+    enabled: Boolean(isAgentUser && user && selectedConversationId)
+  });
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingMessageContent, setEditingMessageContent] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [appointmentModalState, setAppointmentModalState] = useState({
+    open: false,
+    mode: "create",
+    message: null
+  });
 
   const participantStatusItems = useMemo(() => {
     if (!selectedConversation) {
@@ -66,11 +129,77 @@ export const ConversationPanel = () => {
       }));
   }, [onlineUsers, selectedConversation, user?.id]);
 
+  const appointmentPropertyOptions = useMemo(() => {
+    const items = appointmentPropertiesQuery.data?.items || [];
+    const mappedItems = items.map((property) => ({
+      value: property.id,
+      label: property.title,
+      purpose: property.purpose
+    }));
+    const existingProperty = appointmentModalState.message?.appointment?.propertyId
+      ? {
+          value: appointmentModalState.message.appointment.propertyId,
+          label: appointmentModalState.message.appointment.propertyTitle || "Bien selectionne",
+          purpose: appointmentModalState.message.appointment.propertyPurpose || null
+        }
+      : null;
+
+    if (existingProperty && !mappedItems.some((item) => String(item.value) === String(existingProperty.value))) {
+      return [existingProperty, ...mappedItems];
+    }
+
+    return mappedItems;
+  }, [appointmentModalState.message?.appointment, appointmentPropertiesQuery.data?.items]);
+
   const closeDeleteModal = () => {
     setDeleteTarget(null);
   };
 
+  const openCreateAppointmentModal = () => {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    if (isAgentUser && isSelectedParticipantAgent) {
+      showInfo("La prise de rendez-vous est indisponible entre deux agents.");
+      return;
+    }
+
+    if (!isAgentUser) {
+      showInfo("Seul un agent peut initier une prise de rendez-vous.");
+      return;
+    }
+
+    if (!(appointmentPropertiesQuery.data?.items || []).length) {
+      showInfo("Aucun bien disponible pour planifier un rendez-vous.");
+      return;
+    }
+
+    setAppointmentModalState({
+      open: true,
+      mode: "create",
+      message: null
+    });
+  };
+
+  const closeAppointmentModal = () => {
+    setAppointmentModalState({
+      open: false,
+      mode: "create",
+      message: null
+    });
+  };
+
   const startEditingMessage = (message) => {
+    if (message.messageType === "appointment") {
+      setAppointmentModalState({
+        open: true,
+        mode: "edit",
+        message
+      });
+      return;
+    }
+
     setEditingMessageId(message.id);
     setEditingMessageContent(message.content);
   };
@@ -101,6 +230,51 @@ export const ConversationPanel = () => {
     cancelEditingMessage();
   };
 
+  const handleAppointmentSubmit = async (values) => {
+    if (!selectedConversationId || !selectedParticipant?.id) {
+      return;
+    }
+
+    const existingAppointment = appointmentModalState.message?.appointment || null;
+    const appointmentPayload = createAppointmentPayload({
+      values,
+      existingAppointment,
+      selectedConversation,
+      user,
+      selectedParticipant,
+      isAgent: isAgentUser
+    });
+    const summary = buildAppointmentSummary(appointmentPayload, {
+      agentName: formatParticipantName(agentParticipant),
+      clientName: formatParticipantName(clientParticipant)
+    });
+
+    try {
+      if (appointmentModalState.mode === "edit" && appointmentModalState.message?.id) {
+        await updateMessageMutation.mutateAsync({
+          conversationId: selectedConversationId,
+          messageId: appointmentModalState.message.id,
+          content: summary,
+          messageType: "appointment",
+          appointment: appointmentPayload
+        });
+        showSuccess("Le rendez-vous a ete mis a jour.");
+      } else {
+        await sendMessageMutation.mutateAsync({
+          conversationId: selectedConversationId,
+          content: summary,
+          messageType: "appointment",
+          appointment: appointmentPayload
+        });
+        showSuccess("Le rendez-vous a ete envoye dans la conversation.");
+      }
+
+      closeAppointmentModal();
+    } catch (error) {
+      showError(extractErrorMessage(error, "La gestion du rendez-vous a echoue."));
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) {
       return;
@@ -122,7 +296,8 @@ export const ConversationPanel = () => {
   const creationMenuItems = [
     {
       label: "Prise de rendez-vous",
-      action: () => {}
+      action: openCreateAppointmentModal,
+      disabled: isAppointmentCreationDisabled
     }
   ];
 
@@ -206,16 +381,19 @@ export const ConversationPanel = () => {
             {messages.map((message) => {
               const isCurrentUser = message.senderId === user?.id;
               const isEditing = editingMessageId === message.id;
+              const isAppointmentMessage = message.messageType === "appointment";
+              const canEditAppointment = isAppointmentMessage && Boolean(message.appointment);
               const conversationItemMenuItems = [
                 {
-                  label: "Modifier le message",
+                  label: isAppointmentMessage ? "Modifier le rendez-vous" : "Modifier le message",
                   action: async () => {
-                    if (!isCurrentUser || updateMessageMutation.isPending || !selectedConversationId) {
+                    if ((!isCurrentUser && !canEditAppointment) || updateMessageMutation.isPending || !selectedConversationId) {
                       return;
                     }
 
                     startEditingMessage(message);
-                  }
+                  },
+                  disabled: (!isCurrentUser && !canEditAppointment) || (isAppointmentMessage && !message.appointment)
                 },
                 {
                   label: "Supprimer le message",
@@ -230,7 +408,8 @@ export const ConversationPanel = () => {
                       title: "Supprimer le message",
                       content: "Voulez-vous vraiment supprimer ce message ? Cette action est irreversible."
                     });
-                  }
+                  },
+                  disabled: !isCurrentUser
                 }
               ];
 
@@ -262,13 +441,13 @@ export const ConversationPanel = () => {
                         }}
                         autoFocus
                       />
-                    ) : (
+                    ) : isAppointmentMessage ? renderAppointmentDetails(message.appointment) : (
                       <p className="text-sm text-white">{message.content}</p>
                     )}
                     <Menu
                       icon={<SvgDotsMenu color="currentColor" />}
                       items={conversationItemMenuItems}
-                      disabled={!isCurrentUser || updateMessageMutation.isPending || deleteMessageMutation.isPending}
+                      disabled={updateMessageMutation.isPending || deleteMessageMutation.isPending}
                       align="right"
                       aria-label="Ouvrir les actions du message"
                     />
@@ -284,8 +463,7 @@ export const ConversationPanel = () => {
             {!messages.length ? <p className="text-sm text-stone-400">Aucun message dans cette conversation.</p> : null}
           </div>
 
-          <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-end justify-center items-center">
-            
+          <div className="mt-6 flex flex-col items-center justify-center gap-3 md:flex-row md:items-end">
             <Menu
               icon={<SvgPlus />}
               items={creationMenuItems}
@@ -333,6 +511,20 @@ export const ConversationPanel = () => {
         onClose={closeDeleteModal}
         onConfirm={confirmDelete}
         isDeleting={deleteMessageMutation.isPending || deleteConversationMutation.isPending}
+      />
+
+      <ModalManageAppointment
+        open={appointmentModalState.open}
+        mode={appointmentModalState.mode}
+        appointment={appointmentModalState.message?.appointment || null}
+        propertyOptions={appointmentPropertyOptions}
+        currentUser={user}
+        agent={agentParticipant}
+        client={clientParticipant}
+        isAgent={isAgentUser}
+        isSaving={sendMessageMutation.isPending || updateMessageMutation.isPending}
+        onClose={closeAppointmentModal}
+        onSubmit={handleAppointmentSubmit}
       />
     </>
   );

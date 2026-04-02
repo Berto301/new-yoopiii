@@ -164,6 +164,19 @@ export const useChatWorkspace = () => {
       queryClient.invalidateQueries({ queryKey: ["conversations-unread"] });
     };
 
+    const handleMessageUpdated = ({ conversationId, message }) => {
+      if (conversationId !== selectedConversationId) {
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        return;
+      }
+
+      queryClient.setQueryData(["conversation-messages", selectedConversationId], (current) => ({
+        ...(current || { pagination: { page: 1, limit: 50, total: 0, hasNextPage: false } }),
+        items: (current?.items || []).map((item) => (item.id === message.id ? { ...item, ...message } : item))
+      }));
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    };
+
     const handleTyping = ({ conversationId, userId, isTyping }) => {
       if (conversationId !== selectedConversationId || userId === user?.id) {
         return;
@@ -178,6 +191,7 @@ export const useChatWorkspace = () => {
     socket.on("message:new", handleMessageNew);
     socket.on("message:delivered", handleMessageDelivered);
     socket.on("message:read", handleMessageRead);
+    socket.on("message:updated", handleMessageUpdated);
     socket.on("conversation:typing", handleTyping);
 
     return () => {
@@ -185,6 +199,7 @@ export const useChatWorkspace = () => {
       socket.off("message:new", handleMessageNew);
       socket.off("message:delivered", handleMessageDelivered);
       socket.off("message:read", handleMessageRead);
+      socket.off("message:updated", handleMessageUpdated);
       socket.off("conversation:typing", handleTyping);
     };
   }, [queryClient, selectedConversationId, user?.id]);
@@ -200,13 +215,13 @@ export const useChatWorkspace = () => {
   }, [messagesQuery.data?.items, selectedConversationId, user?.id]);
 
   const sendMessageMutation = useMutation({
-    mutationFn: ({ conversationId, content }) => {
+    mutationFn: ({ conversationId, content, messageType, attachments, appointment }) => {
       if (!socket.connected) {
-        return sendConversationMessage({ conversationId, content });
+        return sendConversationMessage({ conversationId, content, messageType, attachments, appointment });
       }
 
       return new Promise((resolve, reject) => {
-        socket.emit("message:send", { conversationId, content }, (response) => {
+        socket.emit("message:send", { conversationId, content, messageType, attachments, appointment }, (response) => {
           if (!response?.ok) {
             reject(new Error(response?.message || "Message send failed"));
             return;
@@ -223,11 +238,27 @@ export const useChatWorkspace = () => {
   });
 
   const updateMessageMutation = useMutation({
-    mutationFn: ({ conversationId, messageId, content }) => updateConversationMessage({ conversationId, messageId, content }),
+    mutationFn: ({ conversationId, messageId, content, messageType, appointment }) => {
+      if (!socket.connected) {
+        return updateConversationMessage({ conversationId, messageId, content, messageType, appointment });
+      }
+
+      return new Promise((resolve, reject) => {
+        socket.emit("message:update", { conversationId, messageId, content, messageType, appointment }, (response) => {
+          if (!response?.ok) {
+            reject(new Error(response?.message || "Message update failed"));
+            return;
+          }
+
+          resolve(response.data?.message || response.data);
+        });
+      });
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["conversations"] }),
-        queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConversationId] })
+        queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConversationId] }),
+        queryClient.invalidateQueries({ queryKey: ["notifications"] })
       ]);
     }
   });

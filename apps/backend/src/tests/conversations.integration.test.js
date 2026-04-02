@@ -5,6 +5,8 @@ import { createApp } from "../app.js";
 import { signAccessToken } from "../core/utils/jwt.js";
 import { Conversation } from "../modules/conversations/conversation.model.js";
 import { Message } from "../modules/conversations/message.model.js";
+import { Notification } from "../modules/notifications/notification.model.js";
+import { Property } from "../modules/properties/property.model.js";
 import { User } from "../modules/users/user.model.js";
 import {
   clearTestDatabase,
@@ -64,7 +66,7 @@ test("conversation lifecycle supports create, send, list, update, delete, read a
     .send({ content: "Bonjour, le bien est-il toujours disponible ?" });
 
   assert.equal(updateMessageResponse.statusCode, 200);
-  assert.equal(updateMessageResponse.body.data.content, "Bonjour, le bien est-il toujours disponible ?");
+  assert.equal(updateMessageResponse.body.data.message.content, "Bonjour, le bien est-il toujours disponible ?");
 
   const listConversationsResponse = await request(app)
     .get("/api/v1/conversations")
@@ -142,6 +144,120 @@ test("message update and delete are restricted to the sender", async () => {
     .set("Authorization", `Bearer ${agentToken}`);
 
   assert.equal(forbiddenDelete.statusCode, 403);
+});
+
+test("appointment messages can be created by an agent and updated by the client with persisted notifications", async () => {
+  const client = await createUser({ firstName: "Client", role: "user" });
+  const agent = await createUser({ firstName: "Agent", role: "independent_agent" });
+  const clientToken = signAccessToken(client);
+  const agentToken = signAccessToken(agent);
+  const app = createApp();
+  const property = await Property.create({
+    title: "Villa Analamahitsy",
+    slug: "villa-analamahitsy",
+    description: "Belle villa pour un achat rapide.",
+    type: "house",
+    purpose: "sale",
+    price: 250000000,
+    currency: "XOF",
+    area: 180,
+    rooms: 6,
+    bedrooms: 4,
+    bathrooms: 2,
+    features: [],
+    address: "Analamahitsy",
+    location: {
+      type: "Point",
+      coordinates: [47.543, -18.879]
+    },
+    status: "published",
+    publicationStatus: "approved",
+    ownerType: "independent_agent",
+    agentId: agent._id
+  });
+
+  const createConversationResponse = await request(app)
+    .post("/api/v1/conversations")
+    .set("Authorization", `Bearer ${agentToken}`)
+    .send({ participantId: String(client._id) });
+
+  const conversationId = createConversationResponse.body.data.id;
+
+  const appointmentPayload = {
+    appointmentId: "appointment-001",
+    propertyId: String(property._id),
+    propertyTitle: "Villa Analamahitsy",
+    propertyPurpose: "sale",
+    conversationId,
+    clientId: String(client._id),
+    agentId: String(agent._id),
+    status: "pending",
+    date: "2026-04-10",
+    startTime: "12:00",
+    endTime: "12:30",
+    visitFee: 25000,
+    description: "Visite du bien principal",
+    clientFeedback: "",
+    clientTakesProperty: false,
+    createdAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
+    updatedAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
+    createdBy: String(agent._id),
+    updatedBy: String(agent._id)
+  };
+
+  const sendAppointmentResponse = await request(app)
+    .post(`/api/v1/conversations/${conversationId}/messages`)
+    .set("Authorization", `Bearer ${agentToken}`)
+    .send({
+      content: "Rendez-vous planifie",
+      messageType: "appointment",
+      appointment: appointmentPayload,
+      attachments: []
+    });
+
+  assert.equal(sendAppointmentResponse.statusCode, 201);
+  assert.equal(sendAppointmentResponse.body.data.message.messageType, "appointment");
+  assert.equal(sendAppointmentResponse.body.data.message.appointment.date, "2026-04-10");
+  assert.equal(sendAppointmentResponse.body.data.message.appointment.propertyTitle, "Villa Analamahitsy");
+
+  const messageId = sendAppointmentResponse.body.data.message.id;
+
+  const updateAppointmentResponse = await request(app)
+    .patch(`/api/v1/conversations/${conversationId}/messages/${messageId}`)
+    .set("Authorization", `Bearer ${clientToken}`)
+    .send({
+      content: "Rendez-vous planifie avec retour client",
+      messageType: "appointment",
+      appointment: {
+        ...appointmentPayload,
+        status: "closed_won",
+        clientFeedback: "Je serai sur place a 11:55",
+        clientTakesProperty: true,
+        updatedAt: new Date("2026-04-02T11:00:00.000Z").toISOString(),
+        updatedBy: String(client._id)
+      }
+    });
+
+  assert.equal(updateAppointmentResponse.statusCode, 200);
+  assert.equal(updateAppointmentResponse.body.data.message.appointment.clientFeedback, "Je serai sur place a 11:55");
+  assert.equal(updateAppointmentResponse.body.data.message.appointment.clientTakesProperty, true);
+  assert.equal(updateAppointmentResponse.body.data.message.appointment.status, "closed_won");
+
+  const notifications = await Notification.find({ userId: agent._id }).sort({ createdAt: -1 }).lean();
+  assert.equal(notifications.length, 1);
+  assert.equal(notifications[0].type, "appointment_closed_won");
+  assert.equal(notifications[0].data.propertyTitle, "Villa Analamahitsy");
+  assert.equal(notifications[0].data.appointmentStatus, "closed_won");
+
+  const refreshedProperty = await Property.findById(property._id).lean();
+  assert.equal(refreshedProperty.status, "sold");
+
+  const listMessagesResponse = await request(app)
+    .get(`/api/v1/conversations/${conversationId}/messages?page=1&limit=30`)
+    .set("Authorization", `Bearer ${clientToken}`);
+
+  assert.equal(listMessagesResponse.statusCode, 200);
+  assert.equal(listMessagesResponse.body.data.items[0].appointment.clientFeedback, "Je serai sur place a 11:55");
 });
 
 test("deleting conversations with a participant removes all shared private conversations and messages", async () => {

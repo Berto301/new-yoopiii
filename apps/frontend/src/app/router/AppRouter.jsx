@@ -15,6 +15,7 @@ import { PropertyDetailPage } from "../../pages/public/PropertyDetailPage.jsx";
 import { FavoritesPage } from "../../pages/private/FavoritesPage.jsx";
 import { BookingsPage } from "../../pages/private/BookingsPage.jsx";
 import { ChatPage } from "../../pages/private/ChatPage.jsx";
+import { CalendarPage } from "../../pages/private/CalendarPage.jsx";
 import { NotificationsPage } from "../../pages/private/NotificationsPage.jsx";
 import { PublicationsPage } from "../../pages/private/PublicationsPage.jsx";
 import { SettingsPage } from "../../pages/private/settings/index.jsx";
@@ -49,6 +50,7 @@ export const AppRouter = () => (
           <Route path="/bookings" element={<BookingsPage />} />
         </Route>
         <Route path="/messages" element={<ChatPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route
           element={<RoleRoute allowedRoles={["user", "agency", "agency_agent", "independent_agent"]} requiredPermission={PERMISSION_IDS.UI_ROUTE_PUBLICATIONS} />}
