@@ -2,21 +2,20 @@ import { StatusCodes } from "http-status-codes";
 import {
   createConversationMessage,
   createOrGetPrivateConversation,
+  deleteConversationMessage,
   deletePrivateConversationsBetweenUsers,
   getConversationById,
   getUnreadMessagesCount,
   listConversationMessages,
   listUserConversations,
-  markMessageAsRead
+  markMessageAsRead,
+  updateConversationMessage
 } from "./conversations.service.js";
 
 export const getConversations = async (req, res) => {
   const conversations = await listUserConversations(req.user.id);
 
-  res.status(StatusCodes.OK).json({
-    success: true,
-    data: conversations
-  });
+  res.status(StatusCodes.OK).json({ success: true, data: conversations });
 };
 
 export const createConversation = async (req, res) => {
@@ -26,19 +25,12 @@ export const createConversation = async (req, res) => {
     propertyId: req.validated.body.propertyId || null
   });
 
-  res.status(StatusCodes.CREATED).json({
-    success: true,
-    data: conversation
-  });
+  res.status(StatusCodes.CREATED).json({ success: true, data: conversation });
 };
 
 export const getConversation = async (req, res) => {
   const conversation = await getConversationById(req.validated.params.conversationId, req.user.id);
-
-  res.status(StatusCodes.OK).json({
-    success: true,
-    data: conversation
-  });
+  res.status(StatusCodes.OK).json({ success: true, data: conversation });
 };
 
 export const getMessages = async (req, res) => {
@@ -49,10 +41,7 @@ export const getMessages = async (req, res) => {
     limit: req.validated.query.limit
   });
 
-  res.status(StatusCodes.OK).json({
-    success: true,
-    data: result
-  });
+  res.status(StatusCodes.OK).json({ success: true, data: result });
 };
 
 export const createMessage = async (req, res) => {
@@ -64,10 +53,28 @@ export const createMessage = async (req, res) => {
     attachments: req.validated.body.attachments
   });
 
-  res.status(StatusCodes.CREATED).json({
-    success: true,
-    data: result
+  res.status(StatusCodes.CREATED).json({ success: true, data: result });
+};
+
+export const updateMessage = async (req, res) => {
+  const message = await updateConversationMessage({
+    conversationId: req.validated.params.conversationId,
+    messageId: req.validated.params.messageId,
+    userId: req.user.id,
+    content: req.validated.body.content
   });
+
+  res.status(StatusCodes.OK).json({ success: true, data: message });
+};
+
+export const deleteMessage = async (req, res) => {
+  const result = await deleteConversationMessage({
+    conversationId: req.validated.params.conversationId,
+    messageId: req.validated.params.messageId,
+    userId: req.user.id
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data: result });
 };
 
 export const readMessage = async (req, res) => {
@@ -77,19 +84,12 @@ export const readMessage = async (req, res) => {
     userId: req.user.id
   });
 
-  res.status(StatusCodes.OK).json({
-    success: true,
-    data: message
-  });
+  res.status(StatusCodes.OK).json({ success: true, data: message });
 };
 
 export const getUnreadCount = async (req, res) => {
   const result = await getUnreadMessagesCount(req.user.id);
-
-  res.status(StatusCodes.OK).json({
-    success: true,
-    data: result
-  });
+  res.status(StatusCodes.OK).json({ success: true, data: result });
 };
 
 export const deleteConversationWithParticipant = async (req, res) => {
@@ -98,8 +98,5 @@ export const deleteConversationWithParticipant = async (req, res) => {
     participantId: req.validated.params.participantId
   });
 
-  res.status(StatusCodes.OK).json({
-    success: true,
-    data: result
-  });
+  res.status(StatusCodes.OK).json({ success: true, data: result });
 };

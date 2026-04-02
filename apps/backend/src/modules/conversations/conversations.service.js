@@ -56,6 +56,32 @@ const formatMessage = (message) => ({
   updatedAt: message.updatedAt
 });
 
+const refreshConversationLastMessage = async (conversationId) => {
+  const conversation = await Conversation.findById(conversationId);
+
+  if (!conversation) {
+    return null;
+  }
+
+  const latestMessage = await Message.findOne({ conversationId, isDeleted: false })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  if (!latestMessage) {
+    conversation.lastMessageId = null;
+    conversation.lastMessageAt = null;
+    conversation.lastMessagePreview = "";
+    await conversation.save();
+    return conversation;
+  }
+
+  conversation.lastMessageId = latestMessage._id;
+  conversation.lastMessageAt = latestMessage.createdAt;
+  conversation.lastMessagePreview = latestMessage.content.slice(0, 120);
+  await conversation.save();
+  return conversation;
+};
+
 export const ensureConversationParticipant = async (conversationId, userId) => {
   const conversation = await Conversation.findOne({
     _id: conversationId,
@@ -68,6 +94,23 @@ export const ensureConversationParticipant = async (conversationId, userId) => {
   }
 
   return conversation;
+};
+
+const ensureMessageSender = async ({ conversationId, messageId, userId }) => {
+  await ensureConversationParticipant(conversationId, userId);
+
+  const message = await Message.findOne({
+    _id: messageId,
+    conversationId,
+    senderId: userId,
+    isDeleted: false
+  });
+
+  if (!message) {
+    throw new AppError("Message not found or forbidden", StatusCodes.FORBIDDEN);
+  }
+
+  return message;
 };
 
 export const listUserConversations = async (userId) => {
@@ -200,6 +243,27 @@ export const createConversationMessage = async ({ conversationId, senderId, cont
     conversation: formatConversation(conversation.toObject()),
     message: formatMessage(message.toObject())
   };
+};
+
+export const updateConversationMessage = async ({ conversationId, messageId, userId, content }) => {
+  const message = await ensureMessageSender({ conversationId, messageId, userId });
+  message.content = content;
+  await message.save();
+
+  await refreshConversationLastMessage(conversationId);
+
+  return formatMessage(message.toObject());
+};
+
+export const deleteConversationMessage = async ({ conversationId, messageId, userId }) => {
+  const message = await ensureMessageSender({ conversationId, messageId, userId });
+  message.isDeleted = true;
+  message.deletedAt = new Date();
+  await message.save();
+
+  await refreshConversationLastMessage(conversationId);
+
+  return { id: String(message._id), deleted: true };
 };
 
 export const markMessageAsDelivered = async ({ conversationId, messageId, receiverId }) => {

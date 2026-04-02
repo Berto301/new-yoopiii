@@ -6,11 +6,13 @@ import {
   createConversation,
   createMessage,
   deleteConversationWithParticipant,
+  deleteMessage,
   getConversation,
   getConversations,
   getMessages,
   getUnreadCount,
-  readMessage
+  readMessage,
+  updateMessage
 } from "./conversations.controller.js";
 import {
   conversationIdParamsSchema,
@@ -18,7 +20,8 @@ import {
   conversationParticipantParamsSchema,
   createConversationSchema,
   createMessageSchema,
-  readMessageSchema
+  messageParamsSchema,
+  updateMessageSchema
 } from "./conversations.validation.js";
 
 export const conversationRouter = Router();
@@ -31,8 +34,6 @@ conversationRouter.delete("/with/:participantId", validate(conversationParticipa
 conversationRouter.get("/:conversationId", validate(conversationIdParamsSchema), asyncHandler(getConversation));
 conversationRouter.get("/:conversationId/messages", validate(conversationMessagesQuerySchema), asyncHandler(getMessages));
 conversationRouter.post("/:conversationId/messages", validate(createMessageSchema), asyncHandler(createMessage));
-conversationRouter.patch(
-  "/:conversationId/messages/:messageId/read",
-  validate(readMessageSchema),
-  asyncHandler(readMessage)
-);
+conversationRouter.patch("/:conversationId/messages/:messageId", validate(updateMessageSchema), asyncHandler(updateMessage));
+conversationRouter.delete("/:conversationId/messages/:messageId", validate(messageParamsSchema), asyncHandler(deleteMessage));
+conversationRouter.patch("/:conversationId/messages/:messageId/read", validate(messageParamsSchema), asyncHandler(readMessage));

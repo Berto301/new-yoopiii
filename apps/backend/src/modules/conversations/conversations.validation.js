@@ -54,7 +54,18 @@ export const createMessageSchema = z.object({
   query: z.object({}).default({})
 });
 
-export const readMessageSchema = z.object({
+export const updateMessageSchema = z.object({
+  body: z.object({
+    content: z.string().trim().min(1).max(5000)
+  }),
+  params: z.object({
+    conversationId: objectIdSchema,
+    messageId: objectIdSchema
+  }),
+  query: z.object({}).default({})
+});
+
+export const messageParamsSchema = z.object({
   body: z.object({}).default({}),
   params: z.object({
     conversationId: objectIdSchema,

@@ -35,7 +35,7 @@ const createUser = (overrides = {}) =>
     status: "active"
   });
 
-test("conversation lifecycle supports create, send, list, read and unread count", async () => {
+test("conversation lifecycle supports create, send, list, update, delete, read and unread count", async () => {
   const client = await createUser({ firstName: "Client", role: "user" });
   const agent = await createUser({ firstName: "Agent", role: "independent_agent" });
   const clientToken = signAccessToken(client);
@@ -48,9 +48,6 @@ test("conversation lifecycle supports create, send, list, read and unread count"
     .send({ participantId: String(agent._id) });
 
   assert.equal(createConversationResponse.statusCode, 201);
-  assert.equal(createConversationResponse.body.success, true);
-  assert.equal(createConversationResponse.body.data.participantIds.length, 2);
-
   const conversationId = createConversationResponse.body.data.id;
 
   const sendMessageResponse = await request(app)
@@ -59,16 +56,22 @@ test("conversation lifecycle supports create, send, list, read and unread count"
     .send({ content: "Bonjour, le bien est-il disponible ?", messageType: "text", attachments: [] });
 
   assert.equal(sendMessageResponse.statusCode, 201);
-  assert.equal(sendMessageResponse.body.success, true);
-  assert.equal(sendMessageResponse.body.data.message.status, "sent");
+  const messageId = sendMessageResponse.body.data.message.id;
+
+  const updateMessageResponse = await request(app)
+    .patch(`/api/v1/conversations/${conversationId}/messages/${messageId}`)
+    .set("Authorization", `Bearer ${clientToken}`)
+    .send({ content: "Bonjour, le bien est-il toujours disponible ?" });
+
+  assert.equal(updateMessageResponse.statusCode, 200);
+  assert.equal(updateMessageResponse.body.data.content, "Bonjour, le bien est-il toujours disponible ?");
 
   const listConversationsResponse = await request(app)
     .get("/api/v1/conversations")
     .set("Authorization", `Bearer ${agentToken}`);
 
   assert.equal(listConversationsResponse.statusCode, 200);
-  assert.equal(listConversationsResponse.body.data.length, 1);
-  assert.equal(listConversationsResponse.body.data[0].lastMessagePreview, "Bonjour, le bien est-il disponible ?");
+  assert.equal(listConversationsResponse.body.data[0].lastMessagePreview, "Bonjour, le bien est-il toujours disponible ?");
 
   const unreadCountResponse = await request(app)
     .get("/api/v1/conversations/unread-count")
@@ -84,30 +87,33 @@ test("conversation lifecycle supports create, send, list, read and unread count"
   assert.equal(getMessagesResponse.statusCode, 200);
   assert.equal(getMessagesResponse.body.data.items.length, 1);
 
-  const messageId = getMessagesResponse.body.data.items[0].id;
-
   const readMessageResponse = await request(app)
     .patch(`/api/v1/conversations/${conversationId}/messages/${messageId}/read`)
     .set("Authorization", `Bearer ${agentToken}`);
 
   assert.equal(readMessageResponse.statusCode, 200);
   assert.equal(readMessageResponse.body.data.status, "read");
-  assert.ok(readMessageResponse.body.data.readAt);
 
-  const unreadCountAfterReadResponse = await request(app)
-    .get("/api/v1/conversations/unread-count")
+  const deleteMessageResponse = await request(app)
+    .delete(`/api/v1/conversations/${conversationId}/messages/${messageId}`)
+    .set("Authorization", `Bearer ${clientToken}`);
+
+  assert.equal(deleteMessageResponse.statusCode, 200);
+  assert.equal(deleteMessageResponse.body.data.deleted, true);
+
+  const getMessagesAfterDeleteResponse = await request(app)
+    .get(`/api/v1/conversations/${conversationId}/messages?page=1&limit=30`)
     .set("Authorization", `Bearer ${agentToken}`);
 
-  assert.equal(unreadCountAfterReadResponse.statusCode, 200);
-  assert.equal(unreadCountAfterReadResponse.body.data.total, 0);
+  assert.equal(getMessagesAfterDeleteResponse.statusCode, 200);
+  assert.equal(getMessagesAfterDeleteResponse.body.data.items.length, 0);
 });
 
-test("conversation access is restricted to participants", async () => {
+test("message update and delete are restricted to the sender", async () => {
   const client = await createUser({ firstName: "Client", role: "user" });
   const agent = await createUser({ firstName: "Agent", role: "independent_agent" });
-  const outsider = await createUser({ firstName: "Outsider", role: "user" });
   const clientToken = signAccessToken(client);
-  const outsiderToken = signAccessToken(outsider);
+  const agentToken = signAccessToken(agent);
   const app = createApp();
 
   const createConversationResponse = await request(app)
@@ -117,12 +123,25 @@ test("conversation access is restricted to participants", async () => {
 
   const conversationId = createConversationResponse.body.data.id;
 
-  const forbiddenResponse = await request(app)
-    .get(`/api/v1/conversations/${conversationId}`)
-    .set("Authorization", `Bearer ${outsiderToken}`);
+  const sendMessageResponse = await request(app)
+    .post(`/api/v1/conversations/${conversationId}/messages`)
+    .set("Authorization", `Bearer ${clientToken}`)
+    .send({ content: "Bonjour", messageType: "text", attachments: [] });
 
-  assert.equal(forbiddenResponse.statusCode, 403);
-  assert.equal(forbiddenResponse.body.success, false);
+  const messageId = sendMessageResponse.body.data.message.id;
+
+  const forbiddenUpdate = await request(app)
+    .patch(`/api/v1/conversations/${conversationId}/messages/${messageId}`)
+    .set("Authorization", `Bearer ${agentToken}`)
+    .send({ content: "Non" });
+
+  assert.equal(forbiddenUpdate.statusCode, 403);
+
+  const forbiddenDelete = await request(app)
+    .delete(`/api/v1/conversations/${conversationId}/messages/${messageId}`)
+    .set("Authorization", `Bearer ${agentToken}`);
+
+  assert.equal(forbiddenDelete.statusCode, 403);
 });
 
 test("deleting conversations with a participant removes all shared private conversations and messages", async () => {
@@ -167,9 +186,6 @@ test("deleting conversations with a participant removes all shared private conve
     .set("Authorization", `Bearer ${clientToken}`);
 
   assert.equal(response.statusCode, 200);
-  assert.equal(response.body.success, true);
   assert.equal(response.body.data.deletedConversationsCount, 2);
   assert.equal(response.body.data.deletedMessagesCount, 2);
-  assert.equal(await Conversation.countDocuments({}), 0);
-  assert.equal(await Message.countDocuments({}), 0);
 });

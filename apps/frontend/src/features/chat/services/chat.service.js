@@ -28,6 +28,16 @@ export const sendConversationMessage = async ({ conversationId, content, message
   return response.data.data;
 };
 
+export const updateConversationMessage = async ({ conversationId, messageId, content }) => {
+  const response = await apiClient.patch(`/conversations/${conversationId}/messages/${messageId}`, { content });
+  return response.data.data;
+};
+
+export const deleteConversationMessage = async ({ conversationId, messageId }) => {
+  const response = await apiClient.delete(`/conversations/${conversationId}/messages/${messageId}`);
+  return response.data.data;
+};
+
 export const markConversationMessageRead = async ({ conversationId, messageId }) => {
   const response = await apiClient.patch(`/conversations/${conversationId}/messages/${messageId}/read`);
   return response.data.data;

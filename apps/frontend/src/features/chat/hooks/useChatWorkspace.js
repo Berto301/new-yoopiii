@@ -5,12 +5,14 @@ import { useSearchParams } from "react-router-dom";
 import { selectAccessToken, selectCurrentUser } from "../../../app/store/session.store.js";
 import { connectSocketWithToken, socket } from "../../../lib/socket/socket.js";
 import {
+  deleteConversationMessage,
   deleteConversationsWithParticipant,
   getConversationMessages,
   getConversations,
   getUnreadConversationCount,
   markConversationMessageRead,
-  sendConversationMessage
+  sendConversationMessage,
+  updateConversationMessage
 } from "../services/chat.service.js";
 
 const appendIfMissing = (items, nextItem) => {
@@ -193,11 +195,7 @@ export const useChatWorkspace = () => {
     );
 
     unreadMessages.forEach((message) => {
-      socket.emit(
-        "message:read",
-        { conversationId: selectedConversationId, messageId: message.id },
-        () => {}
-      );
+      socket.emit("message:read", { conversationId: selectedConversationId, messageId: message.id }, () => {});
     });
   }, [messagesQuery.data?.items, selectedConversationId, user?.id]);
 
@@ -221,6 +219,27 @@ export const useChatWorkspace = () => {
     onSuccess: () => {
       setDraftMessage("");
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    }
+  });
+
+  const updateMessageMutation = useMutation({
+    mutationFn: ({ conversationId, messageId, content }) => updateConversationMessage({ conversationId, messageId, content }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+        queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConversationId] })
+      ]);
+    }
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: ({ conversationId, messageId }) => deleteConversationMessage({ conversationId, messageId }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+        queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConversationId] }),
+        queryClient.invalidateQueries({ queryKey: ["conversations-unread"] })
+      ]);
     }
   });
 
@@ -267,10 +286,7 @@ export const useChatWorkspace = () => {
       return;
     }
 
-    await sendMessageMutation.mutateAsync({
-      conversationId: selectedConversationId,
-      content
-    });
+    await sendMessageMutation.mutateAsync({ conversationId: selectedConversationId, content });
 
     if (socket.connected) {
       socket.emit("conversation:typing:stop", { conversationId: selectedConversationId });
@@ -291,6 +307,8 @@ export const useChatWorkspace = () => {
     setDraftMessage: handleTypingChange,
     submitMessage,
     sendMessageMutation,
+    updateMessageMutation,
+    deleteMessageMutation,
     markReadMutation,
     deleteConversationMutation
   };
