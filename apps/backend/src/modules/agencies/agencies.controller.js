@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { Agency } from "./agency.model.js";
 import { AGENCY_PERMISSIONS } from "./constants/agency-permissions.js";
+import { listAgencyDirectoryAgencies, listAgencyDirectoryAgents } from "./services/agency-directory.service.js";
 import {
   approveAgencyExpense,
   createAgencyCalendarEvent,
@@ -32,6 +33,27 @@ export const getAgencies = async (_req, res) => {
   res.status(StatusCodes.OK).json({
     success: true,
     data: agencies
+  });
+};
+
+export const getAgencyDirectory = async (req, res) => {
+  const data = await listAgencyDirectoryAgencies({ filters: req.validated.query });
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data
+  });
+};
+
+export const getAgencyDirectoryAgents = async (req, res) => {
+  const data = await listAgencyDirectoryAgents({
+    agencyId: req.validated.params.agencyId,
+    filters: req.validated.query
+  });
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data
   });
 };
 

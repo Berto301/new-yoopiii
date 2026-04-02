@@ -13,6 +13,7 @@ import { RegisterIndependentAgentPage } from "../../pages/public/RegisterIndepen
 import { PropertySearchPage } from "../../pages/public/PropertySearchPage.jsx";
 import { PropertyDetailPage } from "../../pages/public/PropertyDetailPage.jsx";
 import { FavoritesPage } from "../../pages/private/FavoritesPage.jsx";
+import { AgenciesAgentsPage } from "../../pages/private/AgenciesAgentsPage.jsx";
 import { BookingsPage } from "../../pages/private/BookingsPage.jsx";
 import { ChatPage } from "../../pages/private/ChatPage.jsx";
 import { CalendarPage } from "../../pages/private/CalendarPage.jsx";
@@ -48,6 +49,7 @@ export const AppRouter = () => (
         <Route element={<RoleRoute allowedRoles={["user"]} />}>
           <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/bookings" element={<BookingsPage />} />
+          <Route path="/agencies-agents" element={<AgenciesAgentsPage />} />
         </Route>
         <Route path="/messages" element={<ChatPage />} />
         <Route path="/calendar" element={<CalendarPage />} />

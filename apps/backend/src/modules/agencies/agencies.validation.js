@@ -8,11 +8,34 @@ const numberFromQuery = (fieldName) =>
   });
 const emptyStringToUndefined = (schema) => z.preprocess((value) => (value === "" ? undefined : value), schema);
 const emptyStringToNull = (schema) => z.preprocess((value) => (value === "" ? null : value), schema);
+const querySearchSchema = emptyStringToUndefined(z.string().trim().max(120).optional());
+const queryPageSchema = numberFromQuery("page").min(1).default(1);
+const queryLimitSchema = numberFromQuery("limit").min(1).max(100).default(20);
 
 export const agencyIdParamsSchema = z.object({
   body: z.object({}).default({}),
   params: z.object({ agencyId: objectIdSchema }),
   query: z.object({}).default({})
+});
+
+export const agencyDirectoryQuerySchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({}).default({}),
+  query: z.object({
+    search: querySearchSchema,
+    status: z.enum(["all", "active", "inactive", "suspended"]).default("all"),
+    page: queryPageSchema,
+    limit: queryLimitSchema
+  })
+});
+
+export const agencyDirectoryAgentsQuerySchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({ agencyId: objectIdSchema }),
+  query: z.object({
+    search: querySearchSchema,
+    role: z.enum(["all", ...AGENCY_MEMBER_ROLES]).default("all")
+  })
 });
 
 export const updateAgencyProfileSchema = z.object({

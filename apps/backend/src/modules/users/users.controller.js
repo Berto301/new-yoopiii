@@ -1,4 +1,5 @@
 import { StatusCodes } from "http-status-codes";
+import { listDiscoverableAgents } from "./agent-directory.service.js";
 import { changeMyPassword, getUserProfileById, listUsers, updateMyProfile } from "./users.service.js";
 
 export const getUsers = async (_req, res) => {
@@ -7,6 +8,15 @@ export const getUsers = async (_req, res) => {
   res.status(StatusCodes.OK).json({
     success: true,
     data: users
+  });
+};
+
+export const getDiscoverableAgents = async (req, res) => {
+  const data = await listDiscoverableAgents({ filters: req.validated.query });
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data
   });
 };
 

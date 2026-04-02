@@ -16,7 +16,8 @@ const buildSidebarItems = (user) => {
     ...(!isManagementRole
       ? [
           { to: "/favorites", label: "Favoris", permission: PERMISSION_IDS.UI_ROUTE_FAVORITES },
-          { to: "/bookings", label: "Reservations", permission: PERMISSION_IDS.UI_ROUTE_BOOKINGS }
+          { to: "/bookings", label: "Reservations", permission: PERMISSION_IDS.UI_ROUTE_BOOKINGS },
+          { to: "/agencies-agents", label: "Agence et Agents", permission: null }
         ]
       : []),
     { to: "/calendar", label: "Calendrier", permission: null },

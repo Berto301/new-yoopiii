@@ -3,6 +3,8 @@ import { requireAuth } from "../../core/middleware/auth.middleware.js";
 import { validate } from "../../core/middleware/validate.middleware.js";
 import { asyncHandler } from "../../core/utils/async-handler.js";
 import {
+  agencyDirectoryAgentsQuerySchema,
+  agencyDirectoryQuerySchema,
   agencyIdParamsSchema,
   createAgencyMemberSchema,
   createCalendarEventSchema,
@@ -25,6 +27,8 @@ import {
   deleteAgencyRoleHandler,
   duplicateAgencyRoleHandler,
   getAgencyById,
+  getAgencyDirectory,
+  getAgencyDirectoryAgents,
   getAgencyCalendarEvents,
   getAgencyDashboardSummary,
   getAgencyExpenses,
@@ -46,6 +50,8 @@ export const agencyRouter = Router();
 
 agencyRouter.get("/", asyncHandler(getAgencies));
 agencyRouter.use(asyncHandler(requireAuth));
+agencyRouter.get("/discovery", validate(agencyDirectoryQuerySchema), asyncHandler(getAgencyDirectory));
+agencyRouter.get("/:agencyId/discovery/agents", validate(agencyDirectoryAgentsQuerySchema), asyncHandler(getAgencyDirectoryAgents));
 agencyRouter.get("/:agencyId", validate(agencyIdParamsSchema), asyncHandler(getAgencyById));
 agencyRouter.delete("/:agencyId", validate(agencyIdParamsSchema), asyncHandler(deleteAgencyHandler));
 agencyRouter.get("/:agencyId/dashboard/summary", validate(agencyIdParamsSchema), asyncHandler(getAgencyDashboardSummary));
