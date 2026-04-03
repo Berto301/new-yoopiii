@@ -760,3 +760,4 @@ export const getPropertyHistory = async ({ userId, filters }) => {
   const favoriteIds = await loadFavoriteIdsForUser(userId, propertyIds);
   return { items: views.map((view) => { const property = propertyMap.get(String(view.propertyId)); if (!property) return null; return { viewedAt: view.viewedAt, source: view.source, property: mapPropertyListItem(property, favoriteIds) }; }).filter(Boolean), pagination: buildPagination({ page, limit, total, itemsLength: views.length }) };
 };
+

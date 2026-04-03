@@ -6,8 +6,8 @@ const variants = {
   ghost: "bg-transparent text-stone-200 hover:bg-white/5"
 };
 
-export const Button = ({ className, variant = "primary", ...props }) => (
-  <button
+export const Button = ({ className, variant = "primary", as: Component = "button", ...props }) => (
+  <Component
     className={cn(
       "inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:cursor-not-allowed disabled:opacity-60",
       variants[variant],
