@@ -24,7 +24,8 @@ import {
   updateAgencyExpense,
   updateAgencyMember,
   updateAgencyProfile,
-  updateAgencyRole
+  updateAgencyRole,
+  uploadAgencyAsset
 } from "./services/agency-management.service.js";
 
 export const getAgencies = async (_req, res) => {
@@ -281,6 +282,17 @@ export const patchAgencyProfile = async (req, res) => {
     agencyId: req.validated.params.agencyId,
     actorUserId: req.user.id,
     payload: req.validated.body
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const postAgencyAsset = async (req, res) => {
+  const data = await uploadAgencyAsset({
+    agencyId: req.validated.params.agencyId,
+    actorUserId: req.user.id,
+    assetKind: req.validated.params.assetKind,
+    file: req.file
   });
 
   res.status(StatusCodes.OK).json({ success: true, data });

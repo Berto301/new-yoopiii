@@ -15,6 +15,19 @@ export const updateMyProfile = async (payload) => {
   return response.data.data;
 };
 
+export const uploadMyAvatar = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post("/users/me/avatar", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  });
+
+  return response.data.data;
+};
+
 export const changeMyPassword = async (payload) => {
   const response = await apiClient.patch("/users/me/password", payload);
   return response.data.data;
@@ -27,6 +40,19 @@ export const getAgencyDetail = async (agencyId) => {
 
 export const updateAgencyProfile = async ({ agencyId, payload }) => {
   const response = await apiClient.patch(`/agencies/${agencyId}/profile`, payload);
+  return response.data.data;
+};
+
+export const uploadAgencyAsset = async ({ agencyId, assetKind, file }) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post(`/agencies/${agencyId}/assets/${assetKind}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  });
+
   return response.data.data;
 };
 

@@ -11,10 +11,25 @@ const emptyStringToNull = (schema) => z.preprocess((value) => (value === "" ? nu
 const querySearchSchema = emptyStringToUndefined(z.string().trim().max(120).optional());
 const queryPageSchema = numberFromQuery("page").min(1).default(1);
 const queryLimitSchema = numberFromQuery("limit").min(1).max(100).default(20);
+const assetPathSchema = z
+  .string()
+  .trim()
+  .refine((value) => value.startsWith("/") || /^https?:\/\//i.test(value), {
+    message: "Asset must be a public URL or an uploaded file path"
+  });
 
 export const agencyIdParamsSchema = z.object({
   body: z.object({}).default({}),
   params: z.object({ agencyId: objectIdSchema }),
+  query: z.object({}).default({})
+});
+
+export const agencyAssetParamsSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({
+    agencyId: objectIdSchema,
+    assetKind: z.enum(["logo", "cover"])
+  }),
   query: z.object({}).default({})
 });
 
@@ -41,8 +56,8 @@ export const agencyDirectoryAgentsQuerySchema = z.object({
 export const updateAgencyProfileSchema = z.object({
   body: z.object({
     name: emptyStringToUndefined(z.string().min(2).max(180).optional()),
-    logo: emptyStringToNull(z.string().url().nullable().optional()),
-    coverImage: emptyStringToNull(z.string().url().nullable().optional()),
+    logo: emptyStringToNull(assetPathSchema.nullable().optional()),
+    coverImage: emptyStringToNull(assetPathSchema.nullable().optional()),
     description: emptyStringToUndefined(z.string().max(3000).optional()),
     contactEmail: emptyStringToUndefined(z.string().email().optional()),
     contactPhone: emptyStringToUndefined(z.string().max(40).optional()),

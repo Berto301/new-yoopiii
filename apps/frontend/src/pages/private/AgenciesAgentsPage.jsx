@@ -2,14 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
-import { Card } from "../../components/ui/Card.jsx";
-import { Button } from "../../components/ui/Button.jsx";
-import { Input } from "../../components/ui/Input.jsx";
 import { selectCurrentUser } from "../../app/store/session.store.js";
-import { useNotification } from "../../hooks/useNotification.js";
+import { Avatar } from "../../components/profile/Avatar.jsx";
+import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
+import { Button } from "../../components/ui/Button.jsx";
+import { Card } from "../../components/ui/Card.jsx";
+import { Input } from "../../components/ui/Input.jsx";
 import { createConversation } from "../../features/chat/services/chat.service.js";
 import { getAgencyDirectory, getAgencyDirectoryAgents, getDiscoverableAgents } from "../../features/directory/services/directory.service.js";
+import { useNotification } from "../../hooks/useNotification.js";
 import { SettingsTabButton } from "./settings/SettingsTabButton.jsx";
 
 const tabs = [
@@ -292,9 +293,12 @@ export const AgenciesAgentsPage = () => {
                   {(agencyAgentsQuery.data?.items || []).map((agent) => (
                     <div key={agent.userId} className="rounded-3xl border border-white/10 bg-stone-950/40 p-5">
                       <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-lg font-semibold text-white">{getPersonName(agent)}</p>
-                          <p className="mt-1 text-sm text-stone-400">{agent.roleLabel}{agent.jobTitle ? ` - ${agent.jobTitle}` : ""}</p>
+                        <div className="flex items-start gap-3">
+                          <Avatar src={agent.avatar} alt={`Photo de ${getPersonName(agent)}`} name={getPersonName(agent)} size="md" variant="message" type="agent" />
+                          <div>
+                            <p className="text-lg font-semibold text-white">{getPersonName(agent)}</p>
+                            <p className="mt-1 text-sm text-stone-400">{agent.roleLabel}{agent.jobTitle ? ` - ${agent.jobTitle}` : ""}</p>
+                          </div>
                         </div>
                         <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-100">
                           {formatRating(agent.clientRating)}
@@ -376,9 +380,12 @@ export const AgenciesAgentsPage = () => {
               {(discoverableAgentsQuery.data?.items || []).map((agent) => (
                 <Card key={agent.userId} className="space-y-5">
                   <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xl font-semibold text-white">{getPersonName(agent)}</p>
-                      <p className="mt-1 text-sm text-stone-400">{agent.organizationLabel}</p>
+                    <div className="flex items-start gap-3">
+                      <Avatar src={agent.avatar} alt={`Photo de ${getPersonName(agent)}`} name={getPersonName(agent)} size="md" variant="message" type="agent" />
+                      <div>
+                        <p className="text-xl font-semibold text-white">{getPersonName(agent)}</p>
+                        <p className="mt-1 text-sm text-stone-400">{agent.organizationLabel}</p>
+                      </div>
                     </div>
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-stone-200">
                       {agent.roleLabel}

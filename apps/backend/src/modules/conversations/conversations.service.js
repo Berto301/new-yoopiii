@@ -15,17 +15,19 @@ const formatConversation = (conversation) => {
         firstName: participant.firstName || "",
         lastName: participant.lastName || "",
         email: participant.email || "",
+        avatar: participant.avatar || null,
         role: participant.role || ""
       };
     }
 
-      return {
-        id: String(participant),
-        firstName: "",
-        lastName: "",
-        email: "",
-        role: ""
-      };
+    return {
+      id: String(participant),
+      firstName: "",
+      lastName: "",
+      email: "",
+      avatar: null,
+      role: ""
+    };
   });
 
   return {
@@ -188,7 +190,7 @@ export const listUserConversations = async (userId) => {
     participantIds: userId,
     isActive: true
   })
-    .populate("participantIds", "firstName lastName email role")
+    .populate("participantIds", "firstName lastName email avatar role")
     .sort({ lastMessageAt: -1, updatedAt: -1 })
     .limit(100)
     .lean();
@@ -202,7 +204,7 @@ export const getConversationById = async (conversationId, userId) => {
     participantIds: userId,
     isActive: true
   })
-    .populate("participantIds", "firstName lastName email role")
+    .populate("participantIds", "firstName lastName email avatar role")
     .lean();
 
   if (!conversation) {
@@ -228,7 +230,7 @@ export const createOrGetPrivateConversation = async ({ userId, participantId, pr
     type: "private",
     participantIds: { $all: normalizedParticipants, $size: 2 },
     isActive: true
-  }).populate("participantIds", "firstName lastName email role");
+  }).populate("participantIds", "firstName lastName email avatar role");
 
   if (existingConversation) {
     if (!existingConversation.propertyId && propertyId) {
@@ -247,7 +249,7 @@ export const createOrGetPrivateConversation = async ({ userId, participantId, pr
   });
 
   const populatedConversation = await Conversation.findById(conversation._id)
-    .populate("participantIds", "firstName lastName email role")
+    .populate("participantIds", "firstName lastName email avatar role")
     .lean();
 
   return formatConversation(populatedConversation);

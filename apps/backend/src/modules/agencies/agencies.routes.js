@@ -3,6 +3,7 @@ import { requireAuth } from "../../core/middleware/auth.middleware.js";
 import { validate } from "../../core/middleware/validate.middleware.js";
 import { asyncHandler } from "../../core/utils/async-handler.js";
 import {
+  agencyAssetParamsSchema,
   agencyDirectoryAgentsQuerySchema,
   agencyDirectoryQuerySchema,
   agencyIdParamsSchema,
@@ -40,11 +41,13 @@ import {
   patchAgencyMember,
   patchAgencyProfile,
   patchAgencyRole,
+  postAgencyAsset,
   postAgencyCalendarEvent,
   postAgencyExpense,
   postAgencyMember,
   postAgencyRole
 } from "./agencies.controller.js";
+import { uploadAgencyAsset } from "./agencies.upload.js";
 
 export const agencyRouter = Router();
 
@@ -65,6 +68,7 @@ agencyRouter.patch("/:agencyId/roles/:roleId", validate(updateRoleTemplateSchema
 agencyRouter.post("/:agencyId/roles/:roleId/duplicate", validate(duplicateRoleTemplateSchema), asyncHandler(duplicateAgencyRoleHandler));
 agencyRouter.delete("/:agencyId/roles/:roleId", validate(updateRoleTemplateSchema), asyncHandler(deleteAgencyRoleHandler));
 agencyRouter.patch("/:agencyId/profile", validate(updateAgencyProfileSchema), asyncHandler(patchAgencyProfile));
+agencyRouter.post("/:agencyId/assets/:assetKind", validate(agencyAssetParamsSchema), uploadAgencyAsset, asyncHandler(postAgencyAsset));
 agencyRouter.get("/:agencyId/calendar/events", validate(listCalendarEventsSchema), asyncHandler(getAgencyCalendarEvents));
 agencyRouter.post("/:agencyId/calendar/events", validate(createCalendarEventSchema), asyncHandler(postAgencyCalendarEvent));
 agencyRouter.patch("/:agencyId/calendar/events/:eventId", validate(updateCalendarEventSchema), asyncHandler(patchAgencyCalendarEvent));

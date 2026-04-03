@@ -1,5 +1,7 @@
+import fs from "node:fs/promises";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
+import { DataFile } from "../files/data-file.model.js";
 import { User } from "./user.model.js";
 import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { RoleTemplate } from "../agencies/models/role-template.model.js";
@@ -45,6 +47,20 @@ const sanitizeUser = async (user) => ({
   location: user.location || null
 });
 
+const deleteFileIfExists = async (storagePath) => {
+  if (!storagePath) {
+    return;
+  }
+
+  try {
+    await fs.unlink(storagePath);
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+  }
+};
+
 export const listUsers = () => User.find().select("-passwordHash").limit(50).lean();
 
 export const getUserProfileById = async (userId) => {
@@ -75,6 +91,54 @@ export const updateMyProfile = async ({ userId, payload }) => {
   user.email = payload.email;
   user.phone = payload.phone || "";
   user.avatar = payload.avatar || null;
+  await user.save();
+
+  return sanitizeUser(user.toObject());
+};
+
+export const uploadMyProfileAvatar = async ({ userId, file }) => {
+  if (!file) {
+    throw new AppError("Profile image file is required", StatusCodes.BAD_REQUEST);
+  }
+
+  if (!file.mimetype?.startsWith("image/")) {
+    await deleteFileIfExists(file.path);
+    throw new AppError("Only image files are allowed", StatusCodes.BAD_REQUEST);
+  }
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    await deleteFileIfExists(file.path);
+    throw new AppError("User not found", StatusCodes.NOT_FOUND);
+  }
+
+  const publicPath = `/uploads/profile/${file.filename}`;
+  const previousDataFile = await DataFile.findOne({ ownerUserId: userId, kind: "profile-avatar" });
+
+  if (previousDataFile?.storagePath && previousDataFile.storagePath !== file.path) {
+    await deleteFileIfExists(previousDataFile.storagePath);
+  }
+
+  await DataFile.findOneAndUpdate(
+    { ownerUserId: userId, kind: "profile-avatar" },
+    {
+      ownerUserId: userId,
+      kind: "profile-avatar",
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      storagePath: file.path,
+      publicPath
+    },
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true
+    }
+  );
+
+  user.avatar = publicPath;
   await user.save();
 
   return sanitizeUser(user.toObject());

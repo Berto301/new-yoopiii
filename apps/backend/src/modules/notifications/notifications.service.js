@@ -33,7 +33,7 @@ const buildContactTargetMap = async (notifications, currentUserId) => {
   }
 
   const users = await User.find({ _id: { $in: targetIds } })
-    .select("firstName lastName email")
+    .select("firstName lastName email avatar")
     .lean();
 
   return new Map(
@@ -43,7 +43,8 @@ const buildContactTargetMap = async (notifications, currentUserId) => {
         id: String(user._id),
         firstName: user.firstName || "",
         lastName: user.lastName || "",
-        email: user.email || ""
+        email: user.email || "",
+        avatar: user.avatar || null
       }
     ])
   );

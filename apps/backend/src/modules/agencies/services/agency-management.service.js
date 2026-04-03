@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
@@ -5,6 +6,7 @@ import { AppError } from "../../../core/errors/app-error.js";
 import { Booking } from "../../bookings/booking.model.js";
 import { Conversation } from "../../conversations/conversation.model.js";
 import { Message } from "../../conversations/message.model.js";
+import { DataFile } from "../../files/data-file.model.js";
 import { Notification } from "../../notifications/notification.model.js";
 import { PropertyFavorite } from "../../properties/models/property-favorite.model.js";
 import { PropertyView } from "../../properties/models/property-view.model.js";
@@ -27,6 +29,20 @@ const resolveRolePermissions = async (roleTemplateId, fallbackPermissions = []) 
 
   const roleTemplate = await RoleTemplate.findById(roleTemplateId).lean();
   return roleTemplate?.permissions?.length ? roleTemplate.permissions : fallbackPermissions;
+};
+
+const deleteFileIfExists = async (storagePath) => {
+  if (!storagePath) {
+    return;
+  }
+
+  try {
+    await fs.unlink(storagePath);
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+  }
 };
 
 const syncAgencyMemberUserAccess = async ({ userId, agencyId = null, roleTemplateId = null, isActiveMember = true }) => {
@@ -91,7 +107,7 @@ export const ensureAgencyAccess = async ({ agencyId, userId, permission = null }
 export const listAgencyMembers = async ({ agencyId, userId, permission }) => {
   await ensureAgencyAccess({ agencyId, userId, permission });
   const members = await AgencyMember.find({ agencyId, status: { $ne: "removed" } })
-    .populate("userId", "firstName lastName email phone status")
+    .populate("userId", "firstName lastName email phone avatar status")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -105,6 +121,7 @@ export const listAgencyMembers = async ({ agencyId, userId, permission }) => {
       lastName: linkedUser?.lastName || "",
       email: linkedUser?.email || "",
       phone: linkedUser?.phone || "",
+      avatar: linkedUser?.avatar || null,
       userStatus: linkedUser?.status || null
     };
   });
@@ -608,6 +625,59 @@ export const updateAgencyProfile = async ({ agencyId, actorUserId, payload }) =>
   return agency.toObject();
 };
 
+export const uploadAgencyAsset = async ({ agencyId, actorUserId, assetKind, file }) => {
+  await ensureAgencyAccess({ agencyId, userId: actorUserId });
+
+  if (!file) {
+    throw new AppError("Agency image file is required", StatusCodes.BAD_REQUEST);
+  }
+
+  const agency = await Agency.findById(agencyId);
+
+  if (!agency) {
+    await deleteFileIfExists(file.path);
+    throw new AppError("Agency not found", StatusCodes.NOT_FOUND);
+  }
+
+  const normalizedAssetKind = assetKind === "cover" ? "cover" : "logo";
+  const dataFileKind = normalizedAssetKind === "cover" ? "agency-cover" : "agency-logo";
+  const publicPath = `/uploads/agencies/${file.filename}`;
+  const previousDataFile = await DataFile.findOne({ ownerAgencyId: agencyId, kind: dataFileKind });
+
+  if (previousDataFile?.storagePath && previousDataFile.storagePath !== file.path) {
+    await deleteFileIfExists(previousDataFile.storagePath);
+  }
+
+  await DataFile.findOneAndUpdate(
+    { ownerAgencyId: agencyId, kind: dataFileKind },
+    {
+      ownerAgencyId: agencyId,
+      ownerUserId: actorUserId,
+      kind: dataFileKind,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      storagePath: file.path,
+      publicPath
+    },
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true
+    }
+  );
+
+  if (normalizedAssetKind === "cover") {
+    agency.coverImage = publicPath;
+  } else {
+    agency.logo = publicPath;
+  }
+
+  await agency.save();
+
+  return agency.toObject();
+};
+
 export const deleteAgencyCascade = async ({ agencyId, actorUserId }) => {
   const { agency } = await ensureAgencyAccess({ agencyId, userId: actorUserId });
 
@@ -622,12 +692,16 @@ export const deleteAgencyCascade = async ({ agencyId, actorUserId }) => {
     $or: [{ participantIds: { $in: userIds } }, ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])]
   }).distinct("_id");
 
+  const agencyFiles = await DataFile.find({ ownerAgencyId: agencyId }).lean();
+  await Promise.all(agencyFiles.map((fileItem) => deleteFileIfExists(fileItem.storagePath)));
+
   await Promise.all([
     AgencyCalendarEvent.deleteMany({ agencyId }),
     AgencyExpense.deleteMany({ agencyId }),
     AgencyMember.deleteMany({ agencyId }),
     AgencyStatsSnapshot.deleteMany({ agencyId }),
     RoleTemplate.deleteMany({ agencyId }),
+    DataFile.deleteMany({ ownerAgencyId: agencyId }),
     Notification.deleteMany({ userId: { $in: userIds } }),
     Booking.deleteMany({
       $or: [{ agencyId }, { agentId: { $in: userIds } }, ...(propertyIds.length ? [{ propertyId: { $in: propertyIds } }] : [])]

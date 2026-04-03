@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Avatar } from "../../components/profile/Avatar.jsx";
 import { ModalDelete } from "../../components/layout/modals/ModalDelete.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Menu } from "../../components/ui/Menu.jsx";
@@ -125,6 +126,8 @@ export const ConversationPanel = () => {
       .map((participant) => ({
         id: participant.id,
         label: formatParticipantName(participant),
+        avatar: participant.avatar || null,
+        role: participant.role,
         isOnline: Boolean(onlineUsers[participant.id])
       }));
   }, [onlineUsers, selectedConversation, user?.id]);
@@ -336,9 +339,9 @@ export const ConversationPanel = () => {
           <div className="mt-4 space-y-3">
             {conversations.map((conversation) => {
               const isActive = conversation.id === selectedConversationId;
-              const peerNames = (conversation.participantProfiles || [])
-                .filter((participant) => participant.id !== user?.id)
-                .map((participant) => formatParticipantName(participant));
+              const peers = (conversation.participantProfiles || []).filter((participant) => participant.id !== user?.id);
+              const peerNames = peers.map((participant) => formatParticipantName(participant));
+              const primaryPeer = peers[0] || null;
 
               return (
                 <button
@@ -350,11 +353,23 @@ export const ConversationPanel = () => {
                     : "w-full rounded-2xl border border-white/10 bg-black/10 p-4 text-left hover:border-white/20"
                   }
                 >
-                  <p className="text-sm font-semibold text-white">{conversation.lastMessagePreview || "Nouvelle conversation"}</p>
-                  <p className="mt-1 text-xs text-stone-400">Participants: {peerNames.join(", ") || "-"}</p>
-                  <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-500">
-                    {conversation.lastMessageAt ? formatTimestamp(conversation.lastMessageAt) : "Aucun message"}
-                  </p>
+                  <div className="flex items-start gap-3">
+                    <Avatar
+                      src={primaryPeer?.avatar}
+                      alt={`Photo de ${primaryPeer ? formatParticipantName(primaryPeer) : "participant"}`}
+                      name={primaryPeer ? formatParticipantName(primaryPeer) : "Participant"}
+                      size="sm"
+                      variant="message"
+                      type={isAgentRole(primaryPeer?.role) ? "agent" : "user"}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-white">{conversation.lastMessagePreview || "Nouvelle conversation"}</p>
+                      <p className="mt-1 truncate text-xs text-stone-400">Participants: {peerNames.join(", ") || "-"}</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-500">
+                        {conversation.lastMessageAt ? formatTimestamp(conversation.lastMessageAt) : "Aucun message"}
+                      </p>
+                    </div>
+                  </div>
                 </button>
               );
             })}
@@ -365,9 +380,17 @@ export const ConversationPanel = () => {
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <div className="border-b border-white/10 pb-4">
             <p className="text-lg font-semibold text-white">Messagerie privee</p>
-            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2 text-sm text-stone-400">
+            <div className="mt-3 flex flex-wrap gap-3 text-sm text-stone-400">
               {participantStatusItems.length ? participantStatusItems.map((participant) => (
-                <span key={participant.id} className="inline-flex items-center gap-2">
+                <span key={participant.id} className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/20 px-3 py-2">
+                  <Avatar
+                    src={participant.avatar}
+                    alt={`Photo de ${participant.label}`}
+                    name={participant.label}
+                    size="xs"
+                    variant="message"
+                    type={isAgentRole(participant.role) ? "agent" : "user"}
+                  />
                   <span>{participant.label}</span>
                   <Status color={participant.isOnline ? "#22c55e" : "#ef4444"} />
                   <span>{participant.isOnline ? "en ligne" : "hors ligne"}</span>
@@ -383,6 +406,7 @@ export const ConversationPanel = () => {
               const isEditing = editingMessageId === message.id;
               const isAppointmentMessage = message.messageType === "appointment";
               const canEditAppointment = isAppointmentMessage && Boolean(message.appointment);
+              const senderProfile = isCurrentUser ? user : selectedParticipant;
               const conversationItemMenuItems = [
                 {
                   label: isAppointmentMessage ? "Modifier le rendez-vous" : "Modifier le message",
@@ -414,48 +438,69 @@ export const ConversationPanel = () => {
               ];
 
               return (
-                <div
-                  key={message.id}
-                  className={isCurrentUser
-                    ? "ml-auto max-w-xl rounded-2xl bg-brand-500/20 p-4 text-right"
-                    : "mr-auto max-w-xl rounded-2xl bg-black/20 p-4"
-                  }
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    {isEditing ? (
-                      <textarea
-                        key={message.id}
-                        defaultValue={message.content}
-                        className="min-h-24 w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500"
-                        onChange={(event) => setEditingMessageContent(event.target.value)}
-                        onKeyDown={async (event) => {
-                          if (event.key === "Escape") {
-                            cancelEditingMessage();
-                            return;
-                          }
-
-                          if (event.key === "Enter" && !event.shiftKey) {
-                            event.preventDefault();
-                            await saveEditedMessage(message);
-                          }
-                        }}
-                        autoFocus
+                <div key={message.id} className={isCurrentUser ? "ml-auto max-w-xl" : "mr-auto max-w-xl"}>
+                  <div className={isCurrentUser ? "flex items-start justify-end gap-3" : "flex items-start gap-3"}>
+                    {!isCurrentUser ? (
+                      <Avatar
+                        src={senderProfile?.avatar}
+                        alt={`Photo de ${formatParticipantName(senderProfile)}`}
+                        name={formatParticipantName(senderProfile)}
+                        size="sm"
+                        variant="message"
+                        type={isAgentRole(senderProfile?.role) ? "agent" : "user"}
+                        className="mt-1"
                       />
-                    ) : isAppointmentMessage ? renderAppointmentDetails(message.appointment) : (
-                      <p className="text-sm text-white">{message.content}</p>
-                    )}
-                    <Menu
-                      icon={<SvgDotsMenu color="currentColor" />}
-                      items={conversationItemMenuItems}
-                      disabled={updateMessageMutation.isPending || deleteMessageMutation.isPending}
-                      align="right"
-                      aria-label="Ouvrir les actions du message"
-                    />
-                  </div>
-                  <div className="mt-2 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">
-                    <span>{message.status}</span>
-                    <Status color="#78716c" />
-                    <span>{formatTimestamp(message.readAt || message.deliveredAt || message.createdAt)}</span>
+                    ) : null}
+                    <div className={isCurrentUser ? "rounded-2xl bg-brand-500/20 p-4 text-right" : "rounded-2xl bg-black/20 p-4"}>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <p className="text-xs uppercase tracking-[0.2em] text-stone-400">{formatParticipantName(senderProfile)}</p>
+                        <Menu
+                          icon={<SvgDotsMenu color="currentColor" />}
+                          items={conversationItemMenuItems}
+                          disabled={updateMessageMutation.isPending || deleteMessageMutation.isPending}
+                          align="right"
+                          aria-label="Ouvrir les actions du message"
+                        />
+                      </div>
+                      {isEditing ? (
+                        <textarea
+                          key={message.id}
+                          defaultValue={message.content}
+                          className="min-h-24 w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500"
+                          onChange={(event) => setEditingMessageContent(event.target.value)}
+                          onKeyDown={async (event) => {
+                            if (event.key === "Escape") {
+                              cancelEditingMessage();
+                              return;
+                            }
+
+                            if (event.key === "Enter" && !event.shiftKey) {
+                              event.preventDefault();
+                              await saveEditedMessage(message);
+                            }
+                          }}
+                          autoFocus
+                        />
+                      ) : isAppointmentMessage ? renderAppointmentDetails(message.appointment) : (
+                        <p className="text-sm text-white">{message.content}</p>
+                      )}
+                      <div className="mt-2 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">
+                        <span>{message.status}</span>
+                        <Status color="#78716c" />
+                        <span>{formatTimestamp(message.readAt || message.deliveredAt || message.createdAt)}</span>
+                      </div>
+                    </div>
+                    {isCurrentUser ? (
+                      <Avatar
+                        src={senderProfile?.avatar}
+                        alt={`Photo de ${formatParticipantName(senderProfile)}`}
+                        name={formatParticipantName(senderProfile)}
+                        size="sm"
+                        variant="message"
+                        type={isAgentRole(senderProfile?.role) ? "agent" : "user"}
+                        className="mt-1"
+                      />
+                    ) : null}
                   </div>
                 </div>
               );

@@ -1,8 +1,9 @@
-﻿import dayjs from "dayjs";
+import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
+import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
-import { Card } from "../../components/ui/Card.jsx";
 import { Button } from "../../components/ui/Button.jsx";
+import { Card } from "../../components/ui/Card.jsx";
 import { createConversation } from "../../features/chat/services/chat.service.js";
 import { useNotifications } from "../../features/notifications/hooks/useNotifications.js";
 
@@ -40,36 +41,50 @@ export const NotificationsPage = () => {
         description="Messages systeme, confirmations de visite, nouvelles annonces et activite commerciale."
       />
       <div className="space-y-4">
-        {notifications.map((notification) => (
-          <Card key={notification._id} className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-lg font-semibold text-white">{notification.title}</p>
-              <p className="mt-2 text-sm text-stone-300">{notification.body}</p>
-              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-500">
-                {notification.type} • {dayjs(notification.createdAt).format("DD/MM/YYYY HH:mm")}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {notification.contactTarget ? (
+        {notifications.map((notification) => {
+          const contactName = getContactLabel(notification);
+
+          return (
+            <Card key={notification._id} className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex items-start gap-4">
+                <Avatar
+                  src={notification.contactTarget?.avatar}
+                  alt={`Photo de ${contactName}`}
+                  name={contactName}
+                  size="md"
+                  variant="notification"
+                  type="user"
+                />
+                <div>
+                  <p className="text-lg font-semibold text-white">{notification.title}</p>
+                  <p className="mt-2 text-sm text-stone-300">{notification.body}</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-500">
+                    {notification.type} � {dayjs(notification.createdAt).format("DD/MM/YYYY HH:mm")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {notification.contactTarget ? (
+                  <Button
+                    variant="secondary"
+                    className="px-4 py-2"
+                    onClick={() => handleContact(notification)}
+                  >
+                    {`Contacter ${contactName}`}
+                  </Button>
+                ) : null}
                 <Button
                   variant="secondary"
                   className="px-4 py-2"
-                  onClick={() => handleContact(notification)}
+                  disabled={markReadMutation.isPending || notification.isRead}
+                  onClick={() => markReadMutation.mutate(notification._id)}
                 >
-                  {`Contacter ${getContactLabel(notification)}`}
+                  {notification.isRead ? "Lue" : "Marquer comme lue"}
                 </Button>
-              ) : null}
-              <Button
-                variant="secondary"
-                className="px-4 py-2"
-                disabled={markReadMutation.isPending || notification.isRead}
-                onClick={() => markReadMutation.mutate(notification._id)}
-              >
-                {notification.isRead ? "Lue" : "Marquer comme lue"}
-              </Button>
-            </div>
-          </Card>
-        ))}
+              </div>
+            </Card>
+          );
+        })}
         {!notifications.length ? (
           <Card>
             <p className="text-sm text-stone-300">Aucune notification pour le moment.</p>

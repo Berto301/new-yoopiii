@@ -33,8 +33,10 @@ export const SettingsPage = () => {
     rolesQuery,
     membersQuery,
     updateProfileMutation,
+    uploadAvatarMutation,
     changePasswordMutation,
     updateAgencyMutation,
+    uploadAgencyAssetMutation,
     createRoleMutation,
     updateRoleMutation,
     duplicateRoleMutation,
@@ -91,8 +93,10 @@ export const SettingsPage = () => {
     }
   }, [profileForm, profileQuery.data]);
 
+  const isAgencyWorkspace = user?.role === "agency" || user?.role === "agency_agent";
+
   const agencyProfile = useMemo(() => {
-    if (user?.role !== "agency") {
+    if (!isAgencyWorkspace) {
       return null;
     }
 
@@ -105,7 +109,7 @@ export const SettingsPage = () => {
       contactPhone: agencyQuery.data?.contactPhone || profileQuery.data?.phone || "",
       address: agencyQuery.data?.address || ""
     };
-  }, [agencyQuery.data, profileQuery.data?.email, profileQuery.data?.phone, user?.role]);
+  }, [agencyQuery.data, isAgencyWorkspace, profileQuery.data?.email, profileQuery.data?.phone]);
 
   useEffect(() => {
     if (agencyProfile) {
@@ -114,12 +118,12 @@ export const SettingsPage = () => {
   }, [agencyForm, agencyProfile]);
 
   const allowedTabs = useMemo(() => {
-    if (user?.role !== "agency" && user?.role !== "agency_agent") {
+    if (!isAgencyWorkspace) {
       return [tabItems[0]];
     }
 
     return tabItems.filter((tab) => hasPermission(user?.permissions, tab.permission));
-  }, [user?.permissions, user?.role]);
+  }, [isAgencyWorkspace, user?.permissions]);
 
   const currentAgencyMembership = useMemo(() => {
     if (!membersQuery.data?.length || !user?.id) {
@@ -178,6 +182,17 @@ export const SettingsPage = () => {
     }
   };
 
+  const handleAvatarUpload = async (file) => {
+    try {
+      const updatedUser = await uploadAvatarMutation.mutateAsync(file);
+      profileForm.setValue("avatar", updatedUser.avatar || "", { shouldDirty: false, shouldValidate: false });
+      showSuccess("Photo de profil mise a jour avec succes.");
+    } catch (error) {
+      showError(extractErrorMessage(error, "Le televersement de la photo a echoue."));
+      throw error;
+    }
+  };
+
   const handlePasswordSubmit = async (values) => {
     try {
       await changePasswordMutation.mutateAsync(values);
@@ -193,17 +208,29 @@ export const SettingsPage = () => {
       const payload = {
         name: normalizeText(values.name),
         contactEmail: normalizeText(values.contactEmail),
-        ...(normalizeText(values.logo) ? { logo: normalizeText(values.logo) } : { logo: null }),
-        ...(normalizeText(values.coverImage) ? { coverImage: normalizeText(values.coverImage) } : { coverImage: null }),
         ...(normalizeText(values.description) ? { description: normalizeText(values.description) } : {}),
-        ...(normalizeText(values.contactPhone) ? { contactPhone: normalizeText(values.contactPhone) } : {}),
-        ...(normalizeText(values.address) ? { address: normalizeText(values.address) } : {})
+        ...(normalizeText(values.contactPhone) ? { contactPhone: normalizeText(values.contactPhone) } : { contactPhone: "" }),
+        ...(normalizeText(values.address) ? { address: normalizeText(values.address) } : { address: "" })
       };
 
       await updateAgencyMutation.mutateAsync({ payload });
       showSuccess("Agence mise a jour avec succes.");
     } catch (error) {
       showError(extractErrorMessage(error, "La mise a jour de l'agence a echoue."));
+    }
+  };
+
+  const handleAgencyAssetUpload = async (assetKind, file) => {
+    try {
+      const updatedAgency = await uploadAgencyAssetMutation.mutateAsync({ assetKind, file });
+      const targetField = assetKind === "cover" ? "coverImage" : "logo";
+      const nextValue = assetKind === "cover" ? updatedAgency.coverImage || "" : updatedAgency.logo || "";
+
+      agencyForm.setValue(targetField, nextValue, { shouldDirty: false, shouldValidate: false });
+      showSuccess(assetKind === "cover" ? "Couverture mise a jour avec succes." : "Logo mis a jour avec succes.");
+    } catch (error) {
+      showError(extractErrorMessage(error, "Le televersement de l'image a echoue."));
+      throw error;
     }
   };
 
@@ -292,16 +319,19 @@ export const SettingsPage = () => {
     profile: (
       <SectionProfile
         profileForm={profileForm}
+        profile={profileQuery.data}
         passwordForm={passwordForm}
         updateProfileMutation={updateProfileMutation}
+        uploadAvatarMutation={uploadAvatarMutation}
         changePasswordMutation={changePasswordMutation}
         onProfileSubmit={handleProfileSubmit}
+        onAvatarUpload={handleAvatarUpload}
         onPasswordSubmit={handlePasswordSubmit}
         roleOptions={rolesQuery.data || []}
         currentRoleKey={currentRoleKey}
         currentRoleLabel={currentRoleLabel}
         permissionDetails={currentPermissionDetails}
-        roleMode={user?.role === "agency" || user?.role === "agency_agent" ? "select" : "input"}
+        roleMode={isAgencyWorkspace ? "select" : "input"}
       />
     ),
     roles: (
@@ -326,14 +356,16 @@ export const SettingsPage = () => {
       <SectionAgency
         agencyForm={agencyForm}
         updateAgencyMutation={updateAgencyMutation}
+        uploadAgencyAssetMutation={uploadAgencyAssetMutation}
         isDeleteDisabled={deleteAgencyMutation.isPending}
         onDeleteClick={() => setIsDeleteAgencyModalOpen(true)}
         onAgencySubmit={handleAgencySubmit}
+        onAgencyAssetUpload={handleAgencyAssetUpload}
       />
     )
   };
 
-  if (user?.role !== "agency" && user?.role !== "agency_agent") {
+  if (!isAgencyWorkspace) {
     return (
       <section className="space-y-8">
         <SectionTitle eyebrow="Parametres" title="Gestion de profile" description="Mettez a jour votre profile connecte et votre mot de passe." />

@@ -6,6 +6,12 @@ const numberFromQuery = (fieldName) =>
     invalid_type_error: `${fieldName} must be a number`
   });
 const emptyStringToUndefined = (schema) => z.preprocess((value) => (value === "" ? undefined : value), schema);
+const avatarSchema = z
+  .string()
+  .trim()
+  .refine((value) => value.startsWith("/") || /^https?:\/\//i.test(value), {
+    message: "Avatar must be a public URL or an uploaded file path"
+  });
 
 export const updateMyProfileSchema = z.object({
   body: z.object({
@@ -13,7 +19,7 @@ export const updateMyProfileSchema = z.object({
     lastName: z.string().trim().min(2).max(80),
     email: z.string().email(),
     phone: phoneSchema,
-    avatar: z.string().url().optional().nullable()
+    avatar: avatarSchema.optional().nullable()
   }),
   params: z.object({}).default({}),
   query: z.object({}).default({})

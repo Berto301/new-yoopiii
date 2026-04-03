@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { listDiscoverableAgents } from "./agent-directory.service.js";
-import { changeMyPassword, getUserProfileById, listUsers, updateMyProfile } from "./users.service.js";
+import { changeMyPassword, getUserProfileById, listUsers, updateMyProfile, uploadMyProfileAvatar } from "./users.service.js";
 
 export const getUsers = async (_req, res) => {
   const users = await listUsers();
@@ -31,6 +31,15 @@ export const getMyProfile = async (req, res) => {
 
 export const patchMyProfile = async (req, res) => {
   const user = await updateMyProfile({ userId: req.user.id, payload: req.validated.body });
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data: user
+  });
+};
+
+export const uploadMyAvatarHandler = async (req, res) => {
+  const user = await uploadMyProfileAvatar({ userId: req.user.id, file: req.file });
 
   res.status(StatusCodes.OK).json({
     success: true,

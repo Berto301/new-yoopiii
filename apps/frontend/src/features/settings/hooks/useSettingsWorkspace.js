@@ -13,10 +13,12 @@ import {
   getAgencyMembers,
   getAgencyRoles,
   getMyProfile,
-  updateAgencyProfile,
   updateAgencyMember,
+  updateAgencyProfile,
   updateAgencyRole,
-  updateMyProfile
+  updateMyProfile,
+  uploadAgencyAsset,
+  uploadMyAvatar
 } from "../services/settings.service.js";
 
 export const useSettingsWorkspace = () => {
@@ -35,7 +37,7 @@ export const useSettingsWorkspace = () => {
   const agencyQuery = useQuery({
     queryKey: ["agency-detail", agencyId],
     queryFn: () => getAgencyDetail(agencyId),
-    enabled: Boolean(user?.role === "agency" && agencyId)
+    enabled: Boolean(isAgencyWorkspace && agencyId)
   });
 
   const rolesQuery = useQuery({
@@ -50,22 +52,36 @@ export const useSettingsWorkspace = () => {
     enabled: Boolean(isAgencyWorkspace && agencyId)
   });
 
+  const syncProfileState = (data) => {
+    dispatch(updateSessionUser(data));
+    queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+  };
+
+  const invalidateAgencyQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["agency-dashboard-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["agency-detail", agencyId] });
+  };
+
   const updateProfileMutation = useMutation({
     mutationFn: updateMyProfile,
-    onSuccess: (data) => {
-      dispatch(updateSessionUser(data));
-      queryClient.invalidateQueries({ queryKey: ["my-profile"] });
-    }
+    onSuccess: syncProfileState
+  });
+
+  const uploadAvatarMutation = useMutation({
+    mutationFn: uploadMyAvatar,
+    onSuccess: syncProfileState
   });
 
   const changePasswordMutation = useMutation({ mutationFn: changeMyPassword });
 
   const updateAgencyMutation = useMutation({
     mutationFn: ({ payload }) => updateAgencyProfile({ agencyId, payload }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["agency-dashboard-summary"] });
-      queryClient.invalidateQueries({ queryKey: ["agency-detail", agencyId] });
-    }
+    onSuccess: invalidateAgencyQueries
+  });
+
+  const uploadAgencyAssetMutation = useMutation({
+    mutationFn: ({ assetKind, file }) => uploadAgencyAsset({ agencyId, assetKind, file }),
+    onSuccess: invalidateAgencyQueries
   });
 
   const createRoleMutation = useMutation({
@@ -139,8 +155,10 @@ export const useSettingsWorkspace = () => {
     rolesQuery,
     membersQuery,
     updateProfileMutation,
+    uploadAvatarMutation,
     changePasswordMutation,
     updateAgencyMutation,
+    uploadAgencyAssetMutation,
     createRoleMutation,
     updateRoleMutation,
     duplicateRoleMutation,

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Avatar } from "../../../components/profile/Avatar.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -139,7 +140,7 @@ export const SectionMembers = ({
   };
 
   const hasActionHandlers = typeof onEditMember === "function" || typeof onDeleteMember === "function";
-
+ console.log(filteredMembers)
   return (
     <Card>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -212,42 +213,52 @@ export const SectionMembers = ({
 
                   return (
                     <tr key={member._id} className="transition hover:bg-white/[0.03]">
-                    <td className="px-5 py-4 align-top">
-                      <div>
-                        <p className="font-semibold text-white">{member.displayName}</p>
-                        {member.email ? <p className="mt-1 text-sm text-stone-400">{member.email}</p> : null}
-                      </div>
-                    </td>
+                      <td className="px-5 py-4 align-top">
+                        <div className="flex items-center gap-3">
+                          <Avatar
+                            src={member.avatar}
+                            alt={`Photo de ${member.displayName}`}
+                            name={member.displayName}
+                            size="sm"
+                            variant="message"
+                            type="agent"
+                          />
+                          <div>
+                            <p className="font-semibold text-white">{member.displayName}</p>
+                            {member.email ? <p className="mt-1 text-sm text-stone-400">{member.email}</p> : null}
+                          </div>
+                        </div>
+                      </td>
 
-                    <td className="px-5 py-4 align-top text-sm text-stone-200">{member.displayRole}</td>
+                      <td className="px-5 py-4 align-top text-sm text-stone-200">{member.displayRole}</td>
 
-                    <td className="px-5 py-4 align-top">
-                      <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getStatusBadgeClassName(member.displayStatus)}`}>
-                        {getStatusLabel(member.displayStatus)}
-                      </span>
-                    </td>
+                      <td className="px-5 py-4 align-top">
+                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getStatusBadgeClassName(member.displayStatus)}`}>
+                          {getStatusLabel(member.displayStatus)}
+                        </span>
+                      </td>
 
-                    <td className="px-5 py-4 align-top">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          disabled={typeof onEditMember !== "function" || isOwnerMember}
-                          onClick={() => onEditMember?.(member)}
-                        >
-                          Modifier
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="border-red-500/40 text-red-200 hover:border-red-400 hover:bg-red-500/10"
-                          disabled={typeof onDeleteMember !== "function" || isDeletingMember || isOwnerMember}
-                          onClick={() => onDeleteMember?.(member)}
-                        >
-                          Supprimer
-                        </Button>
-                      </div>
-                    </td>
+                      <td className="px-5 py-4 align-top">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={typeof onEditMember !== "function" || isOwnerMember}
+                            onClick={() => onEditMember?.(member)}
+                          >
+                            Modifier
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="border-red-500/40 text-red-200 hover:border-red-400 hover:bg-red-500/10"
+                            disabled={typeof onDeleteMember !== "function" || isDeletingMember || isOwnerMember}
+                            onClick={() => onDeleteMember?.(member)}
+                          >
+                            Supprimer
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
