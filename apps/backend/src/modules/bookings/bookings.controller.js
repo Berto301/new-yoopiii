@@ -13,9 +13,9 @@ export const getBookings = async (req, res) => {
   const bookings = await Booking.find(query)
     .sort({ updatedAt: -1, createdAt: -1 })
     .limit(50)
-    .populate("propertyId", "title address coverImage price currency status")
-    .populate("agentId", "firstName lastName")
-    .populate("userId", "firstName lastName email")
+    .populate("propertyId", "title address coverImage price currency status type purpose area rooms bedrooms bathrooms features")
+    .populate("agentId", "firstName lastName email avatar")
+    .populate("userId", "firstName lastName email avatar")
     .lean();
 
   res.status(StatusCodes.OK).json({
@@ -28,3 +28,4 @@ export const getBookings = async (req, res) => {
     }))
   });
 };
+

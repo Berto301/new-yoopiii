@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  envPrefix: ["VITE_", "GOOGLE_"],
+  envDir: "../../",
   server: {
     host: "0.0.0.0",
     port: 5173

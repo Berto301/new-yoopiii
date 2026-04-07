@@ -39,7 +39,7 @@ const renderAppointmentDetails = (appointment) => {
   }
 
   return (
-    <div className="space-y-3 text-left">
+    <div className="space-y-4 text-left">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-emerald-100">
           Rendez-vous
@@ -55,13 +55,119 @@ const renderAppointmentDetails = (appointment) => {
         <p><span className="text-stone-400">Frais :</span> {Number(appointment.visitFee || 0).toLocaleString("fr-FR")} Ar</p>
         <p><span className="text-stone-400">Client prend le bien :</span> {appointment.clientTakesProperty ? "Oui" : "Non"}</p>
       </div>
-      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/10 p-3">
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-3">
         <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Description</p>
         <p className="text-sm text-white">{appointment.description || "-"}</p>
       </div>
-      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/10 p-3">
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-3">
         <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Retour client</p>
         <p className="text-sm text-white">{appointment.clientFeedback || "-"}</p>
+      </div>
+    </div>
+  );
+};
+
+const MessageBubble = ({
+  message,
+  isCurrentUser,
+  isEditing,
+  onEditingChange,
+  onEditingKeyDown,
+  onStartEdit,
+  onDelete,
+  senderProfile,
+  selectedConversationId,
+  updateMessageMutation,
+  deleteMessageMutation
+}) => {
+  const isAppointmentMessage = message.messageType === "appointment";
+  const canEditAppointment = isAppointmentMessage && Boolean(message.appointment);
+  const conversationItemMenuItems = [
+    {
+      label: isAppointmentMessage ? "Modifier le rendez-vous" : "Modifier le message",
+      action: async () => {
+        if ((!isCurrentUser && !canEditAppointment) || updateMessageMutation.isPending || !selectedConversationId) {
+          return;
+        }
+
+        onStartEdit(message);
+      },
+      disabled: (!isCurrentUser && !canEditAppointment) || (isAppointmentMessage && !message.appointment)
+    },
+    {
+      label: "Supprimer le message",
+      action: async () => {
+        if (!isCurrentUser || deleteMessageMutation.isPending || !selectedConversationId) {
+          return;
+        }
+
+        onDelete(message);
+      },
+      disabled: !isCurrentUser
+    }
+  ];
+
+  return (
+    <div className={isCurrentUser ? "ml-auto max-w-3xl" : "mr-auto max-w-3xl"}>
+      <div className={isCurrentUser ? "flex items-end justify-end gap-3" : "flex items-end gap-3"}>
+        {!isCurrentUser ? (
+          <Avatar
+            src={senderProfile?.avatar}
+            alt={`Photo de ${formatParticipantName(senderProfile)}`}
+            name={formatParticipantName(senderProfile)}
+            size="sm"
+            variant="message"
+            type={isAgentRole(senderProfile?.role) ? "agent" : "user"}
+            className="mb-1"
+          />
+        ) : null}
+
+        <div className={isCurrentUser ? "max-w-full rounded-[1.75rem] border border-brand-500/25 bg-brand-500/12 p-4 text-right shadow-[0_20px_50px_rgba(0,0,0,0.18)]" : "max-w-full rounded-[1.75rem] border border-white/10 bg-white/5 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.18)]"}>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className={isCurrentUser ? "ml-auto text-right" : "text-left"}>
+              <p className="text-xs uppercase tracking-[0.2em] text-stone-400">{formatParticipantName(senderProfile)}</p>
+              <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-stone-500">{message.messageType === "appointment" ? "Rendez-vous" : "Message"}</p>
+            </div>
+            <Menu
+              icon={<SvgDotsMenu color="currentColor" />}
+              items={conversationItemMenuItems}
+              disabled={updateMessageMutation.isPending || deleteMessageMutation.isPending}
+              align="right"
+              aria-label="Ouvrir les actions du message"
+            />
+          </div>
+
+          {isEditing ? (
+            <textarea
+              key={message.id}
+              defaultValue={message.content}
+              className="min-h-24 w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500"
+              onChange={(event) => onEditingChange(event.target.value)}
+              onKeyDown={onEditingKeyDown}
+              autoFocus
+            />
+          ) : isAppointmentMessage ? renderAppointmentDetails(message.appointment) : (
+            <p className="text-sm leading-7 text-white">{message.content}</p>
+          )}
+
+          <div className={isCurrentUser ? "mt-3 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-400" : "mt-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-400"}>
+            <span>{message.status}</span>
+            <Status color="#78716c" />
+            <span>{formatTimestamp(message.readAt || message.deliveredAt || message.createdAt)}</span>
+          </div>
+        </div>
+
+        {isCurrentUser ? (
+          <Avatar
+            src={senderProfile?.avatar}
+            alt={`Photo de ${formatParticipantName(senderProfile)}`}
+            name={formatParticipantName(senderProfile)}
+            size="sm"
+            variant="message"
+            type={isAgentRole(senderProfile?.role) ? "agent" : "user"}
+            className="mb-1"
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -153,6 +259,12 @@ export const ConversationPanel = () => {
 
     return mappedItems;
   }, [appointmentModalState.message?.appointment, appointmentPropertiesQuery.data?.items]);
+
+  const conversationMetrics = useMemo(() => ({
+    total: conversations.length,
+    unread: unreadCountQuery.data?.total ?? 0,
+    messages: messages.length
+  }), [conversations.length, messages.length, unreadCountQuery.data?.total]);
 
   const closeDeleteModal = () => {
     setDeleteTarget(null);
@@ -324,16 +436,33 @@ export const ConversationPanel = () => {
 
   return (
     <>
-      <section className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <aside className="rounded-3xl border border-white/10 bg-white/5 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-stone-400">Conversations privees</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{conversations.length}</p>
+      <section className="grid gap-5 xl:grid-cols-[360px_1fr]">
+        <aside className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.14),transparent_25%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+          <div className="space-y-4 border-b border-white/10 pb-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Messagerie</p>
+                <h3 className="mt-2 text-2xl font-semibold text-white">Conversations privees</h3>
+              </div>
+              <div className="rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs uppercase tracking-[0.2em] text-stone-300 backdrop-blur">
+                {conversationMetrics.unread} non lus
+              </div>
             </div>
-            <span className="rounded-full border border-brand-500/30 bg-brand-500/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-brand-100">
-              {unreadCountQuery.data?.total ?? 0} non lus
-            </span>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Conversations</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{conversationMetrics.total}</p>
+              </div>
+              <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Messages</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{conversationMetrics.messages}</p>
+              </div>
+              <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Selection</p>
+                <p className="mt-2 text-sm font-medium text-stone-200">{selectedParticipant ? formatParticipantName(selectedParticipant) : "Aucune"}</p>
+              </div>
+            </div>
           </div>
 
           <div className="mt-4 space-y-3">
@@ -342,6 +471,7 @@ export const ConversationPanel = () => {
               const peers = (conversation.participantProfiles || []).filter((participant) => participant.id !== user?.id);
               const peerNames = peers.map((participant) => formatParticipantName(participant));
               const primaryPeer = peers[0] || null;
+              const isPeerOnline = primaryPeer ? Boolean(onlineUsers[primaryPeer.id]) : false;
 
               return (
                 <button
@@ -349,25 +479,37 @@ export const ConversationPanel = () => {
                   type="button"
                   onClick={() => setSelectedConversationId(conversation.id)}
                   className={isActive
-                    ? "w-full rounded-2xl border border-brand-500/40 bg-brand-500/10 p-4 text-left"
-                    : "w-full rounded-2xl border border-white/10 bg-black/10 p-4 text-left hover:border-white/20"
+                    ? "w-full rounded-[1.6rem] border border-brand-500/35 bg-brand-500/10 p-4 text-left shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
+                    : "w-full rounded-[1.6rem] border border-white/10 bg-black/15 p-4 text-left transition hover:border-white/20 hover:bg-white/5"
                   }
                 >
                   <div className="flex items-start gap-3">
-                    <Avatar
-                      src={primaryPeer?.avatar}
-                      alt={`Photo de ${primaryPeer ? formatParticipantName(primaryPeer) : "participant"}`}
-                      name={primaryPeer ? formatParticipantName(primaryPeer) : "Participant"}
-                      size="sm"
-                      variant="message"
-                      type={isAgentRole(primaryPeer?.role) ? "agent" : "user"}
-                    />
+                    <div className="relative">
+                      <Avatar
+                        src={primaryPeer?.avatar}
+                        alt={`Photo de ${primaryPeer ? formatParticipantName(primaryPeer) : "participant"}`}
+                        name={primaryPeer ? formatParticipantName(primaryPeer) : "Participant"}
+                        size="sm"
+                        variant="message"
+                        type={isAgentRole(primaryPeer?.role) ? "agent" : "user"}
+                      />
+                      {primaryPeer ? (
+                        <span className="absolute -bottom-1 -right-1 inline-flex h-3.5 w-3.5 rounded-full border-2 border-stone-950" style={{ backgroundColor: isPeerOnline ? "#22c55e" : "#ef4444" }} />
+                      ) : null}
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-white">{conversation.lastMessagePreview || "Nouvelle conversation"}</p>
-                      <p className="mt-1 truncate text-xs text-stone-400">Participants: {peerNames.join(", ") || "-"}</p>
-                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-500">
-                        {conversation.lastMessageAt ? formatTimestamp(conversation.lastMessageAt) : "Aucun message"}
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="truncate text-sm font-semibold text-white">{peerNames.join(", ") || "Nouvelle conversation"}</p>
+                        <span className="whitespace-nowrap text-[11px] uppercase tracking-[0.2em] text-stone-500">
+                          {conversation.lastMessageAt ? formatTimestamp(conversation.lastMessageAt) : "-"}
+                        </span>
+                      </div>
+                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-300">{conversation.lastMessagePreview || "Nouvelle conversation"}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-500">
+                        <span>{primaryPeer?.role || "participant"}</span>
+                        <Status color={isPeerOnline ? "#22c55e" : "#ef4444"} />
+                        <span>{isPeerOnline ? "en ligne" : "hors ligne"}</span>
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -377,174 +519,138 @@ export const ConversationPanel = () => {
           </div>
         </aside>
 
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-          <div className="border-b border-white/10 pb-4">
-            <p className="text-lg font-semibold text-white">Messagerie privee</p>
-            <div className="mt-3 flex flex-wrap gap-3 text-sm text-stone-400">
-              {participantStatusItems.length ? participantStatusItems.map((participant) => (
-                <span key={participant.id} className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/20 px-3 py-2">
-                  <Avatar
-                    src={participant.avatar}
-                    alt={`Photo de ${participant.label}`}
-                    name={participant.label}
-                    size="xs"
-                    variant="message"
-                    type={isAgentRole(participant.role) ? "agent" : "user"}
-                  />
-                  <span>{participant.label}</span>
-                  <Status color={participant.isOnline ? "#22c55e" : "#ef4444"} />
-                  <span>{participant.isOnline ? "en ligne" : "hors ligne"}</span>
-                </span>
-              )) : <span>Selectionnez une conversation</span>}
+        <div className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.08),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.22)] lg:p-6">
+          <div className="border-b border-white/10 pb-5">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Conversation active</p>
+                  <h3 className="mt-2 text-2xl font-semibold text-white">{selectedParticipant ? formatParticipantName(selectedParticipant) : "Messagerie privee"}</h3>
+                </div>
+                <div className="flex flex-wrap gap-3 text-sm text-stone-400">
+                  {participantStatusItems.length ? participantStatusItems.map((participant) => (
+                    <span key={participant.id} className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-black/20 px-3 py-2">
+                      <Avatar
+                        src={participant.avatar}
+                        alt={`Photo de ${participant.label}`}
+                        name={participant.label}
+                        size="xs"
+                        variant="message"
+                        type={isAgentRole(participant.role) ? "agent" : "user"}
+                      />
+                      <span>{participant.label}</span>
+                      <Status color={participant.isOnline ? "#22c55e" : "#ef4444"} />
+                      <span>{participant.isOnline ? "en ligne" : "hors ligne"}</span>
+                    </span>
+                  )) : <span>Selectionnez une conversation</span>}
+                </div>
+                {typingUserId ? <p className="text-xs font-medium text-brand-100">Votre interlocuteur est en train d'ecrire...</p> : null}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[320px]">
+                <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Messages</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">{messages.length}</p>
+                </div>
+                <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Rendez-vous</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">{messages.filter((message) => message.messageType === "appointment").length}</p>
+                </div>
+                <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Statut</p>
+                  <p className="mt-2 text-sm font-medium text-stone-200">{selectedParticipant ? (onlineUsers[selectedParticipant.id] ? "Disponible" : "Hors ligne") : "Aucune selection"}</p>
+                </div>
+              </div>
             </div>
-            {typingUserId ? <p className="mt-2 text-xs text-brand-100">Votre interlocuteur est en train d'ecrire...</p> : null}
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-5 min-h-[420px] space-y-4 rounded-[1.8rem] border border-white/10 bg-black/15 p-4 lg:p-5">
             {messages.map((message) => {
               const isCurrentUser = message.senderId === user?.id;
               const isEditing = editingMessageId === message.id;
-              const isAppointmentMessage = message.messageType === "appointment";
-              const canEditAppointment = isAppointmentMessage && Boolean(message.appointment);
               const senderProfile = isCurrentUser ? user : selectedParticipant;
-              const conversationItemMenuItems = [
-                {
-                  label: isAppointmentMessage ? "Modifier le rendez-vous" : "Modifier le message",
-                  action: async () => {
-                    if ((!isCurrentUser && !canEditAppointment) || updateMessageMutation.isPending || !selectedConversationId) {
-                      return;
-                    }
-
-                    startEditingMessage(message);
-                  },
-                  disabled: (!isCurrentUser && !canEditAppointment) || (isAppointmentMessage && !message.appointment)
-                },
-                {
-                  label: "Supprimer le message",
-                  action: async () => {
-                    if (!isCurrentUser || deleteMessageMutation.isPending || !selectedConversationId) {
-                      return;
-                    }
-
-                    setDeleteTarget({
-                      type: "message",
-                      messageId: message.id,
-                      title: "Supprimer le message",
-                      content: "Voulez-vous vraiment supprimer ce message ? Cette action est irreversible."
-                    });
-                  },
-                  disabled: !isCurrentUser
-                }
-              ];
 
               return (
-                <div key={message.id} className={isCurrentUser ? "ml-auto max-w-xl" : "mr-auto max-w-xl"}>
-                  <div className={isCurrentUser ? "flex items-start justify-end gap-3" : "flex items-start gap-3"}>
-                    {!isCurrentUser ? (
-                      <Avatar
-                        src={senderProfile?.avatar}
-                        alt={`Photo de ${formatParticipantName(senderProfile)}`}
-                        name={formatParticipantName(senderProfile)}
-                        size="sm"
-                        variant="message"
-                        type={isAgentRole(senderProfile?.role) ? "agent" : "user"}
-                        className="mt-1"
-                      />
-                    ) : null}
-                    <div className={isCurrentUser ? "rounded-2xl bg-brand-500/20 p-4 text-right" : "rounded-2xl bg-black/20 p-4"}>
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <p className="text-xs uppercase tracking-[0.2em] text-stone-400">{formatParticipantName(senderProfile)}</p>
-                        <Menu
-                          icon={<SvgDotsMenu color="currentColor" />}
-                          items={conversationItemMenuItems}
-                          disabled={updateMessageMutation.isPending || deleteMessageMutation.isPending}
-                          align="right"
-                          aria-label="Ouvrir les actions du message"
-                        />
-                      </div>
-                      {isEditing ? (
-                        <textarea
-                          key={message.id}
-                          defaultValue={message.content}
-                          className="min-h-24 w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500"
-                          onChange={(event) => setEditingMessageContent(event.target.value)}
-                          onKeyDown={async (event) => {
-                            if (event.key === "Escape") {
-                              cancelEditingMessage();
-                              return;
-                            }
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  isCurrentUser={isCurrentUser}
+                  isEditing={isEditing}
+                  onEditingChange={setEditingMessageContent}
+                  onEditingKeyDown={async (event) => {
+                    if (event.key === "Escape") {
+                      cancelEditingMessage();
+                      return;
+                    }
 
-                            if (event.key === "Enter" && !event.shiftKey) {
-                              event.preventDefault();
-                              await saveEditedMessage(message);
-                            }
-                          }}
-                          autoFocus
-                        />
-                      ) : isAppointmentMessage ? renderAppointmentDetails(message.appointment) : (
-                        <p className="text-sm text-white">{message.content}</p>
-                      )}
-                      <div className="mt-2 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">
-                        <span>{message.status}</span>
-                        <Status color="#78716c" />
-                        <span>{formatTimestamp(message.readAt || message.deliveredAt || message.createdAt)}</span>
-                      </div>
-                    </div>
-                    {isCurrentUser ? (
-                      <Avatar
-                        src={senderProfile?.avatar}
-                        alt={`Photo de ${formatParticipantName(senderProfile)}`}
-                        name={formatParticipantName(senderProfile)}
-                        size="sm"
-                        variant="message"
-                        type={isAgentRole(senderProfile?.role) ? "agent" : "user"}
-                        className="mt-1"
-                      />
-                    ) : null}
-                  </div>
-                </div>
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      await saveEditedMessage(message);
+                    }
+                  }}
+                  onStartEdit={startEditingMessage}
+                  onDelete={(targetMessage) => setDeleteTarget({
+                    type: "message",
+                    messageId: targetMessage.id,
+                    title: "Supprimer le message",
+                    content: "Voulez-vous vraiment supprimer ce message ? Cette action est irreversible."
+                  })}
+                  senderProfile={senderProfile}
+                  selectedConversationId={selectedConversationId}
+                  updateMessageMutation={updateMessageMutation}
+                  deleteMessageMutation={deleteMessageMutation}
+                />
               );
             })}
-            {!messages.length ? <p className="text-sm text-stone-400">Aucun message dans cette conversation.</p> : null}
+            {!messages.length ? (
+              <div className="flex min-h-[320px] items-center justify-center rounded-[1.5rem] border border-dashed border-white/15 bg-black/10 px-6 text-center text-sm leading-6 text-stone-400">
+                Aucun message dans cette conversation. Utilisez la zone de composition pour demarrer l'echange.
+              </div>
+            ) : null}
           </div>
 
-          <div className="mt-6 flex flex-col items-center justify-center gap-3 md:flex-row md:items-end">
-            <Menu
-              icon={<SvgPlus />}
-              items={creationMenuItems}
-              disabled={isConversationDisabled}
-              aria-label="Ouvrir les actions de creation"
-            />
-
-            <div className="flex-1">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-stone-200">Votre message</span>
-                <textarea
-                  className="min-h-24 w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500"
-                  value={draftMessage}
-                  onChange={(event) => setDraftMessage(event.target.value)}
-                  placeholder="Ecrivez a votre agent ou a votre client..."
-                  disabled={!selectedConversationId || sendMessageMutation.isPending}
+          <div className="mt-5 rounded-[1.8rem] border border-white/10 bg-black/20 p-4 lg:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+              <div className="flex items-center gap-3">
+                <Menu
+                  icon={<SvgPlus />}
+                  items={creationMenuItems}
+                  disabled={isConversationDisabled}
+                  aria-label="Ouvrir les actions de creation"
                 />
-              </label>
+                <Menu
+                  icon={<SvgDotsMenu color="currentColor" />}
+                  items={conversationMenuItems}
+                  disabled={isConversationDisabled || deleteConversationMutation.isPending || !selectedParticipant?.id}
+                  align="right"
+                  aria-label="Ouvrir les actions de conversation"
+                />
+              </div>
+
+              <div className="flex-1">
+                <label className="block space-y-2">
+                  <span className="text-sm font-medium text-stone-200">Votre message</span>
+                  <textarea
+                    className="min-h-28 w-full rounded-[1.5rem] border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500"
+                    value={draftMessage}
+                    onChange={(event) => setDraftMessage(event.target.value)}
+                    placeholder="Ecrivez a votre agent ou a votre client..."
+                    disabled={!selectedConversationId || sendMessageMutation.isPending}
+                  />
+                </label>
+              </div>
+
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  className="px-6"
+                  disabled={!selectedConversationId || !draftMessage.trim() || sendMessageMutation.isPending}
+                  onClick={submitMessage}
+                >
+                  Envoyer
+                </Button>
+              </div>
             </div>
-
-            <Button
-              type="button"
-              className="px-6"
-              disabled={!selectedConversationId || !draftMessage.trim() || sendMessageMutation.isPending}
-              onClick={submitMessage}
-            >
-              Envoyer
-            </Button>
-
-            <Menu
-              icon={<SvgDotsMenu color="currentColor" />}
-              items={conversationMenuItems}
-              disabled={isConversationDisabled || deleteConversationMutation.isPending || !selectedParticipant?.id}
-              align="right"
-              aria-label="Ouvrir les actions de conversation"
-            />
           </div>
         </div>
       </section>

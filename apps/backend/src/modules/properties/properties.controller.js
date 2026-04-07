@@ -18,6 +18,7 @@ import {
   updateManagedProperty,
   updatePropertyWorkflow
 } from "./properties.service.js";
+import { uploadPropertyAssetFile } from "./properties.asset.service.js";
 
 export const getProperties = async (req, res) => {
   const { type, purpose, status } = req.query;
@@ -75,6 +76,17 @@ export const postManagedPropertyHandler = async (req, res) => {
   const data = await createManagedProperty({
     actor: req.user,
     payload: req.validated.body
+  });
+
+  res.status(StatusCodes.CREATED).json({ success: true, data });
+};
+
+export const postManagedPropertyAssetHandler = async (req, res) => {
+  const data = await uploadPropertyAssetFile({
+    actor: req.user,
+    assetKind: req.validated.params.assetKind,
+    mediaType: req.validated.query.mediaType,
+    file: req.file
   });
 
   res.status(StatusCodes.CREATED).json({ success: true, data });

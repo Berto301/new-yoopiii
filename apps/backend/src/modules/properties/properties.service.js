@@ -191,6 +191,7 @@ const mapPropertyListItem = (property, favoriteIds = new Set()) => ({
     property.agentName ||
     [property.agentId?.firstName, property.agentId?.lastName].filter(Boolean).join(" ").trim() ||
     "Agent",
+  agentAvatar: property.agentAvatar || property.agentId?.avatar || null,
   agencyId: property.agencyId?._id ? String(property.agencyId._id) : property.agencyId,
   agencyName: property.agencyName || property.agencyId?.name || null,
   ownerType: property.ownerType,
@@ -734,7 +735,7 @@ export const getPropertyFavorites = async ({ userId, filters }) => {
     PropertyFavorite.countDocuments({ userId })
   ]);
   const propertyIds = favorites.map((item) => item.propertyId);
-  const properties = await Property.find({ _id: { $in: propertyIds } }).lean();
+  const properties = await Property.find({ _id: { $in: propertyIds } }).populate("agentId", "firstName lastName avatar").lean();
   const propertyMap = new Map(properties.map((property) => [String(property._id), property]));
   const favoriteIds = new Set(propertyIds.map(String));
   return { items: favorites.map((favorite) => propertyMap.get(String(favorite.propertyId))).filter(Boolean).map((property) => mapPropertyListItem(property, favoriteIds)), pagination: buildPagination({ page, limit, total, itemsLength: favorites.length }) };
@@ -755,9 +756,12 @@ export const getPropertyHistory = async ({ userId, filters }) => {
     PropertyView.countDocuments({ userId })
   ]);
   const propertyIds = views.map((view) => view.propertyId);
-  const properties = await Property.find({ _id: { $in: propertyIds } }).lean();
+  const properties = await Property.find({ _id: { $in: propertyIds } }).populate("agentId", "firstName lastName avatar").lean();
   const propertyMap = new Map(properties.map((property) => [String(property._id), property]));
   const favoriteIds = await loadFavoriteIdsForUser(userId, propertyIds);
   return { items: views.map((view) => { const property = propertyMap.get(String(view.propertyId)); if (!property) return null; return { viewedAt: view.viewedAt, source: view.source, property: mapPropertyListItem(property, favoriteIds) }; }).filter(Boolean), pagination: buildPagination({ page, limit, total, itemsLength: views.length }) };
 };
+
+
+
 

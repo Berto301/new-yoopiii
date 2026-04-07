@@ -10,6 +10,20 @@ export const createManagedProperty = async (payload) => {
   return response.data.data;
 };
 
+export const uploadPropertyAsset = async ({ assetKind, file, mediaType }) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post(`/properties/management/assets/${assetKind}`, formData, {
+    params: mediaType ? { mediaType } : undefined,
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  });
+
+  return response.data.data;
+};
+
 export const updateManagedProperty = async ({ propertyId, payload }) => {
   const response = await apiClient.patch(`/properties/management/${propertyId}`, payload);
   return response.data.data;

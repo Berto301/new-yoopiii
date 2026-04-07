@@ -12,6 +12,8 @@ const propertyStatusSchema = z.enum(["draft", "published", "reserved", "sold", "
 const publicationStatusSchema = z.enum(["pending", "approved", "rejected"]);
 const propertyPurposeSchema = z.enum(["sale", "rent"]);
 const mediaTypeSchema = z.enum(["image", "video", "virtual_tour", "document"]);
+const propertyAssetKindSchema = z.enum(["cover", "media"]);
+const propertyUploadMediaTypeSchema = z.enum(["image", "video"]).optional();
 
 const propertyMediaSchema = z.object({
   type: mediaTypeSchema.default("image"),
@@ -159,4 +161,14 @@ export const duplicateManagedPropertySchema = z.object({
   body: z.object({ title: z.string().trim().min(3).max(180).optional() }).default({}),
   params: z.object({ propertyId: objectIdSchema }),
   query: z.object({}).default({})
+});
+
+export const propertyAssetUploadSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({
+    assetKind: propertyAssetKindSchema
+  }),
+  query: z.object({
+    mediaType: propertyUploadMediaTypeSchema
+  })
 });

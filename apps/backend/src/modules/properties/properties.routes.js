@@ -15,9 +15,10 @@ import {
   getPropertyHistoryHandler,
   patchManagedPropertyHandler,
   patchPropertyWorkflowHandler,
-  postPropertyReservationHandler,
+  postManagedPropertyAssetHandler,
   postManagedPropertyHandler,
   postPropertyFavoriteHandler,
+  postPropertyReservationHandler,
   postPropertyReservationReleaseHandler,
   postPropertyViewHandler
 } from "./properties.controller.js";
@@ -27,12 +28,14 @@ import {
   duplicateManagedPropertySchema,
   managedPropertiesSchema,
   nearbyPropertiesSchema,
+  propertyAssetUploadSchema,
   propertyCollectionSchema,
   propertyHistoryCreateSchema,
   propertyIdParamsSchema,
   propertyWorkflowSchema,
   updateManagedPropertySchema
 } from "./properties.validation.js";
+import { uploadPropertyAsset } from "./properties.upload.js";
 
 export const propertyRouter = Router();
 
@@ -43,6 +46,7 @@ propertyRouter.use(asyncHandler(requireAuth));
 propertyRouter.get("/publications/feed", validate(propertyCollectionSchema), asyncHandler(getPropertyPublicationsHandler));
 propertyRouter.get("/management/mine", validate(managedPropertiesSchema), asyncHandler(getManagedPropertiesHandler));
 propertyRouter.post("/management", validate(createManagedPropertySchema), asyncHandler(postManagedPropertyHandler));
+propertyRouter.post("/management/assets/:assetKind", validate(propertyAssetUploadSchema), uploadPropertyAsset, asyncHandler(postManagedPropertyAssetHandler));
 propertyRouter.patch("/management/:propertyId", validate(updateManagedPropertySchema), asyncHandler(patchManagedPropertyHandler));
 propertyRouter.post("/management/:propertyId/duplicate", validate(duplicateManagedPropertySchema), asyncHandler(duplicateManagedPropertyHandler));
 propertyRouter.delete("/management/:propertyId", validate(propertyIdParamsSchema), asyncHandler(deleteManagedPropertyHandler));

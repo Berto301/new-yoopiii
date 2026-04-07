@@ -4,6 +4,7 @@ import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
+import { useNotification } from "../../../hooks/useNotification.js";
 import { usePropertyWorkspace } from "../../../features/properties/hooks/usePropertyWorkspace.js";
 import { ModalManageProperty } from "./ModalManageProperty.jsx";
 
@@ -14,16 +15,203 @@ const formatPrice = (value, currency = "XOF") =>
     maximumFractionDigits: 0
   }).format(value || 0);
 
+const formatOwnerType = (ownerType) => (ownerType === "agency" ? "Agence" : "Agent independant");
+
+const summaryCards = [
+  {
+    key: "total",
+    label: "Biens total",
+    description: "Portefeuille global sous supervision",
+    accent: "from-amber-400/30 via-orange-400/15 to-transparent"
+  },
+  {
+    key: "published",
+    label: "Publies",
+    description: "Biens visibles et actifs",
+    accent: "from-emerald-400/30 via-emerald-300/10 to-transparent"
+  },
+  {
+    key: "pendingApproval",
+    label: "En attente",
+    description: "Elements a valider ou publier",
+    accent: "from-sky-400/30 via-cyan-300/10 to-transparent"
+  },
+  {
+    key: "totalFavorites",
+    label: "Favoris cumules",
+    description: "Interet total capte sur la vitrine",
+    accent: "from-fuchsia-400/25 via-rose-300/10 to-transparent"
+  }
+];
+
+const getPublicationBadgeClassName = (publicationStatus) => {
+  if (publicationStatus === "approved") {
+    return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
+  }
+
+  if (publicationStatus === "rejected") {
+    return "border-red-400/30 bg-red-400/10 text-red-100";
+  }
+
+  return "border-amber-400/30 bg-amber-400/10 text-amber-100";
+};
+
+const getStatusBadgeClassName = (status) => {
+  if (status === "published") {
+    return "border-emerald-400/25 bg-emerald-400/10 text-emerald-100";
+  }
+
+  if (status === "reserved") {
+    return "border-sky-400/25 bg-sky-400/10 text-sky-100";
+  }
+
+  if (status === "archived") {
+    return "border-white/10 bg-white/5 text-stone-200";
+  }
+
+  return "border-white/10 bg-white/5 text-stone-200";
+};
+
+const StatCard = ({ label, value, description, accent }) => (
+  <Card className="relative overflow-hidden border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))]">
+    <div className={`absolute inset-0 bg-gradient-to-br ${accent}`} />
+    <div className="relative space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-400">{label}</p>
+      <p className="text-3xl font-semibold text-white md:text-4xl">{value}</p>
+      <p className="max-w-[22rem] text-sm leading-6 text-stone-300">{description}</p>
+    </div>
+  </Card>
+);
+
+const PropertyCard = ({
+  property,
+  workflowMutation,
+  duplicateManagedPropertyMutation,
+  deleteManagedPropertyMutation,
+  onEdit,
+  onDuplicate,
+  onDelete
+}) => {
+  const coverImage = property.coverImage || property.media?.find((item) => item.type === "image")?.url || "";
+  const mediaCount = property.media?.length || 0;
+  const detailItems = [
+    { label: "Type", value: property.type || "--" },
+    { label: "Usage", value: property.purpose || "--" },
+    { label: "Fichiers", value: mediaCount },
+    { label: "Gestion", value: formatOwnerType(property.ownerType) }
+  ];
+
+  return (
+    <Card className="overflow-hidden border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-0">
+      <div className="grid gap-0 xl:grid-cols-[340px_1fr]">
+        <div className="relative min-h-[260px] overflow-hidden border-b border-white/10 xl:border-b-0 xl:border-r">
+          {coverImage ? (
+            <img src={coverImage} alt={property.title} className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.35),transparent_30%),linear-gradient(135deg,rgba(41,37,36,1),rgba(28,25,23,0.92),rgba(12,10,9,1))]" />
+          )}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,10,9,0.12),rgba(12,10,9,0.82))]" />
+
+          <div className="relative flex h-full min-h-[260px] flex-col justify-between p-5 lg:p-6">
+            <div className="flex flex-wrap gap-2">
+              <Badge className={getPublicationBadgeClassName(property.publicationStatus)}>{property.publicationStatus}</Badge>
+              <Badge className={getStatusBadgeClassName(property.status)}>{property.status}</Badge>
+              {property.has3DView ? <Badge className="border-brand-500/30 bg-brand-500/10 text-brand-100">3D</Badge> : null}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-stone-200/80">{property.slug || "propriete"}</p>
+              <div>
+                <h3 className="text-2xl font-semibold text-white">{property.title}</h3>
+                <p className="mt-2 max-w-sm text-sm leading-6 text-stone-200/85">{property.address}</p>
+              </div>
+              <p className="text-xl font-semibold text-amber-100">{formatPrice(property.price, property.currency)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6 p-5 lg:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Resume du bien</p>
+              <p className="max-w-3xl text-sm leading-7 text-stone-300">{property.description || "Aucune description disponible pour le moment."}</p>
+            </div>
+            <div className="rounded-[1.5rem] border border-white/10 bg-black/20 px-4 py-3 text-right backdrop-blur">
+              <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Favoris</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{property.favoriteCount || 0}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+            {detailItems.map((item) => (
+              <div key={item.label} className="rounded-[1.4rem] border border-white/10 bg-stone-950/60 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{item.label}</p>
+                <p className="mt-2 text-sm font-medium capitalize text-white">{item.value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-4 border-t border-white/10 pt-5 lg:flex-row lg:items-center lg:justify-between">
+            <p className="text-xs uppercase tracking-[0.22em] text-stone-500">
+              {property.favoriteCount || 0} favoris • {mediaCount} fichiers • {property.has3DView ? "Visite 3D active" : "Sans visite 3D"}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onEdit(property)}>
+                Modifier
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="px-4 py-2"
+                disabled={workflowMutation.isPending || property.publicationStatus === "approved"}
+                onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { publicationStatus: "approved", status: "published" } })}
+              >
+                Publier
+              </Button>
+              <Button type="button" variant="ghost" className="px-4 py-2" disabled={duplicateManagedPropertyMutation.isPending} onClick={() => onDuplicate(property)}>
+                Dupliquer
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="px-4 py-2"
+                disabled={workflowMutation.isPending || property.status === "reserved"}
+                onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "reserved" } })}
+              >
+                Reserver
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="px-4 py-2"
+                disabled={workflowMutation.isPending || property.status === "archived"}
+                onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "archived" } })}
+              >
+                Archiver
+              </Button>
+              <Button type="button" variant="ghost" className="px-4 py-2 text-red-200" disabled={deleteManagedPropertyMutation.isPending} onClick={() => onDelete(property)}>
+                Supprimer
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 export const PropertyManagementPage = () => {
   const {
     user,
     managedPropertiesQuery,
     workflowMutation,
     createManagedPropertyMutation,
+    uploadPropertyAssetMutation,
     updateManagedPropertyMutation,
     duplicateManagedPropertyMutation,
     deleteManagedPropertyMutation
   } = usePropertyWorkspace();
+  const { showSuccess, showError } = useNotification();
   const [modalMode, setModalMode] = useState("create");
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
@@ -62,6 +250,18 @@ export const PropertyManagementPage = () => {
     closeManageModal();
   };
 
+  const handlePropertyAssetUpload = async ({ assetKind, mediaType, file }) => {
+    const uploadedAsset = await uploadPropertyAssetMutation.mutateAsync({ assetKind, mediaType, file });
+
+    if (assetKind === "cover") {
+      showSuccess("Image de couverture televersee avec succes.");
+    } else {
+      showSuccess(mediaType === "video" ? "Video televersee avec succes." : "Image televersee avec succes.");
+    }
+
+    return uploadedAsset;
+  };
+
   const handleDuplicateProperty = async (property) => {
     await duplicateManagedPropertyMutation.mutateAsync({
       propertyId: property.id,
@@ -79,7 +279,9 @@ export const PropertyManagementPage = () => {
     return (
       <section className="space-y-8">
         <SectionTitle eyebrow="Gestion biens" title="Pilotage des proprietes" description="Chargement des proprietes sous votre responsabilite." />
-        <Card><p className="text-sm text-stone-300">Chargement des proprietes...</p></Card>
+        <Card className="border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))]">
+          <p className="text-sm text-stone-300">Chargement des proprietes...</p>
+        </Card>
       </section>
     );
   }
@@ -88,7 +290,9 @@ export const PropertyManagementPage = () => {
     return (
       <section className="space-y-8">
         <SectionTitle eyebrow="Gestion biens" title="Pilotage des proprietes" description="L'espace de gestion n'a pas pu etre charge." />
-        <Card><p className="text-sm text-red-300">Une erreur est survenue lors du chargement des proprietes.</p></Card>
+        <Card className="border-red-500/20 bg-red-500/5">
+          <p className="text-sm text-red-200">Une erreur est survenue lors du chargement des proprietes.</p>
+        </Card>
       </section>
     );
   }
@@ -100,62 +304,73 @@ export const PropertyManagementPage = () => {
   return (
     <>
       <section className="space-y-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <SectionTitle
-            eyebrow="Gestion biens"
-            title="Pilotage des proprietes"
-            description="Agence et agents peuvent suivre les publications, statuts et performances des biens depuis un espace dedie."
-          />
-          <Button type="button" className="px-5 py-3" onClick={openCreateModal}>
-            Ajout de Bien
-          </Button>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card><p className="text-sm text-stone-400">Biens total</p><p className="mt-3 text-3xl font-semibold text-white">{summary.total ?? 0}</p></Card>
-          <Card><p className="text-sm text-stone-400">Publies</p><p className="mt-3 text-3xl font-semibold text-white">{summary.published ?? 0}</p></Card>
-          <Card><p className="text-sm text-stone-400">En attente</p><p className="mt-3 text-3xl font-semibold text-white">{summary.pendingApproval ?? 0}</p></Card>
-          <Card><p className="text-sm text-stone-400">Favoris cumules</p><p className="mt-3 text-3xl font-semibold text-white">{summary.totalFavorites ?? 0}</p></Card>
-        </div>
-
-        <div className="space-y-4">
-          {items.map((property) => (
-            <Card key={property.id} className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-xl font-semibold text-white">{property.title}</h3>
-                  <Badge>{property.publicationStatus}</Badge>
-                  <Badge className="border-white/10 bg-white/5 text-stone-200">{property.status}</Badge>
-                  {property.has3DView ? <Badge className="border-brand-500/30 bg-brand-500/10 text-brand-100">3D</Badge> : null}
+        <Card className="overflow-hidden border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.20),transparent_24%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_22%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-0">
+          <div className="grid gap-8 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
+            <div className="space-y-5">
+              <SectionTitle
+                eyebrow="Gestion biens"
+                title="Pilotage des proprietes"
+                description="Suivez les performances, soignez la presentation et pilotez chaque bien depuis un espace plus clair, plus rapide et plus professionnel."
+              />
+              <div className="flex flex-wrap gap-3">
+                <Button type="button" className="px-5 py-3" onClick={openCreateModal}>
+                  Ajout de Bien
+                </Button>
+                <div className="rounded-full border border-white/10 bg-black/20 px-4 py-3 text-xs uppercase tracking-[0.24em] text-stone-300 backdrop-blur">
+                  {items.length} biens charges dans l'espace de gestion
                 </div>
-                <p className="text-sm text-stone-400">{property.address}</p>
-                <p className="text-sm text-brand-100">{formatPrice(property.price, property.currency)}</p>
-                <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{property.favoriteCount} favoris • {property.ownerType} • {property.media?.length || 0} fichiers</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => openEditModal(property)}>
-                  Modifier
-                </Button>
-                <Button type="button" variant="secondary" className="px-4 py-2" disabled={workflowMutation.isPending || property.publicationStatus === "approved"} onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { publicationStatus: "approved", status: "published" } })}>
-                  Publier
-                </Button>
-                <Button type="button" variant="ghost" className="px-4 py-2" disabled={duplicateManagedPropertyMutation.isPending} onClick={() => handleDuplicateProperty(property)}>
-                  Dupliquer
-                </Button>
-                <Button type="button" variant="ghost" className="px-4 py-2" disabled={workflowMutation.isPending || property.status === "reserved"} onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "reserved" } })}>
-                  Reserver
-                </Button>
-                <Button type="button" variant="ghost" className="px-4 py-2" disabled={workflowMutation.isPending || property.status === "archived"} onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "archived" } })}>
-                  Archiver
-                </Button>
-                <Button type="button" variant="ghost" className="px-4 py-2 text-red-200" disabled={deleteManagedPropertyMutation.isPending} onClick={() => handleDeleteProperty(property)}>
-                  Supprimer
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {summaryCards.map((card) => (
+                <StatCard
+                  key={card.key}
+                  label={card.label}
+                  value={summary[card.key] ?? 0}
+                  description={card.description}
+                  accent={card.accent}
+                />
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Portefeuille actif</p>
+            <h3 className="mt-2 text-2xl font-semibold text-white">Biens recents et operations rapides</h3>
+          </div>
+          <p className="max-w-2xl text-sm leading-6 text-stone-400">
+            Les cartes ci-dessous regroupent les infos essentielles, le visuel principal et les actions de publication pour gagner du temps sans perdre en lisibilite.
+          </p>
+        </div>
+
+        <div className="space-y-5">
+          {items.map((property) => (
+            <PropertyCard
+              key={property.id}
+              property={property}
+              workflowMutation={workflowMutation}
+              duplicateManagedPropertyMutation={duplicateManagedPropertyMutation}
+              deleteManagedPropertyMutation={deleteManagedPropertyMutation}
+              onEdit={openEditModal}
+              onDuplicate={handleDuplicateProperty}
+              onDelete={handleDeleteProperty}
+            />
+          ))}
+
+          {!items.length ? (
+            <Card className="border-dashed border-white/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] text-center">
+              <p className="text-sm font-medium text-white">Aucune propriete a gerer pour le moment.</p>
+              <p className="mt-2 text-sm leading-6 text-stone-400">Commencez par ajouter un bien pour structurer votre portefeuille et centraliser sa publication.</p>
+              <div className="mt-5">
+                <Button type="button" className="px-5 py-3" onClick={openCreateModal}>
+                  Creer le premier bien
                 </Button>
               </div>
             </Card>
-          ))}
-
-          {!items.length ? <Card><p className="text-sm text-stone-300">Aucune propriete a gerer pour le moment.</p></Card> : null}
+          ) : null}
         </div>
       </section>
 
@@ -165,6 +380,9 @@ export const PropertyManagementPage = () => {
         property={selectedProperty}
         onClose={closeManageModal}
         onSubmit={handleSaveProperty}
+        onUploadAsset={handlePropertyAssetUpload}
+        onUploadError={(error) => showError(error?.response?.data?.message || "Le televersement du fichier a echoue.")}
+        isUploadingAsset={uploadPropertyAssetMutation.isPending}
         isSaving={createManagedPropertyMutation.isPending || updateManagedPropertyMutation.isPending}
       />
     </>

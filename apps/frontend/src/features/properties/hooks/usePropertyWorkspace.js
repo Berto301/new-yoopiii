@@ -13,6 +13,7 @@ import {
   releasePropertyReservation,
   removePropertyFromFavorites,
   reserveProperty,
+  uploadPropertyAsset,
   updateManagedProperty,
   updatePropertyWorkflow
 } from "../services/property.service.js";
@@ -92,6 +93,10 @@ export const usePropertyWorkspace = () => {
     }
   });
 
+  const uploadPropertyAssetMutation = useMutation({
+    mutationFn: uploadPropertyAsset
+  });
+
   const updateManagedPropertyMutation = useMutation({
     mutationFn: updateManagedProperty,
     onSuccess: () => {
@@ -123,6 +128,7 @@ export const usePropertyWorkspace = () => {
     reservationMutation,
     workflowMutation,
     createManagedPropertyMutation,
+    uploadPropertyAssetMutation,
     updateManagedPropertyMutation,
     duplicateManagedPropertyMutation,
     deleteManagedPropertyMutation
