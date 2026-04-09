@@ -9,6 +9,8 @@ import { useNotification } from "../../hooks/useNotification.js";
 import { SvgDotsMenu, SvgPlus } from "../../helpers/iconeSvg.js";
 import { getManagedProperties } from "../properties/services/property.service.js";
 import { ModalManageAppointment } from "./ModalManageAppointment.jsx";
+import { ModalCommunications } from "./ModalCommunications.jsx";
+import { ModalVisitReports } from "./ModalVisitReports.jsx";
 import {
   APPOINTMENT_STATUS,
   buildAppointmentSummary,
@@ -16,6 +18,7 @@ import {
   formatParticipantName,
   isAgentRole
 } from "./appointment.utils.js";
+import { channelOptions, pipelineStatusOptions, propertyTypeLabelMap } from "./report.utils.js";
 import { useChatWorkspace } from "./hooks/useChatWorkspace.js";
 
 const extractErrorMessage = (error, fallback) => error?.response?.data?.message || error?.message || fallback;
@@ -67,6 +70,78 @@ const renderAppointmentDetails = (appointment) => {
   );
 };
 
+const resolveOptionLabel = (options, value) => options.find((option) => option.value === value)?.label || value || "-";
+
+const renderCommunicationDetails = (report) => {
+  if (!report) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4 text-left">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-sky-100">
+          Communication
+        </span>
+        <span className="text-xs uppercase tracking-[0.2em] text-stone-400">
+          {resolveOptionLabel(pipelineStatusOptions, report.pipelineStage)}
+        </span>
+      </div>
+      <div className="grid gap-3 text-sm text-stone-200 md:grid-cols-2">
+        <p><span className="text-stone-400">Client :</span> {report.clientFullName || "-"}</p>
+        <p><span className="text-stone-400">Canal :</span> {resolveOptionLabel(channelOptions, report.channel)}</p>
+        <p><span className="text-stone-400">Date :</span> {report.communicationDate || "-"}</p>
+        <p><span className="text-stone-400">Heure :</span> {report.communicationTime || "-"}</p>
+        <p><span className="text-stone-400">Objet :</span> {report.subject || "-"}</p>
+        <p><span className="text-stone-400">Interet :</span> {report.interestLevel || "-"}</p>
+      </div>
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Resume</p>
+        <p className="text-sm text-white">{report.summary || "-"}</p>
+      </div>
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Suite</p>
+        <p className="text-sm text-white">{report.nextAction || "-"}</p>
+      </div>
+    </div>
+  );
+};
+
+const renderVisitReportDetails = (report) => {
+  if (!report) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4 text-left">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-amber-100">
+          Rapport de visite
+        </span>
+        <span className="text-xs uppercase tracking-[0.2em] text-stone-400">
+          {resolveOptionLabel(pipelineStatusOptions, report.pipelineStatus)}
+        </span>
+      </div>
+      <div className="grid gap-3 text-sm text-stone-200 md:grid-cols-2">
+        <p><span className="text-stone-400">Bien :</span> {report.propertyTitle || "-"}</p>
+        <p><span className="text-stone-400">Operation :</span> {propertyTypeLabelMap[report.operationType] || report.operationType || "-"}</p>
+        <p><span className="text-stone-400">Date :</span> {report.visitDate || "-"}</p>
+        <p><span className="text-stone-400">Heure :</span> {report.visitTime || "-"}</p>
+        <p><span className="text-stone-400">Client :</span> {report.clientFullName || "-"}</p>
+        <p><span className="text-stone-400">Budget :</span> {Number(report.estimatedBudget || 0).toLocaleString("fr-FR")} Ar</p>
+      </div>
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Besoin client</p>
+        <p className="text-sm text-white">{report.clientNeed || "-"}</p>
+      </div>
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/20 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Recommandations</p>
+        <p className="text-sm text-white">{report.recommendations || "-"}</p>
+      </div>
+    </div>
+  );
+};
+
 const MessageBubble = ({
   message,
   isCurrentUser,
@@ -81,18 +156,22 @@ const MessageBubble = ({
   deleteMessageMutation
 }) => {
   const isAppointmentMessage = message.messageType === "appointment";
-  const canEditAppointment = isAppointmentMessage && Boolean(message.appointment);
+  const isCommunicationReportMessage = message.messageType === "communication_report";
+  const isVisitReportMessage = message.messageType === "visit_report";
+  const canEditRichMessage = (isAppointmentMessage && Boolean(message.appointment))
+    || (isCommunicationReportMessage && Boolean(message.communicationReport))
+    || (isVisitReportMessage && Boolean(message.visitReport));
   const conversationItemMenuItems = [
     {
-      label: isAppointmentMessage ? "Modifier le rendez-vous" : "Modifier le message",
+      label: isAppointmentMessage ? "Modifier le rendez-vous" : isCommunicationReportMessage ? "Modifier le rapport" : isVisitReportMessage ? "Modifier le rapport" : "Modifier le message",
       action: async () => {
-        if ((!isCurrentUser && !canEditAppointment) || updateMessageMutation.isPending || !selectedConversationId) {
+        if ((!isCurrentUser && !canEditRichMessage) || updateMessageMutation.isPending || !selectedConversationId) {
           return;
         }
 
         onStartEdit(message);
       },
-      disabled: (!isCurrentUser && !canEditAppointment) || (isAppointmentMessage && !message.appointment)
+      disabled: (!isCurrentUser && !canEditRichMessage)
     },
     {
       label: "Supprimer le message",
@@ -126,7 +205,15 @@ const MessageBubble = ({
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className={isCurrentUser ? "ml-auto text-right" : "text-left"}>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400">{formatParticipantName(senderProfile)}</p>
-              <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-stone-500">{message.messageType === "appointment" ? "Rendez-vous" : "Message"}</p>
+              <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-stone-500">
+                {message.messageType === "appointment"
+                  ? "Rendez-vous"
+                  : message.messageType === "communication_report"
+                    ? "Rapport de communication"
+                    : message.messageType === "visit_report"
+                      ? "Rapport de visite"
+                      : "Message"}
+              </p>
             </div>
             <Menu
               icon={<SvgDotsMenu color="currentColor" />}
@@ -146,7 +233,7 @@ const MessageBubble = ({
               onKeyDown={onEditingKeyDown}
               autoFocus
             />
-          ) : isAppointmentMessage ? renderAppointmentDetails(message.appointment) : (
+          ) : isAppointmentMessage ? renderAppointmentDetails(message.appointment) : isCommunicationReportMessage ? renderCommunicationDetails(message.communicationReport) : isVisitReportMessage ? renderVisitReportDetails(message.visitReport) : (
             <p className="text-sm leading-7 text-white">{message.content}</p>
           )}
 
@@ -190,7 +277,8 @@ export const ConversationPanel = () => {
     sendMessageMutation,
     updateMessageMutation,
     deleteMessageMutation,
-    deleteConversationMutation
+    deleteConversationMutation,
+    uploadConversationAttachmentsMutation
   } = useChatWorkspace();
   const { showError, showInfo, showSuccess } = useNotification();
 
@@ -217,6 +305,16 @@ export const ConversationPanel = () => {
   const [editingMessageContent, setEditingMessageContent] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [appointmentModalState, setAppointmentModalState] = useState({
+    open: false,
+    mode: "create",
+    message: null
+  });
+  const [communicationModalState, setCommunicationModalState] = useState({
+    open: false,
+    mode: "create",
+    message: null
+  });
+  const [visitReportModalState, setVisitReportModalState] = useState({
     open: false,
     mode: "create",
     message: null
@@ -297,8 +395,58 @@ export const ConversationPanel = () => {
     });
   };
 
+  const openCreateCommunicationModal = () => {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    if (!isAgentUser) {
+      showInfo("Seul un agent peut enregistrer un rapport de communication.");
+      return;
+    }
+
+    setCommunicationModalState({
+      open: true,
+      mode: "create",
+      message: null
+    });
+  };
+
+  const openCreateVisitReportModal = () => {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    if (!isAgentUser) {
+      showInfo("Seul un agent peut enregistrer un rapport de visite.");
+      return;
+    }
+
+    setVisitReportModalState({
+      open: true,
+      mode: "create",
+      message: null
+    });
+  };
+
   const closeAppointmentModal = () => {
     setAppointmentModalState({
+      open: false,
+      mode: "create",
+      message: null
+    });
+  };
+
+  const closeCommunicationModal = () => {
+    setCommunicationModalState({
+      open: false,
+      mode: "create",
+      message: null
+    });
+  };
+
+  const closeVisitReportModal = () => {
+    setVisitReportModalState({
       open: false,
       mode: "create",
       message: null
@@ -308,6 +456,24 @@ export const ConversationPanel = () => {
   const startEditingMessage = (message) => {
     if (message.messageType === "appointment") {
       setAppointmentModalState({
+        open: true,
+        mode: "edit",
+        message
+      });
+      return;
+    }
+
+    if (message.messageType === "communication_report") {
+      setCommunicationModalState({
+        open: true,
+        mode: "edit",
+        message
+      });
+      return;
+    }
+
+    if (message.messageType === "visit_report") {
+      setVisitReportModalState({
         open: true,
         mode: "edit",
         message
@@ -390,6 +556,81 @@ export const ConversationPanel = () => {
     }
   };
 
+  const uploadAttachments = async (files) => {
+    try {
+      return await uploadConversationAttachmentsMutation.mutateAsync(files);
+    } catch (error) {
+      showError(extractErrorMessage(error, "Le televersement des pieces jointes a echoue."));
+      return [];
+    }
+  };
+
+  const handleCommunicationSubmit = async (values) => {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    try {
+      if (communicationModalState.mode === "edit" && communicationModalState.message?.id) {
+        await updateMessageMutation.mutateAsync({
+          conversationId: selectedConversationId,
+          messageId: communicationModalState.message.id,
+          content: "Rapport de communication",
+          messageType: "communication_report",
+          communicationReport: values,
+          attachments: values.attachments || []
+        });
+        showSuccess("Le rapport de communication a ete mis a jour.");
+      } else {
+        await sendMessageMutation.mutateAsync({
+          conversationId: selectedConversationId,
+          content: "Rapport de communication",
+          messageType: "communication_report",
+          communicationReport: values,
+          attachments: values.attachments || []
+        });
+        showSuccess("Le rapport de communication a ete envoye.");
+      }
+
+      closeCommunicationModal();
+    } catch (error) {
+      showError(extractErrorMessage(error, "L'enregistrement du rapport de communication a echoue."));
+    }
+  };
+
+  const handleVisitReportSubmit = async (values) => {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    try {
+      if (visitReportModalState.mode === "edit" && visitReportModalState.message?.id) {
+        await updateMessageMutation.mutateAsync({
+          conversationId: selectedConversationId,
+          messageId: visitReportModalState.message.id,
+          content: "Rapport de visite",
+          messageType: "visit_report",
+          visitReport: values,
+          attachments: values.attachments || []
+        });
+        showSuccess("Le rapport de visite a ete mis a jour.");
+      } else {
+        await sendMessageMutation.mutateAsync({
+          conversationId: selectedConversationId,
+          content: "Rapport de visite",
+          messageType: "visit_report",
+          visitReport: values,
+          attachments: values.attachments || []
+        });
+        showSuccess("Le rapport de visite a ete envoye.");
+      }
+
+      closeVisitReportModal();
+    } catch (error) {
+      showError(extractErrorMessage(error, "L'enregistrement du rapport de visite a echoue."));
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) {
       return;
@@ -413,6 +654,16 @@ export const ConversationPanel = () => {
       label: "Prise de rendez-vous",
       action: openCreateAppointmentModal,
       disabled: isAppointmentCreationDisabled
+    },
+    {
+      label: "Rapport de communication",
+      action: openCreateCommunicationModal,
+      disabled: isConversationDisabled || !isAgentUser
+    },
+    {
+      label: "Rapport de visite",
+      action: openCreateVisitReportModal,
+      disabled: isConversationDisabled || !isAgentUser
     }
   ];
 
@@ -547,7 +798,7 @@ export const ConversationPanel = () => {
                 {typingUserId ? <p className="text-xs font-medium text-brand-100">Votre interlocuteur est en train d'ecrire...</p> : null}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[320px]">
+              <div className="grid gap-3 sm:grid-cols-4 lg:min-w-[320px]">
                 <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Messages</p>
                   <p className="mt-2 text-2xl font-semibold text-white">{messages.length}</p>
@@ -557,8 +808,21 @@ export const ConversationPanel = () => {
                   <p className="mt-2 text-2xl font-semibold text-white">{messages.filter((message) => message.messageType === "appointment").length}</p>
                 </div>
                 <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Rapports</p>
+                  <p className="mt-2 text-2xl font-semibold text-white">{messages.filter((message) => ["communication_report", "visit_report"].includes(message.messageType)).length}</p>
+                </div>
+                {/* <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Statut</p>
                   <p className="mt-2 text-sm font-medium text-stone-200">{selectedParticipant ? (onlineUsers[selectedParticipant.id] ? "Disponible" : "Hors ligne") : "Aucune selection"}</p>
+                </div> */}
+                <div className="mt-9">
+                  <Menu
+                    icon={<SvgDotsMenu color="currentColor" />}
+                    items={conversationMenuItems}
+                    disabled={isConversationDisabled || deleteConversationMutation.isPending || !selectedParticipant?.id}
+                    align="right"
+                    aria-label="Ouvrir les actions de conversation"
+                  />
                 </div>
               </div>
             </div>
@@ -618,13 +882,7 @@ export const ConversationPanel = () => {
                   disabled={isConversationDisabled}
                   aria-label="Ouvrir les actions de creation"
                 />
-                <Menu
-                  icon={<SvgDotsMenu color="currentColor" />}
-                  items={conversationMenuItems}
-                  disabled={isConversationDisabled || deleteConversationMutation.isPending || !selectedParticipant?.id}
-                  align="right"
-                  aria-label="Ouvrir les actions de conversation"
-                />
+                
               </div>
 
               <div className="flex-1">
@@ -676,6 +934,34 @@ export const ConversationPanel = () => {
         isSaving={sendMessageMutation.isPending || updateMessageMutation.isPending}
         onClose={closeAppointmentModal}
         onSubmit={handleAppointmentSubmit}
+      />
+
+      <ModalCommunications
+        open={communicationModalState.open}
+        mode={communicationModalState.mode}
+        currentUser={user}
+        participant={selectedParticipant}
+        propertyOptions={appointmentPropertyOptions}
+        report={communicationModalState.message?.communicationReport || null}
+        isSaving={sendMessageMutation.isPending || updateMessageMutation.isPending}
+        isUploading={uploadConversationAttachmentsMutation.isPending}
+        onUploadFiles={uploadAttachments}
+        onClose={closeCommunicationModal}
+        onSubmit={handleCommunicationSubmit}
+      />
+
+      <ModalVisitReports
+        open={visitReportModalState.open}
+        mode={visitReportModalState.mode}
+        currentUser={user}
+        participant={selectedParticipant}
+        propertyOptions={appointmentPropertyOptions}
+        report={visitReportModalState.message?.visitReport || null}
+        isSaving={sendMessageMutation.isPending || updateMessageMutation.isPending}
+        isUploading={uploadConversationAttachmentsMutation.isPending}
+        onUploadFiles={uploadAttachments}
+        onClose={closeVisitReportModal}
+        onSubmit={handleVisitReportSubmit}
       />
     </>
   );

@@ -1,4 +1,5 @@
 import { StatusCodes } from "http-status-codes";
+import { uploadConversationFiles } from "./conversations.asset.service.js";
 import {
   createConversationMessage,
   createOrGetPrivateConversation,
@@ -51,7 +52,9 @@ export const createMessage = async (req, res) => {
     content: req.validated.body.content,
     messageType: req.validated.body.messageType,
     attachments: req.validated.body.attachments,
-    appointment: req.validated.body.appointment || null
+    appointment: req.validated.body.appointment || null,
+    communicationReport: req.validated.body.communicationReport || null,
+    visitReport: req.validated.body.visitReport || null
   });
 
   res.status(StatusCodes.CREATED).json({ success: true, data: result });
@@ -64,7 +67,10 @@ export const updateMessage = async (req, res) => {
     userId: req.user.id,
     content: req.validated.body.content,
     messageType: req.validated.body.messageType,
-    appointment: req.validated.body.appointment
+    attachments: req.validated.body.attachments,
+    appointment: req.validated.body.appointment,
+    communicationReport: req.validated.body.communicationReport,
+    visitReport: req.validated.body.visitReport
   });
 
   res.status(StatusCodes.OK).json({ success: true, data: result });
@@ -102,4 +108,13 @@ export const deleteConversationWithParticipant = async (req, res) => {
   });
 
   res.status(StatusCodes.OK).json({ success: true, data: result });
+};
+
+export const uploadMessageAttachments = async (req, res) => {
+  const data = await uploadConversationFiles({
+    actor: req.user,
+    files: req.files || []
+  });
+
+  res.status(StatusCodes.CREATED).json({ success: true, data });
 };

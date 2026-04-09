@@ -12,6 +12,7 @@ import {
   getMessages,
   getUnreadCount,
   readMessage,
+  uploadMessageAttachments,
   updateMessage
 } from "./conversations.controller.js";
 import {
@@ -23,12 +24,14 @@ import {
   messageParamsSchema,
   updateMessageSchema
 } from "./conversations.validation.js";
+import { uploadConversationAttachments } from "./conversations.upload.js";
 
 export const conversationRouter = Router();
 
 conversationRouter.use(asyncHandler(requireAuth));
 conversationRouter.get("/unread-count", asyncHandler(getUnreadCount));
 conversationRouter.get("/", asyncHandler(getConversations));
+conversationRouter.post("/uploads/attachments", uploadConversationAttachments, asyncHandler(uploadMessageAttachments));
 conversationRouter.post("/", validate(createConversationSchema), asyncHandler(createConversation));
 conversationRouter.delete("/with/:participantId", validate(conversationParticipantParamsSchema), asyncHandler(deleteConversationWithParticipant));
 conversationRouter.get("/:conversationId", validate(conversationIdParamsSchema), asyncHandler(getConversation));

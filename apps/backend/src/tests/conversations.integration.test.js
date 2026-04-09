@@ -260,6 +260,139 @@ test("appointment messages can be created by an agent and updated by the client 
   assert.equal(listMessagesResponse.body.data.items[0].appointment.clientFeedback, "Je serai sur place a 11:55");
 });
 
+test("communication and visit reports are persisted with generated summaries and notifications", async () => {
+  const client = await createUser({ firstName: "Client", role: "user" });
+  const agent = await createUser({ firstName: "Agent", role: "independent_agent" });
+  const agentToken = signAccessToken(agent);
+  const app = createApp();
+
+  const createConversationResponse = await request(app)
+    .post("/api/v1/conversations")
+    .set("Authorization", `Bearer ${agentToken}`)
+    .send({ participantId: String(client._id) });
+
+  const conversationId = createConversationResponse.body.data.id;
+
+  const communicationResponse = await request(app)
+    .post(`/api/v1/conversations/${conversationId}/messages`)
+    .set("Authorization", `Bearer ${agentToken}`)
+    .send({
+      content: "Rapport de communication",
+      messageType: "communication_report",
+      attachments: ["/uploads/conversations/mock-proof.pdf"],
+      communicationReport: {
+        clientFullName: "Client Test",
+        propertyId: "",
+        propertyTitle: "",
+        agentResponsibleId: String(agent._id),
+        agentResponsibleName: "Agent Test",
+        communicationDate: "2026-04-09",
+        communicationTime: "09:30",
+        channel: "phone",
+        direction: "outbound",
+        durationMinutes: 12,
+        subject: "Qualification initiale",
+        summary: "Le client souhaite recevoir une selection de biens rapidement.",
+        detailedContent: "Echange detaille sur les contraintes budgetaires et la localisation.",
+        clientTone: "positive",
+        interestLevel: "warm",
+        interactionResult: "follow_up",
+        nextAction: "send_offer",
+        nextActionDate: "2026-04-10",
+        priority: "high",
+        attachments: ["/uploads/conversations/mock-proof.pdf"],
+        externalLink: "",
+        visibility: "team",
+        tags: ["appel", "qualifie"],
+        internalNote: "A rappeler en fin de journee si pas de reponse.",
+        leadSource: "website",
+        pipelineStage: "qualified",
+        lossReason: "",
+        leadScore: 78
+      }
+    });
+
+  assert.equal(communicationResponse.statusCode, 201);
+  assert.equal(communicationResponse.body.data.message.messageType, "communication_report");
+  assert.match(communicationResponse.body.data.message.content, /Rapport de communication/u);
+  assert.equal(communicationResponse.body.data.message.communicationReport.subject, "Qualification initiale");
+
+  const visitResponse = await request(app)
+    .post(`/api/v1/conversations/${conversationId}/messages`)
+    .set("Authorization", `Bearer ${agentToken}`)
+    .send({
+      content: "Rapport de visite",
+      messageType: "visit_report",
+      attachments: [],
+      visitReport: {
+        propertyId: "",
+        propertyTitle: "Appartement Ivandry",
+        visitDate: "2026-04-10",
+        visitTime: "15:00",
+        agentResponsibleId: String(agent._id),
+        agentResponsibleName: "Agent Test",
+        operationType: "rent",
+        clientFullName: "Client Test",
+        clientPhone: "+261340000000",
+        clientEmail: "client@yopii.test",
+        clientType: "tenant",
+        interestStatus: "high",
+        estimatedBudget: 1800000,
+        clientNeed: "Appartement 2 chambres proche du bureau.",
+        attendees: "Client et conjoint",
+        durationMinutes: 40,
+        positivePoints: "Luminosite et acces.",
+        negativePoints: "Parking un peu etroit.",
+        objections: "Caution jugee elevee.",
+        pricePerception: "high",
+        locationAppreciation: "excellent",
+        followUpPlanned: true,
+        followUpDate: "2026-04-11",
+        nextAction: "call_back",
+        conversionProbability: 72,
+        pipelineStatus: "visit_scheduled",
+        agentComment: "Le client reste motive malgre la caution.",
+        recommendations: "Proposer une alternative avec caution plus souple.",
+        tags: ["visite", "chaud"],
+        attachments: []
+      }
+    });
+
+  assert.equal(visitResponse.statusCode, 201);
+  assert.equal(visitResponse.body.data.message.messageType, "visit_report");
+  assert.match(visitResponse.body.data.message.content, /Appartement Ivandry/u);
+  assert.equal(visitResponse.body.data.message.visitReport.clientFullName, "Client Test");
+
+  const notifications = await Notification.find({ userId: client._id }).sort({ createdAt: -1 }).lean();
+  assert.equal(notifications.length, 2);
+  assert.equal(notifications[0].type, "visit_report_created");
+  assert.equal(notifications[1].type, "communication_report_created");
+
+  const listMessagesResponse = await request(app)
+    .get(`/api/v1/conversations/${conversationId}/messages?page=1&limit=30`)
+    .set("Authorization", `Bearer ${agentToken}`);
+
+  assert.equal(listMessagesResponse.statusCode, 200);
+  assert.equal(listMessagesResponse.body.data.items.length, 2);
+  assert.equal(listMessagesResponse.body.data.items[0].messageType, "communication_report");
+  assert.equal(listMessagesResponse.body.data.items[1].messageType, "visit_report");
+});
+
+test("conversation attachments can be uploaded", async () => {
+  const user = await createUser({ firstName: "Uploader", role: "independent_agent" });
+  const token = signAccessToken(user);
+  const app = createApp();
+
+  const response = await request(app)
+    .post("/api/v1/conversations/uploads/attachments")
+    .set("Authorization", `Bearer ${token}`)
+    .attach("files", Buffer.from("hello world"), "proof.txt");
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.body.data.length, 1);
+  assert.match(response.body.data[0].publicPath, /\/uploads\/conversations\//u);
+});
+
 test("deleting conversations with a participant removes all shared private conversations and messages", async () => {
   const client = await createUser({ firstName: "Client", role: "user" });
   const agent = await createUser({ firstName: "Agent", role: "independent_agent" });

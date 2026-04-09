@@ -23,23 +23,37 @@ export const sendConversationMessage = async ({
   content,
   messageType = "text",
   attachments = [],
-  appointment = null
+  appointment = null,
+  communicationReport = null,
+  visitReport = null
 }) => {
   const response = await apiClient.post(`/conversations/${conversationId}/messages`, {
     content,
     messageType,
     attachments,
-    appointment
+    appointment,
+    communicationReport,
+    visitReport
   });
 
   return response.data.data;
 };
 
-export const updateConversationMessage = async ({ conversationId, messageId, content, messageType, appointment }) => {
+export const updateConversationMessage = async ({
+  conversationId,
+  messageId,
+  content,
+  messageType,
+  appointment,
+  communicationReport,
+  visitReport
+}) => {
   const response = await apiClient.patch(`/conversations/${conversationId}/messages/${messageId}`, {
     content,
     ...(messageType ? { messageType } : {}),
-    ...(appointment !== undefined ? { appointment } : {})
+    ...(appointment !== undefined ? { appointment } : {}),
+    ...(communicationReport !== undefined ? { communicationReport } : {}),
+    ...(visitReport !== undefined ? { visitReport } : {})
   });
   return response.data.data?.message || response.data.data;
 };
@@ -61,5 +75,21 @@ export const getUnreadConversationCount = async () => {
 
 export const deleteConversationsWithParticipant = async ({ participantId }) => {
   const response = await apiClient.delete(`/conversations/with/${participantId}`);
+  return response.data.data;
+};
+
+export const uploadConversationAttachments = async (files) => {
+  const formData = new FormData();
+
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  const response = await apiClient.post("/conversations/uploads/attachments", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  });
+
   return response.data.data;
 };

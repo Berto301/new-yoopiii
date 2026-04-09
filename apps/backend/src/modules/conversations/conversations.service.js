@@ -6,6 +6,11 @@ import { Property } from "../properties/property.model.js";
 import { User } from "../users/user.model.js";
 import { Conversation } from "./conversation.model.js";
 import { Message } from "./message.model.js";
+import {
+  buildConversationNotificationData,
+  buildNotificationDescriptor,
+  resolveMessageContent
+} from "./conversations.report-utils.js";
 
 const formatConversation = (conversation) => {
   const participantProfiles = (conversation.participantIds || []).map((participant) => {
@@ -55,6 +60,8 @@ const formatMessage = (message) => ({
   messageType: message.messageType,
   attachments: message.attachments,
   appointment: message.appointment || null,
+  communicationReport: message.communicationReport || null,
+  visitReport: message.visitReport || null,
   status: message.status,
   deliveredAt: message.deliveredAt,
   readAt: message.readAt,
@@ -62,30 +69,24 @@ const formatMessage = (message) => ({
   updatedAt: message.updatedAt
 });
 
-const buildNotificationPayload = ({ conversationId, message, actorId, recipientId, isUpdate = false }) => ({
-  userId: recipientId,
-  type: message.messageType === "appointment"
-    ? message.appointment?.status === "closed_won"
-      ? "appointment_closed_won"
-      : (isUpdate ? "appointment_updated" : "appointment_created")
-    : "new_message",
-  title: message.messageType === "appointment"
-    ? message.appointment?.status === "closed_won"
-      ? "Rendez-vous conclu"
-      : (isUpdate ? "Rendez-vous mis a jour" : "Nouveau rendez-vous")
-    : (isUpdate ? "Message modifie" : "Nouveau message"),
-  body: message.content.slice(0, 120),
-  data: {
-    conversationId,
-    messageId: message._id,
-    senderId: actorId,
-    appointmentId: message.appointment?.appointmentId || null,
-    propertyId: message.appointment?.propertyId || null,
-    propertyTitle: message.appointment?.propertyTitle || null,
-    appointmentStatus: message.appointment?.status || null
-  },
-  channel: "in_app"
-});
+const buildNotificationPayload = ({ conversationId, message, actorId, recipientId, isUpdate = false }) => {
+  const descriptor = buildNotificationDescriptor({
+    messageType: message.messageType,
+    appointment: message.appointment,
+    communicationReport: message.communicationReport,
+    visitReport: message.visitReport,
+    isUpdate
+  });
+
+  return {
+    userId: recipientId,
+    type: descriptor.type,
+    title: descriptor.title,
+    body: message.content.slice(0, 120),
+    data: buildConversationNotificationData({ conversationId, message, actorId }),
+    channel: "in_app"
+  };
+};
 
 const syncAppointmentPropertyOutcome = async (appointment) => {
   if (!appointment?.propertyId || appointment.status !== "closed_won") {
@@ -285,25 +286,35 @@ export const createConversationMessage = async ({
   content,
   messageType = "text",
   attachments = [],
-  appointment = null
+  appointment = null,
+  communicationReport = null,
+  visitReport = null
 }) => {
   const conversation = await ensureConversationParticipant(conversationId, senderId);
   const receiverId = conversation.participantIds.find((participantId) => String(participantId) !== String(senderId));
+  const resolvedContent = resolveMessageContent({
+    content,
+    messageType,
+    communicationReport,
+    visitReport
+  });
 
   const message = await Message.create({
     conversationId,
     senderId,
     receiverId,
-    content,
+    content: resolvedContent,
     messageType,
     attachments,
     appointment,
+    communicationReport,
+    visitReport,
     status: "sent"
   });
 
   conversation.lastMessageId = message._id;
   conversation.lastMessageAt = message.createdAt;
-  conversation.lastMessagePreview = content.slice(0, 120);
+  conversation.lastMessagePreview = resolvedContent.slice(0, 120);
   await conversation.save();
 
   await Notification.create(buildNotificationPayload({
@@ -329,19 +340,42 @@ export const updateConversationMessage = async ({
   userId,
   content,
   messageType,
-  appointment
+  attachments,
+  appointment,
+  communicationReport,
+  visitReport
 }) => {
   const { conversation, message } = await ensureMessageUpdatable({ conversationId, messageId, userId });
   const recipientId = conversation.participantIds.find((participantId) => String(participantId) !== String(userId));
+  const nextMessageType = messageType || message.messageType;
+  const nextCommunicationReport = communicationReport !== undefined ? communicationReport : message.communicationReport;
+  const nextVisitReport = visitReport !== undefined ? visitReport : message.visitReport;
 
-  message.content = content;
+  message.content = resolveMessageContent({
+    content,
+    messageType: nextMessageType,
+    communicationReport: nextCommunicationReport,
+    visitReport: nextVisitReport
+  });
 
   if (messageType) {
     message.messageType = messageType;
   }
 
+  if (attachments !== undefined) {
+    message.attachments = attachments;
+  }
+
   if (appointment !== undefined) {
     message.appointment = appointment;
+  }
+
+  if (communicationReport !== undefined) {
+    message.communicationReport = communicationReport;
+  }
+
+  if (visitReport !== undefined) {
+    message.visitReport = visitReport;
   }
 
   await message.save();

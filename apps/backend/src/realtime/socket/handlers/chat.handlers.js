@@ -1,5 +1,9 @@
 import { AppError } from "../../../core/errors/app-error.js";
 import {
+  buildConversationNotificationData,
+  buildNotificationDescriptor
+} from "../../../modules/conversations/conversations.report-utils.js";
+import {
   createConversationMessage,
   ensureConversationParticipant,
   markMessageAsDelivered,
@@ -9,28 +13,22 @@ import {
 import { conversationRoomName, userRoomName } from "../rooms/room-names.js";
 
 export const registerChatHandlers = (io, socket) => {
-  const buildRealtimeNotification = ({ conversationId, message, senderId, isUpdate = false }) => ({
-    type: message.messageType === "appointment"
-      ? message.appointment?.status === "closed_won"
-        ? "appointment_closed_won"
-        : (isUpdate ? "appointment_updated" : "appointment_created")
-      : "new_message",
-    title: message.messageType === "appointment"
-      ? message.appointment?.status === "closed_won"
-        ? "Rendez-vous conclu"
-        : (isUpdate ? "Rendez-vous mis a jour" : "Nouveau rendez-vous")
-      : (isUpdate ? "Message modifie" : "Nouveau message"),
-    body: message.content.slice(0, 120),
-    data: {
-      conversationId,
-      messageId: message.id,
-      senderId,
-      appointmentId: message.appointment?.appointmentId || null,
-      propertyId: message.appointment?.propertyId || null,
-      propertyTitle: message.appointment?.propertyTitle || null,
-      appointmentStatus: message.appointment?.status || null
-    }
-  });
+  const buildRealtimeNotification = ({ conversationId, message, senderId, isUpdate = false }) => {
+    const descriptor = buildNotificationDescriptor({
+      messageType: message.messageType,
+      appointment: message.appointment,
+      communicationReport: message.communicationReport,
+      visitReport: message.visitReport,
+      isUpdate
+    });
+
+    return {
+      type: descriptor.type,
+      title: descriptor.title,
+      body: message.content.slice(0, 120),
+      data: buildConversationNotificationData({ conversationId, message, actorId: senderId })
+    };
+  };
 
   socket.on("conversation:join", async ({ conversationId }, callback = () => {}) => {
     try {
@@ -56,7 +54,9 @@ export const registerChatHandlers = (io, socket) => {
         content: payload.content,
         messageType: payload.messageType,
         attachments: payload.attachments || [],
-        appointment: payload.appointment || null
+        appointment: payload.appointment || null,
+        communicationReport: payload.communicationReport || null,
+        visitReport: payload.visitReport || null
       });
 
       io.to(conversationRoomName(payload.conversationId)).emit("message:new", {
@@ -108,7 +108,10 @@ export const registerChatHandlers = (io, socket) => {
         userId: socket.data.user.id,
         content: payload.content,
         messageType: payload.messageType,
-        appointment: payload.appointment
+        attachments: payload.attachments,
+        appointment: payload.appointment,
+        communicationReport: payload.communicationReport,
+        visitReport: payload.visitReport
       });
 
       io.to(conversationRoomName(payload.conversationId)).emit("message:updated", {

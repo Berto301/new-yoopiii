@@ -12,7 +12,8 @@ import {
   getUnreadConversationCount,
   markConversationMessageRead,
   sendConversationMessage,
-  updateConversationMessage
+  updateConversationMessage,
+  uploadConversationAttachments
 } from "../services/chat.service.js";
 
 const appendIfMissing = (items, nextItem) => {
@@ -215,13 +216,13 @@ export const useChatWorkspace = () => {
   }, [messagesQuery.data?.items, selectedConversationId, user?.id]);
 
   const sendMessageMutation = useMutation({
-    mutationFn: ({ conversationId, content, messageType, attachments, appointment }) => {
+    mutationFn: ({ conversationId, content, messageType, attachments, appointment, communicationReport, visitReport }) => {
       if (!socket.connected) {
-        return sendConversationMessage({ conversationId, content, messageType, attachments, appointment });
+        return sendConversationMessage({ conversationId, content, messageType, attachments, appointment, communicationReport, visitReport });
       }
 
       return new Promise((resolve, reject) => {
-        socket.emit("message:send", { conversationId, content, messageType, attachments, appointment }, (response) => {
+        socket.emit("message:send", { conversationId, content, messageType, attachments, appointment, communicationReport, visitReport }, (response) => {
           if (!response?.ok) {
             reject(new Error(response?.message || "Message send failed"));
             return;
@@ -238,13 +239,13 @@ export const useChatWorkspace = () => {
   });
 
   const updateMessageMutation = useMutation({
-    mutationFn: ({ conversationId, messageId, content, messageType, appointment }) => {
+    mutationFn: ({ conversationId, messageId, content, messageType, appointment, communicationReport, visitReport }) => {
       if (!socket.connected) {
-        return updateConversationMessage({ conversationId, messageId, content, messageType, appointment });
+        return updateConversationMessage({ conversationId, messageId, content, messageType, appointment, communicationReport, visitReport });
       }
 
       return new Promise((resolve, reject) => {
-        socket.emit("message:update", { conversationId, messageId, content, messageType, appointment }, (response) => {
+        socket.emit("message:update", { conversationId, messageId, content, messageType, appointment, communicationReport, visitReport }, (response) => {
           if (!response?.ok) {
             reject(new Error(response?.message || "Message update failed"));
             return;
@@ -291,6 +292,10 @@ export const useChatWorkspace = () => {
         queryClient.invalidateQueries({ queryKey: ["conversation-messages"] })
       ]);
     }
+  });
+
+  const uploadConversationAttachmentsMutation = useMutation({
+    mutationFn: uploadConversationAttachments
   });
 
   const selectedConversation = useMemo(
@@ -341,6 +346,7 @@ export const useChatWorkspace = () => {
     updateMessageMutation,
     deleteMessageMutation,
     markReadMutation,
-    deleteConversationMutation
+    deleteConversationMutation,
+    uploadConversationAttachmentsMutation
   };
 };
