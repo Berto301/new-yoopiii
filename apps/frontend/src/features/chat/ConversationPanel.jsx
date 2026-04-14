@@ -1,6 +1,8 @@
+import { jsPDF } from "jspdf";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar } from "../../components/profile/Avatar.jsx";
+import { resolveAvatarUrl } from "../../components/profile/avatar.utils.js";
 import { ModalDelete } from "../../components/layout/modals/ModalDelete.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Menu } from "../../components/ui/Menu.jsx";
@@ -22,6 +24,149 @@ import { channelOptions, pipelineStatusOptions, propertyTypeLabelMap } from "./r
 import { useChatWorkspace } from "./hooks/useChatWorkspace.js";
 
 const extractErrorMessage = (error, fallback) => error?.response?.data?.message || error?.message || fallback;
+
+const loadImageAsDataUrl = async (src) => {
+  if (!src) {
+    return null;
+  }
+
+  const response = await fetch(resolveAvatarUrl(src, ""), { mode: "cors" });
+
+  if (!response.ok) {
+    throw new Error("Impossible de charger la photo de profil.");
+  }
+
+  const blob = await response.blob();
+
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+    reader.onerror = () => reject(new Error("Impossible de preparer la photo de profil."));
+    reader.readAsDataURL(blob);
+  });
+};
+
+const getPdfImageFormat = (dataUrl) => {
+  if (!dataUrl?.startsWith("data:image/")) {
+    return "JPEG";
+  }
+
+  const mimeType = dataUrl.slice(5, dataUrl.indexOf(";")).toLowerCase();
+
+  if (mimeType.includes("png")) {
+    return "PNG";
+  }
+
+  if (mimeType.includes("webp")) {
+    return "WEBP";
+  }
+
+  return "JPEG";
+};
+
+const buildProfileFileName = (participant, type) => {
+  const fullName = formatParticipantName(participant)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+
+  return `fiche-${type}-${fullName || "profil"}.pdf`;
+};
+
+const addProfilePhoto = (doc, participant, imageDataUrl, type) => {
+  const photoX = 145;
+  const photoY = 28;
+  const photoSize = 36;
+
+  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(photoX, photoY, photoSize, photoSize, 8, 8, "FD");
+
+  if (imageDataUrl) {
+    doc.addImage(imageDataUrl, getPdfImageFormat(imageDataUrl), photoX + 2, photoY + 2, photoSize - 4, photoSize - 4);
+    return;
+  }
+
+  const initials = formatParticipantName(participant)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || (type === "agent" ? "AG" : "CL");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(15, 23, 42);
+  doc.text(initials, photoX + (photoSize / 2), photoY + 23, { align: "center" });
+};
+
+const createProfilePdf = async ({ participant, type }) => {
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4"
+  });
+  const imageDataUrl = await loadImageAsDataUrl(participant?.avatar).catch(() => null);
+  const fullName = formatParticipantName(participant);
+  const roleLabel = type === "agent" ? "Fiche agent" : "Fiche client";
+  const primaryContact = participant?.phone || participant?.email || "Non renseigne";
+
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 60, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("Yopii", 20, 18);
+  doc.setFontSize(24);
+  doc.text(roleLabel, 20, 31);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text("Profil exporte depuis la messagerie privee", 20, 39);
+
+  addProfilePhoto(doc, participant, imageDataUrl, type);
+
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(15, 68, 180, 60, 10, 10, "F");
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(15, 68, 180, 60, 10, 10, "S");
+
+  doc.setTextColor(100, 116, 139);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Nom complet", 24, 84);
+  doc.text("Contact principal", 24, 102);
+  doc.text("Role", 24, 120);
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(17);
+  doc.text(fullName, 24, 91);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(13);
+  doc.text(primaryContact, 24, 109);
+  doc.text(participant?.role || "-", 24, 127);
+
+  const detailLines = [
+    `Email : ${participant?.email || "Non renseigne"}`,
+    `Telephone : ${participant?.phone || "Non renseigne"}`
+  ];
+
+  doc.setTextColor(71, 85, 105);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text("Coordonnees", 20, 152);
+  doc.roundedRect(15, 158, 180, 40, 10, 10, "S");
+  doc.text(detailLines, 24, 172, { maxWidth: 160 });
+
+  doc.setTextColor(148, 163, 184);
+  doc.setFontSize(9);
+  doc.text(`Genere le ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date())}`, 20, 286);
+
+  doc.save(buildProfileFileName(participant, type));
+};
 
 const formatTimestamp = (value) => {
   if (!value) {
@@ -319,6 +464,7 @@ export const ConversationPanel = () => {
     mode: "create",
     message: null
   });
+  const [isDownloadingProfile, setIsDownloadingProfile] = useState(false);
 
   const participantStatusItems = useMemo(() => {
     if (!selectedConversation) {
@@ -649,6 +795,25 @@ export const ConversationPanel = () => {
     closeDeleteModal();
   };
 
+  const handleDownloadProfile = async (type) => {
+    if (!selectedParticipant?.id || isDownloadingProfile) {
+      return;
+    }
+
+    try {
+      setIsDownloadingProfile(true);
+      await createProfilePdf({
+        participant: selectedParticipant,
+        type
+      });
+      showSuccess(`La fiche ${type === "agent" ? "agent" : "client"} a ete telechargee.`);
+    } catch (error) {
+      showError(extractErrorMessage(error, "Le telechargement de la fiche a echoue."));
+    } finally {
+      setIsDownloadingProfile(false);
+    }
+  };
+
   const creationMenuItems = [
     {
       label: "Prise de rendez-vous",
@@ -668,6 +833,24 @@ export const ConversationPanel = () => {
   ];
 
   const conversationMenuItems = [
+    ...((!isAgentUser && isSelectedParticipantAgent)
+      ? [{
+          label: "Telecharger fiche agent",
+          action: async () => {
+            await handleDownloadProfile("agent");
+          },
+          disabled: isDownloadingProfile
+        }]
+      : []),
+    ...((isAgentUser && !isSelectedParticipantAgent)
+      ? [{
+          label: "Telecharger fiche client",
+          action: async () => {
+            await handleDownloadProfile("client");
+          },
+          disabled: isDownloadingProfile
+        }]
+      : []),
     {
       label: "Supprimer la conversation",
       action: async () => {
