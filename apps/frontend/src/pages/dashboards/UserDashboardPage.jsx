@@ -4,6 +4,7 @@ import { selectCurrentUser } from "../../app/store/session.store.js";
 import { AgentDashboardOverview } from "../../features/dashboards/agent/AgentDashboardOverview.jsx";
 import { AgencyDashboardOverview } from "../../features/dashboards/agency/AgencyDashboardOverview.jsx";
 import { UserDashboardOverview } from "../../features/dashboards/user/UserDashboardOverview.jsx";
+import { OwnerDashboardOverview } from "../../features/owner/OwnerWorkspace.jsx";
 
 const dashboardByRole = {
   user: {
@@ -29,6 +30,12 @@ const dashboardByRole = {
     title: "Supervision agence",
     description: "Vue globale des biens, de l'equipe, des rendez-vous et des conversations de l'espace agence.",
     render: () => <AgencyDashboardOverview />
+  },
+  proprietaire: {
+    eyebrow: "Dashboard proprietaire",
+    title: "Pilotage premium du patrimoine",
+    description: "Revenus mensuels, contrats, loyers, locataires, maintenance et alertes automatiques dans un seul cockpit.",
+    render: () => <OwnerDashboardOverview />
   }
 };
 

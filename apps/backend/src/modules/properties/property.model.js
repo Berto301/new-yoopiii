@@ -55,9 +55,11 @@ const propertySchema = new mongoose.Schema(
     },
     ownerType: {
       type: String,
-      enum: ["independent_agent", "agency"],
+      enum: ["independent_agent", "agency", "proprietaire"],
       required: true
     },
+    ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
+    managementContractId: { type: mongoose.Schema.Types.ObjectId, ref: "ManagementContract", default: null, index: true },
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     agencyId: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", default: null },
     reservedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },

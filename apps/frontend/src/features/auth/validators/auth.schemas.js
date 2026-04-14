@@ -13,7 +13,7 @@ export const registerSchema = z
     phone: z.string().min(8, "Numero invalide"),
     password: z.string().min(8, "Minimum 8 caracteres"),
     companyName: z.string().optional(),
-    role: z.enum(["user", "agency", "independent_agent"])
+    role: z.enum(["user", "proprietaire", "agency", "independent_agent"])
   })
   .superRefine((value, ctx) => {
     if (value.role === "agency" && (!value.companyName || value.companyName.trim().length < 2)) {

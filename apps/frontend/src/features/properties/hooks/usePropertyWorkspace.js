@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../../../app/store/session.store.js";
+import { getActiveContracts } from "../../contracts/contracts.service.js";
 import {
   addPropertyToFavorites,
   createManagedProperty,
@@ -30,7 +31,7 @@ export const usePropertyWorkspace = () => {
         page: 1,
         limit: 50
       }),
-    enabled: Boolean(user && ["agency", "agency_agent", "independent_agent"].includes(user.role))
+    enabled: Boolean(user && ["agency", "agency_agent", "independent_agent", "proprietaire"].includes(user.role))
   });
 
   const favoritePropertiesQuery = useQuery({
@@ -93,6 +94,12 @@ export const usePropertyWorkspace = () => {
     }
   });
 
+  const activeContractsQuery = useQuery({
+    queryKey: ["active-contracts", user?.role, user?.agencyId, user?.id],
+    queryFn: getActiveContracts,
+    enabled: Boolean(user && ["agency", "agency_agent", "independent_agent", "proprietaire"].includes(user.role))
+  });
+
   const uploadPropertyAssetMutation = useMutation({
     mutationFn: uploadPropertyAsset
   });
@@ -121,6 +128,7 @@ export const usePropertyWorkspace = () => {
   return {
     user,
     managedPropertiesQuery,
+    activeContractsQuery,
     favoritePropertiesQuery,
     propertyPublicationsQuery,
     propertyHistoryQuery,

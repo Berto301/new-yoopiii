@@ -9,7 +9,7 @@ export const registerSchema = z.object({
       phone: z.string().optional(),
       password: z.string().min(8),
       companyName: z.string().min(2).optional(),
-      role: z.enum(["user", "independent_agent", "agency", "agency_agent"]).default("user")
+      role: z.enum(["user", "proprietaire", "independent_agent", "agency", "agency_agent"]).default("user")
     })
     .superRefine((value, ctx) => {
       if (value.role === "agency" && !value.companyName) {

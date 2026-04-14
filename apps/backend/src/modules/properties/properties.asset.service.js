@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 
-const ALLOWED_PROPERTY_UPLOAD_ROLES = ["agency", "agency_agent", "independent_agent"];
+const ALLOWED_PROPERTY_UPLOAD_ROLES = ["agency", "agency_agent", "independent_agent", "proprietaire"];
 
 export const uploadPropertyAssetFile = async ({ actor, assetKind, mediaType, file }) => {
   if (!ALLOWED_PROPERTY_UPLOAD_ROLES.includes(actor?.role)) {

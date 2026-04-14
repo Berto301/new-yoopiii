@@ -11,6 +11,21 @@ const buildSidebarItems = (user) => {
   const role = user?.role;
   const permissions = user?.permissions || [];
   const isManagementRole = ["agency", "agency_agent", "independent_agent"].includes(role);
+
+  if (role === "proprietaire") {
+    return [
+      { to: "/dashboard/owner", label: "Dashboard", permission: null },
+      { to: "/owner/contracts", label: "Gestion de contrats", permission: null },
+      { to: "/messages", label: "Messages", permission: null },
+      { to: "/notifications", label: "Notifications", permission: null },
+      { to: "/owner/rents", label: "Gestion de loyers", permission: null },
+      { to: "/owner/tenants", label: "Gestion des locataires", permission: null },
+      { to: "/owner/properties", label: "Mes biens", permission: null },
+      { to: "/owner/maintenance", label: "Gestion de maintenance", permission: null },
+      { to: "/settings", label: "Parametres", permission: null }
+    ];
+  }
+
   const baseItems = [
     { to: "/dashboard/user", label: "Vue globale", permission: PERMISSION_IDS.UI_ROUTE_DASHBOARD_USER },
     { to: "/dashboard/publications", label: "Publication des biens", permission: PERMISSION_IDS.UI_ROUTE_PUBLICATIONS },
@@ -29,6 +44,10 @@ const buildSidebarItems = (user) => {
 
   if (isManagementRole) {
     baseItems.splice(1, 0, { to: "/dashboard/properties", label: "Gestion biens", permission: PERMISSION_IDS.UI_ROUTE_PROPERTIES });
+  }
+
+  if (role === "agency" || role === "independent_agent") {
+    baseItems.splice(2, 0, { to: "/contracts", label: "Mes contrats", permission: null });
   }
 
   if (role === "agency_agent") {
@@ -67,7 +86,7 @@ export const DashboardLayout = () => {
               />
               <div className="min-w-0">
                 <h2 className="truncate text-base font-semibold text-white">{fullName}</h2>
-                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-brand-100">{user?.role?.replaceAll("_", " ")}</p>
+                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-brand-100">{user?.role === "proprietaire" ? "proprietaire" : user?.role?.replaceAll("_", " ")}</p>
               </div>
             </div>
           </div>

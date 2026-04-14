@@ -23,6 +23,7 @@ const propertyMediaSchema = z.object({
 });
 
 const propertyPayloadSchema = z.object({
+  managementContractId: objectIdSchema.nullish(),
   title: z.string().trim().min(3).max(180),
   description: z.string().trim().min(10).max(5000),
   type: propertyTypeSchema,

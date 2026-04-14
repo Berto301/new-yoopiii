@@ -15,15 +15,19 @@ const getDashboardPath = (user) => {
     return "/dashboard/agent";
   }
 
+  if (user.role === "proprietaire") {
+    return "/dashboard/owner";
+  }
+
   return "/dashboard/user";
 };
 
 const getPropertyManagementPath = (user) => {
-  if (!user || !["agency", "agency_agent", "independent_agent"].includes(user.role)) {
+  if (!user || !["agency", "agency_agent", "independent_agent", "proprietaire"].includes(user.role)) {
     return null;
   }
 
-  return "/dashboard/properties";
+  return user.role === "proprietaire" ? "/owner/properties" : "/dashboard/properties";
 };
 
 export const MainLayout = () => {

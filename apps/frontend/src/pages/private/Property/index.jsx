@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
@@ -15,7 +15,11 @@ const formatPrice = (value, currency = "XOF") =>
     maximumFractionDigits: 0
   }).format(value || 0);
 
-const formatOwnerType = (ownerType) => (ownerType === "agency" ? "Agence" : "Agent independant");
+const formatOwnerType = (ownerType) => {
+  if (ownerType === "agency") return "Agence";
+  if (ownerType === "proprietaire") return "Proprietaire";
+  return "Agent independant";
+};
 
 const summaryCards = [
   {
@@ -153,7 +157,7 @@ const PropertyCard = ({
 
           <div className="flex flex-col gap-4 border-t border-white/10 pt-5 lg:flex-row lg:items-center lg:justify-between">
             <p className="text-xs uppercase tracking-[0.22em] text-stone-500">
-              {property.favoriteCount || 0} favoris � {mediaCount} fichiers � {property.has3DView ? "Visite 3D active" : "Sans visite 3D"}
+              {property.favoriteCount || 0} favoris • {mediaCount} fichiers • {property.has3DView ? "Visite 3D active" : "Sans visite 3D"}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onEdit(property)}>
@@ -204,6 +208,7 @@ export const PropertyManagementPage = () => {
   const {
     user,
     managedPropertiesQuery,
+    activeContractsQuery,
     workflowMutation,
     createManagedPropertyMutation,
     uploadPropertyAssetMutation,
@@ -216,11 +221,18 @@ export const PropertyManagementPage = () => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
-  if (!user || !["agency", "agency_agent", "independent_agent"].includes(user.role)) {
+  const isOwnerRole = user?.role === "proprietaire";
+
+  if (!user || !["agency", "agency_agent", "independent_agent", "proprietaire"].includes(user.role)) {
     return <Navigate to="/dashboard/user" replace />;
   }
 
   const openCreateModal = () => {
+    if (!isOwnerRole && !(activeContractsQuery.data || []).length) {
+      showError("Aucun contrat valide ne permet actuellement de gerer ou creer un bien.");
+      return;
+    }
+
     setModalMode("create");
     setSelectedProperty(null);
     setIsManageModalOpen(true);
@@ -300,6 +312,10 @@ export const PropertyManagementPage = () => {
   const managed = managedPropertiesQuery.data;
   const items = managed?.items || [];
   const summary = managed?.summary || {};
+  const contractOptions = (activeContractsQuery.data || []).map((contract) => ({
+    label: `${contract.reference} • ${contract.owner?.fullName || "Proprietaire"} • ${contract.endDateLabel}`,
+    value: contract.id
+  }));
 
   return (
     <>
@@ -308,9 +324,13 @@ export const PropertyManagementPage = () => {
           <div className="grid gap-8 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
             <div className="space-y-5">
               <SectionTitle
-                eyebrow="Gestion biens"
-                title="Pilotage des proprietes"
-                description="Suivez les performances, soignez la presentation et pilotez chaque bien depuis un espace plus clair, plus rapide et plus professionnel."
+                eyebrow={isOwnerRole ? "Mes biens" : "Gestion biens"}
+                title={isOwnerRole ? "Pilotage proprietaire des biens" : "Pilotage des proprietes"}
+                description={
+                  isOwnerRole
+                    ? "Retrouvez tous vos biens, rattachez-les a un contrat quand c'est utile et gardez une vue claire sur votre portefeuille."
+                    : "Suivez les performances, soignez la presentation et pilotez chaque bien depuis un espace plus clair, plus rapide et plus professionnel."
+                }
               />
               <div className="flex flex-wrap gap-3">
                 <Button type="button" className="px-5 py-3" onClick={openCreateModal}>
@@ -318,6 +338,9 @@ export const PropertyManagementPage = () => {
                 </Button>
                 <div className="rounded-full border border-white/10 bg-black/20 px-4 py-3 text-xs uppercase tracking-[0.24em] text-stone-300 backdrop-blur">
                   {items.length} biens charges dans l'espace de gestion
+                </div>
+                <div className="rounded-full border border-white/10 bg-black/20 px-4 py-3 text-xs uppercase tracking-[0.24em] text-stone-300 backdrop-blur">
+                  {contractOptions.length} contrats valides
                 </div>
               </div>
             </div>
@@ -345,6 +368,14 @@ export const PropertyManagementPage = () => {
             Les cartes ci-dessous regroupent les infos essentielles, le visuel principal et les actions de publication pour gagner du temps sans perdre en lisibilite.
           </p>
         </div>
+
+        {!isOwnerRole && !contractOptions.length ? (
+          <Card className="border-amber-400/20 bg-amber-400/5">
+            <p className="text-sm text-amber-100">
+              Aucun contrat signe, accepte ou actif n'est rattache a votre compte. La creation, la modification et la gestion des biens sont bloquees tant qu'un contrat valide avec un proprietaire n'est pas en place.
+            </p>
+          </Card>
+        ) : null}
 
         <div className="space-y-5">
           {items.map((property) => (
@@ -378,6 +409,8 @@ export const PropertyManagementPage = () => {
         open={isManageModalOpen}
         mode={modalMode}
         property={selectedProperty}
+        contractOptions={contractOptions}
+        contractRequired={!isOwnerRole}
         onClose={closeManageModal}
         onSubmit={handleSaveProperty}
         onUploadAsset={handlePropertyAssetUpload}
@@ -388,3 +421,4 @@ export const PropertyManagementPage = () => {
     </>
   );
 };
+

@@ -13,6 +13,7 @@ import { useNotification } from "../../../hooks/useNotification.js";
 const submitLabelByMode = {
   login: "Se connecter",
   user: "Creer mon compte",
+  proprietaire: "Creer mon espace proprietaire",
   agency: "Creer mon agence",
   independent_agent: "Creer mon profil agent"
 };
@@ -189,6 +190,7 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
       <div className="mt-6 flex flex-wrap gap-4 text-sm text-stone-400">
         <Link to="/login" className="hover:text-white">Connexion</Link>
         <Link to="/register/user" className="hover:text-white">Compte utilisateur</Link>
+        <Link to="/register/owner" className="hover:text-white">Compte proprietaire</Link>
         <Link to="/register/agency" className="hover:text-white">Compte agence</Link>
         <Link to="/register/agent" className="hover:text-white">Agent independant</Link>
       </div>

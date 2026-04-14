@@ -12,6 +12,10 @@ const resolveRedirectPath = (user) => {
     return "/dashboard/agency";
   }
 
+  if (user.role === "proprietaire") {
+    return "/dashboard/owner";
+  }
+
   return "/dashboard/user";
 };
 

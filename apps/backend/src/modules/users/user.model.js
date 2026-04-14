@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     role: {
       type: String,
-      enum: ["user", "independent_agent", "agency", "agency_agent", "admin"],
+      enum: ["user", "proprietaire", "independent_agent", "agency", "agency_agent", "admin"],
       default: "user"
     },
     permissionId: { type: mongoose.Schema.Types.ObjectId, ref: "RoleTemplate", default: null },

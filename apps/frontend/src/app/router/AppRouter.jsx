@@ -8,6 +8,7 @@ import { DashboardLayout } from "../../components/layout/DashboardLayout.jsx";
 import { LandingPage } from "../../pages/public/LandingPage.jsx";
 import { LoginPage } from "../../pages/public/LoginPage.jsx";
 import { RegisterUserPage } from "../../pages/public/RegisterUserPage.jsx";
+import { RegisterOwnerPage } from "../../pages/public/RegisterOwnerPage.jsx";
 import { RegisterAgencyPage } from "../../pages/public/RegisterAgencyPage.jsx";
 import { RegisterIndependentAgentPage } from "../../pages/public/RegisterIndependentAgentPage.jsx";
 import { PropertySearchPage } from "../../pages/public/PropertySearchPage.jsx";
@@ -28,6 +29,13 @@ import { AgencyCalendarPage } from "../../pages/dashboards/AgencyCalendarPage.js
 import { AgencyExpensesPage } from "../../pages/dashboards/AgencyExpensesPage.jsx";
 import { AgencyMembersPage } from "../../pages/dashboards/AgencyMembersPage.jsx";
 import { AgentScoringPage } from "../../pages/dashboards/AgentScoringPage.jsx";
+import { OwnerDashboardPage } from "../../pages/private/owner/OwnerDashboardPage.jsx";
+import { OwnerContractsPage } from "../../pages/private/owner/OwnerContractsPage.jsx";
+import { OwnerRentsPage } from "../../pages/private/owner/OwnerRentsPage.jsx";
+import { OwnerTenantsPage } from "../../pages/private/owner/OwnerTenantsPage.jsx";
+import { OwnerPropertiesPage } from "../../pages/private/owner/OwnerPropertiesPage.jsx";
+import { OwnerMaintenancePage } from "../../pages/private/owner/OwnerMaintenancePage.jsx";
+import { ContractsPage } from "../../pages/private/contracts/ContractsPage.jsx";
 
 export const AppRouter = () => (
   <Routes>
@@ -40,6 +48,7 @@ export const AppRouter = () => (
     <Route element={<AuthLayout />}>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register/user" element={<RegisterUserPage />} />
+      <Route path="/register/owner" element={<RegisterOwnerPage />} />
       <Route path="/register/agency" element={<RegisterAgencyPage />} />
       <Route path="/register/agent" element={<RegisterIndependentAgentPage />} />
     </Route>
@@ -54,6 +63,9 @@ export const AppRouter = () => (
         <Route path="/messages" element={<ChatPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route element={<RoleRoute allowedRoles={["agency", "independent_agent"]} />}>
+          <Route path="/contracts" element={<ContractsPage />} />
+        </Route>
         <Route
           element={<RoleRoute allowedRoles={["user", "agency", "agency_agent", "independent_agent"]} requiredPermission={PERMISSION_IDS.UI_ROUTE_PUBLICATIONS} />}
         >
@@ -61,6 +73,15 @@ export const AppRouter = () => (
         </Route>
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/dashboard/user" element={<UserDashboardPage />} />
+
+        <Route element={<RoleRoute allowedRoles={["proprietaire"]} />}>
+          <Route path="/dashboard/owner" element={<OwnerDashboardPage />} />
+          <Route path="/owner/contracts" element={<OwnerContractsPage />} />
+          <Route path="/owner/rents" element={<OwnerRentsPage />} />
+          <Route path="/owner/tenants" element={<OwnerTenantsPage />} />
+          <Route path="/owner/properties" element={<OwnerPropertiesPage />} />
+          <Route path="/owner/maintenance" element={<OwnerMaintenancePage />} />
+        </Route>
 
         <Route
           element={<RoleRoute allowedRoles={["agency", "agency_agent", "independent_agent"]} requiredPermission={PERMISSION_IDS.UI_ROUTE_PROPERTIES} />}

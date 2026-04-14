@@ -88,7 +88,8 @@ const buildMapCenter = (location) => {
   return DEFAULT_MAP_CENTER;
 };
 
-const mapPropertyToFormValues = (property) => ({
+const mapPropertyToFormValues = (property, contractOptions = []) => ({
+  managementContract: contractOptions.find((item) => item.value === property?.managementContractId) || null,
   title: property?.title || "",
   description: property?.description || "",
   type: propertyTypeOptions.find((item) => item.value === property?.type) || propertyTypeOptions[0],
@@ -116,6 +117,7 @@ const mapPropertyToFormValues = (property) => ({
 });
 
 const normalizePayload = (values) => ({
+  managementContractId: values.managementContract?.value || null,
   title: values.title,
   description: values.description,
   type: values.type.value,
@@ -163,6 +165,8 @@ export const ModalManageProperty = ({
   open,
   mode,
   property,
+  contractOptions = [],
+  contractRequired = true,
   onClose,
   onSubmit,
   onUploadAsset,
@@ -170,7 +174,7 @@ export const ModalManageProperty = ({
   isSaving = false,
   isUploadingAsset = false
 }) => {
-  const defaultValues = useMemo(() => mapPropertyToFormValues(property), [property]);
+  const defaultValues = useMemo(() => mapPropertyToFormValues(property, contractOptions), [contractOptions, property]);
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY || "";
   const { isLoaded: isMapsLoaded, loadError } = useJsApiLoader({
     id: "property-google-maps-script",
@@ -366,7 +370,7 @@ export const ModalManageProperty = ({
       onClose={closeModal}
       onSave={handleSubmit(async (values) => {
         await onSubmit(normalizePayload(values));
-        reset(mapPropertyToFormValues(null));
+        reset(mapPropertyToFormValues(null, contractOptions));
         setAddressQuery("");
         setMapCenter(DEFAULT_MAP_CENTER);
         setLocationMessage("Selectionnez un emplacement sur la carte ou via Google.");
@@ -541,6 +545,21 @@ export const ModalManageProperty = ({
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
+            <Controller
+              name="managementContract"
+              control={control}
+              rules={contractRequired ? { required: "Un contrat valide est requis" } : {}}
+              render={({ field }) => (
+                <BaseListBox
+                  label={contractRequired ? "Contrat valide" : "Contrat de gestion"}
+                  options={contractOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.managementContract?.message}
+                  placeholder={contractRequired ? "Selectionner le contrat valide" : "Affecter un contrat si necessaire"}
+                />
+              )}
+            />
             <Controller
               name="title"
               control={control}
