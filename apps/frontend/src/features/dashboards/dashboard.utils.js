@@ -9,12 +9,8 @@ const fallbackNameByRole = {
 
 export const formatCompactNumber = (value) => new Intl.NumberFormat("fr-FR", { notation: "compact" }).format(value || 0);
 
-export const formatCurrency = (value, currency = "XOF") =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0
-  }).format(value || 0);
+export const formatCurrency = (value, currency = "AR") =>
+  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
 
 export const formatDateTime = (value, format = "DD/MM/YYYY HH:mm") => (value ? dayjs(value).format(format) : "-");
 

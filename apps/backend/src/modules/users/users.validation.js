@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 const phoneSchema = z.string().max(40).optional().or(z.literal(""));
+const cinSchema = z.string().trim().max(120).optional().or(z.literal(""));
+const addressSchema = z.string().trim().max(255).optional().or(z.literal(""));
+const genderSchema = z.enum(["homme", "femme", "autre"]).optional().or(z.literal(""));
 const numberFromQuery = (fieldName) =>
   z.coerce.number({
     invalid_type_error: `${fieldName} must be a number`
@@ -19,9 +22,20 @@ export const updateMyProfileSchema = z.object({
     lastName: z.string().trim().min(2).max(80),
     email: z.string().email(),
     phone: phoneSchema,
+    cin: cinSchema,
+    adresse: addressSchema,
+    sexe: genderSchema,
     avatar: avatarSchema.optional().nullable()
   }),
   params: z.object({}).default({}),
+  query: z.object({}).default({})
+});
+
+export const userIdParamsSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({
+    userId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid user id")
+  }),
   query: z.object({}).default({})
 });
 

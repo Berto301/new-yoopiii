@@ -14,11 +14,17 @@ const propertyPurposeSchema = z.enum(["sale", "rent"]);
 const mediaTypeSchema = z.enum(["image", "video", "virtual_tour", "document"]);
 const propertyAssetKindSchema = z.enum(["cover", "media"]);
 const propertyUploadMediaTypeSchema = z.enum(["image", "video"]).optional();
+const assetPathSchema = z
+  .string()
+  .trim()
+  .refine((value) => value.startsWith("/") || /^https?:\/\//i.test(value), {
+    message: "Asset must be a public URL or an uploaded file path"
+  });
 
 const propertyMediaSchema = z.object({
   type: mediaTypeSchema.default("image"),
-  url: z.string().url(),
-  thumbnailUrl: z.string().url().nullable().optional(),
+  url: assetPathSchema,
+  thumbnailUrl: assetPathSchema.nullable().optional(),
   order: z.coerce.number().min(0).default(0)
 });
 
@@ -29,7 +35,7 @@ const propertyPayloadSchema = z.object({
   type: propertyTypeSchema,
   purpose: propertyPurposeSchema,
   price: z.coerce.number().min(0),
-  currency: z.string().trim().min(3).max(5).default("XOF"),
+  currency: z.string().trim().length(2, "Currency must contain exactly 2 characters").default("AR"),
   area: z.coerce.number().min(0).default(0),
   rooms: z.coerce.number().min(0).default(0),
   bedrooms: z.coerce.number().min(0).default(0),
@@ -41,7 +47,7 @@ const propertyPayloadSchema = z.object({
     lng: z.coerce.number().min(-180).max(180),
     placeId: z.string().trim().optional().nullable()
   }),
-  coverImage: z.string().url().nullable().optional(),
+  coverImage: assetPathSchema.nullable().optional(),
   media: z.array(propertyMediaSchema).default([]),
   has3DView: z.coerce.boolean().default(false),
   threeDUrl: z.string().url().nullable().optional(),

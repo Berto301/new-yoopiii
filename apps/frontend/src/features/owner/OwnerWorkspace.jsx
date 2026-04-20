@@ -1,7 +1,10 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
+import { useNotification } from "../../hooks/useNotification.js";
+import { notifyApiErrors } from "../../lib/errors/api-error.js";
 import {
   DashboardEmptyState,
   DashboardHero,
@@ -9,7 +12,11 @@ import {
   DashboardPanel,
   DashboardStatsGrid
 } from "../dashboards/components/DashboardBlocks.jsx";
+import { useBookingsWorkspace } from "../bookings/hooks/useBookingsWorkspace.js";
 import { useOwnerWorkspace } from "./hooks/useOwnerWorkspace.js";
+import { ModalDeleteTicket } from "../../pages/private/owner/ModalDeleteTicket.jsx";
+import { ModalManageLocataire } from "../../pages/private/owner/ModalManageLocataire.jsx";
+import { ModalManageTicket } from "../../pages/private/owner/ModalManageTicket.jsx";
 
 const toneClassNames = {
   alert: "border-rose-400/30 bg-rose-500/10 text-rose-100",
@@ -285,7 +292,57 @@ export const OwnerRentsModule = () => {
 };
 
 export const OwnerTenantsModule = () => {
-  const { tenantsQuery } = useOwnerWorkspace();
+  const { tenantsQuery, managedPropertiesQuery, createTenantMutation, updateTenantMutation } = useOwnerWorkspace();
+  const { bookingsQuery } = useBookingsWorkspace();
+  const { showError, showSuccess } = useNotification();
+  const [modalState, setModalState] = useState({ open: false, mode: "create", tenant: null });
+  const tenants = tenantsQuery.data || [];
+
+  const propertyOptions = useMemo(
+    () =>
+      (managedPropertiesQuery.data || [])
+        .filter((property) => property.purpose === "rent")
+        .map((property) => ({
+          value: property.id,
+          label: property.title,
+          contractLabel: property.managementContractId ? `Contrat ${property.managementContractId}` : "Aucun contrat associe",
+          managementContractId: property.managementContractId || null
+        })),
+    [managedPropertiesQuery.data]
+  );
+
+  const userOptions = useMemo(() => {
+    const entries = new Map();
+
+    tenants.forEach((tenant) => {
+      if (!tenant.linkedUserId) {
+        return;
+      }
+
+      entries.set(String(tenant.linkedUserId), {
+        value: String(tenant.linkedUserId),
+        label: `${tenant.fullName}${tenant.email ? ` • ${tenant.email}` : ""}`
+      });
+    });
+
+    (bookingsQuery.data || [])
+      .filter((booking) => booking.property?.purpose === "rent" && booking.customer)
+      .forEach((booking) => {
+        const customer = booking.customer;
+        const customerId = customer.id || customer._id;
+
+        if (!customerId || entries.has(String(customerId))) {
+          return;
+        }
+
+        entries.set(String(customerId), {
+          value: String(customerId),
+          label: `${[customer.firstName, customer.lastName].filter(Boolean).join(" ").trim() || customer.email || "Utilisateur"}${customer.email ? ` • ${customer.email}` : ""}`
+        });
+      });
+
+    return [...entries.values()];
+  }, [bookingsQuery.data, tenants]);
 
   if (tenantsQuery.isLoading) {
     return <DashboardLoadingState label="Chargement des locataires..." />;
@@ -295,34 +352,80 @@ export const OwnerTenantsModule = () => {
     return <DashboardEmptyState title="Locataires indisponibles" description="Les fiches locataires n'ont pas pu etre chargees." />;
   }
 
-  const tenants = tenantsQuery.data || [];
+  const handleSubmitTenant = async (payload) => {
+    try {
+      if (modalState.mode === "edit" && modalState.tenant) {
+        await updateTenantMutation.mutateAsync({
+          tenantId: modalState.tenant.id,
+          payload
+        });
+        showSuccess("Locataire mis a jour.");
+      } else {
+        await createTenantMutation.mutateAsync(payload);
+        showSuccess("Locataire cree.");
+      }
+
+      setModalState({ open: false, mode: "create", tenant: null });
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du locataire a echoue." });
+    }
+  };
 
   return (
-    <DashboardPanel
-      title="Gestion des locataires"
-      description="Centralisez les fiches locataires, les contacts, les documents, l'historique de paiement et les contrats associes."
-      badge={`${tenants.length} locataires`}
-      action={<Button type="button" variant="secondary">Nouvelle fiche</Button>}
-    >
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        {tenants.map((tenant) => (
-          <Card key={tenant.id} className="border-white/10 bg-stone-950/50 p-5">
-            <div className="space-y-4">
-              <div>
-                <p className="text-lg font-semibold text-white">{tenant.fullName}</p>
-                <p className="mt-1 text-sm text-stone-400">{tenant.contact}</p>
+    <>
+      <DashboardPanel
+        title="Gestion des locataires"
+        description="Centralisez les fiches locataires, les contacts, les identifiants, le bien loue et le contrat associe."
+        badge={`${tenants.length} locataires`}
+        action={
+          <Button type="button" variant="secondary" disabled={!propertyOptions.length} onClick={() => setModalState({ open: true, mode: "create", tenant: null })}>
+            Nouvelle fiche
+          </Button>
+        }
+      >
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {tenants.map((tenant) => (
+            <Card key={tenant.id} className="border-white/10 bg-stone-950/50 p-5">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-lg font-semibold text-white">{tenant.fullName}</p>
+                    <p className="mt-1 text-sm text-stone-400">{tenant.email || tenant.contact}</p>
+                  </div>
+                  <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => setModalState({ open: true, mode: "edit", tenant })}>
+                    Modifier
+                  </Button>
+                </div>
+                <div className="space-y-2 text-sm text-stone-300">
+                  <p><span className="text-stone-500">Telephone:</span> {tenant.phone || "-"}</p>
+                  <p><span className="text-stone-500">CIN:</span> {tenant.cin || tenant.identity}</p>
+                  <p><span className="text-stone-500">Sexe:</span> {tenant.sexeLabel}</p>
+                  <p><span className="text-stone-500">Adresse:</span> {tenant.adresse || "-"}</p>
+                  <p><span className="text-stone-500">Bien:</span> {tenant.property}</p>
+                  <p><span className="text-stone-500">Contrat:</span> {tenant.contract}</p>
+                </div>
               </div>
-              <div className="space-y-2 text-sm text-stone-300">
-                <p><span className="text-stone-500">Identite:</span> {tenant.identity}</p>
-                <p><span className="text-stone-500">Documents:</span> {tenant.documents}</p>
-                <p><span className="text-stone-500">Historique:</span> {tenant.paymentHistory}</p>
-                <p><span className="text-stone-500">Contrat:</span> {tenant.contract}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </DashboardPanel>
+            </Card>
+          ))}
+        </div>
+        {!propertyOptions.length && !managedPropertiesQuery.isLoading ? (
+          <p className="mt-4 text-sm text-stone-400">
+            Aucun bien en location n'est disponible pour rattacher un locataire.
+          </p>
+        ) : null}
+      </DashboardPanel>
+
+      <ModalManageLocataire
+        open={modalState.open}
+        mode={modalState.mode}
+        tenant={modalState.tenant}
+        propertyOptions={propertyOptions}
+        userOptions={userOptions}
+        onClose={() => setModalState({ open: false, mode: "create", tenant: null })}
+        onSubmit={handleSubmitTenant}
+        isSaving={createTenantMutation.isPending || updateTenantMutation.isPending}
+      />
+    </>
   );
 };
 
@@ -372,7 +475,25 @@ export const OwnerPropertiesModule = () => {
 };
 
 export const OwnerMaintenanceModule = () => {
-  const { maintenanceQuery } = useOwnerWorkspace();
+  const {
+    maintenanceQuery,
+    managedPropertiesQuery,
+    createMaintenanceTicketMutation,
+    updateMaintenanceTicketMutation,
+    deleteMaintenanceTicketMutation
+  } = useOwnerWorkspace();
+  const { showError, showSuccess } = useNotification();
+  const [modalState, setModalState] = useState({ open: false, mode: "create", ticket: null });
+  const [deleteModalState, setDeleteModalState] = useState({ open: false, ticket: null });
+  const propertyOptions = useMemo(
+    () =>
+      (managedPropertiesQuery.data || []).map((property) => ({
+        value: property.id,
+        label: property.title,
+        type: property.type
+      })),
+    [managedPropertiesQuery.data]
+  );
 
   if (maintenanceQuery.isLoading) {
     return <DashboardLoadingState label="Chargement de la maintenance..." />;
@@ -384,31 +505,109 @@ export const OwnerMaintenanceModule = () => {
 
   const maintenance = maintenanceQuery.data || [];
 
+  const handleSubmitTicket = async (payload) => {
+    try {
+      if (modalState.mode === "edit" && modalState.ticket) {
+        await updateMaintenanceTicketMutation.mutateAsync({
+          ticketId: modalState.ticket.id,
+          payload
+        });
+        showSuccess("Ticket de maintenance mis a jour.");
+      } else {
+        await createMaintenanceTicketMutation.mutateAsync(payload);
+        showSuccess("Ticket de maintenance cree.");
+      }
+
+      setModalState({ open: false, mode: "create", ticket: null });
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du ticket a echoue." });
+    }
+  };
+
+  const handleDeleteTicket = async () => {
+    if (!deleteModalState.ticket) return;
+
+    try {
+      await deleteMaintenanceTicketMutation.mutateAsync(deleteModalState.ticket.id);
+      setDeleteModalState({ open: false, ticket: null });
+      showSuccess("Ticket de maintenance supprime.");
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: "La suppression du ticket a echoue." });
+    }
+  };
+
   return (
-    <DashboardPanel
-      title="Gestion de maintenance"
-      description="Tickets, interventions planifiees et historique des reparations pour chaque bien."
-      badge={`${maintenance.length} tickets`}
-      action={<Button type="button" variant="secondary">Nouveau ticket</Button>}
-    >
-      {maintenance.length ? (
-        <DataTable
-          columns={[
-            { key: "title", label: "Ticket" },
-            { key: "property", label: "Bien" },
-            { key: "priority", label: "Priorite" },
-            { key: "assignee", label: "Intervenant" },
-            { key: "lastUpdate", label: "Derniere mise a jour" },
-            { key: "status", label: "Statut", render: (row) => <StatusPill value={row.status} /> }
-          ]}
-          rows={maintenance}
-        />
-      ) : (
-        <DashboardEmptyState
-          title="Aucun ticket de maintenance"
-          description="Les demandes techniques et leur suivi apparaitront ici des qu'elles seront enregistrees."
-        />
-      )}
-    </DashboardPanel>
+    <>
+      <DashboardPanel
+        title="Gestion de maintenance"
+        description="Tickets, interventions planifiees et historique des reparations pour chaque bien."
+        badge={`${maintenance.length} tickets`}
+        action={
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={managedPropertiesQuery.isLoading || !propertyOptions.length}
+            onClick={() => setModalState({ open: true, mode: "create", ticket: null })}
+          >
+            Nouveau ticket
+          </Button>
+        }
+      >
+        {maintenance.length ? (
+          <DataTable
+            columns={[
+              { key: "title", label: "Ticket" },
+              { key: "property", label: "Bien" },
+              { key: "priority", label: "Priorite" },
+              { key: "assignee", label: "Intervenant" },
+              { key: "lastUpdate", label: "Derniere mise a jour" },
+              { key: "status", label: "Statut", render: (row) => <StatusPill value={row.status} /> },
+              {
+                key: "actions",
+                label: "Actions",
+                render: (row) => (
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => setModalState({ open: true, mode: "edit", ticket: row })}>
+                      Modifier
+                    </Button>
+                    <Button type="button" variant="ghost" className="px-3 py-2 text-xs text-red-200" onClick={() => setDeleteModalState({ open: true, ticket: row })}>
+                      Supprimer
+                    </Button>
+                  </div>
+                )
+              }
+            ]}
+            rows={maintenance}
+          />
+        ) : (
+          <DashboardEmptyState
+            title="Aucun ticket de maintenance"
+            description="Les demandes techniques et leur suivi apparaitront ici des qu'elles seront enregistrees."
+          />
+        )}
+        {!propertyOptions.length && !managedPropertiesQuery.isLoading ? (
+          <p className="mt-4 text-sm text-stone-400">
+            Aucun bien gere n'est disponible pour ouvrir un ticket de maintenance.
+          </p>
+        ) : null}
+      </DashboardPanel>
+
+      <ModalManageTicket
+        open={modalState.open}
+        mode={modalState.mode}
+        ticket={modalState.ticket}
+        propertyOptions={propertyOptions}
+        onClose={() => setModalState({ open: false, mode: "create", ticket: null })}
+        onSubmit={handleSubmitTicket}
+        isSaving={createMaintenanceTicketMutation.isPending || updateMaintenanceTicketMutation.isPending}
+      />
+      <ModalDeleteTicket
+        open={deleteModalState.open}
+        ticket={deleteModalState.ticket}
+        onClose={() => setDeleteModalState({ open: false, ticket: null })}
+        onConfirm={handleDeleteTicket}
+        isDeleting={deleteMaintenanceTicketMutation.isPending}
+      />
+    </>
   );
 };

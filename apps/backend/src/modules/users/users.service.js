@@ -38,6 +38,9 @@ const sanitizeUser = async (user) => ({
   lastName: user.lastName,
   email: user.email,
   phone: user.phone || "",
+  cin: user.cin || "",
+  adresse: user.adresse || "",
+  sexe: user.sexe || "",
   avatar: user.avatar || null,
   role: user.role,
   agencyId: user.agencyId || null,
@@ -90,6 +93,9 @@ export const updateMyProfile = async ({ userId, payload }) => {
   user.lastName = payload.lastName;
   user.email = payload.email;
   user.phone = payload.phone || "";
+  user.cin = payload.cin || "";
+  user.adresse = payload.adresse || "";
+  user.sexe = payload.sexe || "";
   user.avatar = payload.avatar || null;
   await user.save();
 

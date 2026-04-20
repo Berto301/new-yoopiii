@@ -31,7 +31,7 @@ const propertySchema = new mongoose.Schema(
       required: true
     },
     price: { type: Number, required: true, min: 0 },
-    currency: { type: String, default: "XOF" },
+    currency: { type: String, default: "AR" },
     area: { type: Number, default: 0 },
     rooms: { type: Number, default: 0 },
     bedrooms: { type: Number, default: 0 },

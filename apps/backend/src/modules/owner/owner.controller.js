@@ -1,5 +1,12 @@
 import { StatusCodes } from "http-status-codes";
-import { getOwnerWorkspace } from "./owner.service.js";
+import {
+  createOwnerTenant,
+  createOwnerMaintenanceTicket,
+  deleteOwnerMaintenanceTicket,
+  getOwnerWorkspace,
+  updateOwnerTenant,
+  updateOwnerMaintenanceTicket
+} from "./owner.service.js";
 
 export const getOwnerDashboardHandler = async (req, res) => {
   const workspace = await getOwnerWorkspace({ ownerId: req.user.id });
@@ -31,6 +38,25 @@ export const getOwnerTenantsHandler = async (req, res) => {
   res.status(StatusCodes.OK).json({ success: true, data: workspace.tenants });
 };
 
+export const createOwnerTenantHandler = async (req, res) => {
+  const data = await createOwnerTenant({
+    ownerId: req.user.id,
+    payload: req.validated.body
+  });
+
+  res.status(StatusCodes.CREATED).json({ success: true, data });
+};
+
+export const updateOwnerTenantHandler = async (req, res) => {
+  const data = await updateOwnerTenant({
+    ownerId: req.user.id,
+    tenantId: req.validated.params.tenantId,
+    payload: req.validated.body
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
 export const getOwnerPropertiesHandler = async (req, res) => {
   const workspace = await getOwnerWorkspace({ ownerId: req.user.id });
   res.status(StatusCodes.OK).json({ success: true, data: workspace.properties });
@@ -39,4 +65,32 @@ export const getOwnerPropertiesHandler = async (req, res) => {
 export const getOwnerMaintenanceHandler = async (req, res) => {
   const workspace = await getOwnerWorkspace({ ownerId: req.user.id });
   res.status(StatusCodes.OK).json({ success: true, data: workspace.maintenance });
+};
+
+export const createOwnerMaintenanceHandler = async (req, res) => {
+  const data = await createOwnerMaintenanceTicket({
+    ownerId: req.user.id,
+    payload: req.validated.body
+  });
+
+  res.status(StatusCodes.CREATED).json({ success: true, data });
+};
+
+export const updateOwnerMaintenanceHandler = async (req, res) => {
+  const data = await updateOwnerMaintenanceTicket({
+    ownerId: req.user.id,
+    ticketId: req.validated.params.ticketId,
+    payload: req.validated.body
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const deleteOwnerMaintenanceHandler = async (req, res) => {
+  const data = await deleteOwnerMaintenanceTicket({
+    ownerId: req.user.id,
+    ticketId: req.validated.params.ticketId
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
 };

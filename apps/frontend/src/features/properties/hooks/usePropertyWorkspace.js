@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../../../app/store/session.store.js";
-import { getActiveContracts } from "../../contracts/contracts.service.js";
+import { createContract, getActiveContracts, getContracts, updateContract, uploadContractDocument } from "../../contracts/contracts.service.js";
+import { getOwnerTenants } from "../../owner/services/owner.service.js";
 import {
   addPropertyToFavorites,
   createManagedProperty,
@@ -100,8 +101,46 @@ export const usePropertyWorkspace = () => {
     enabled: Boolean(user && ["agency", "agency_agent", "independent_agent", "proprietaire"].includes(user.role))
   });
 
+  const contractsQuery = useQuery({
+    queryKey: ["property-contracts", user?.role, user?.agencyId, user?.id],
+    queryFn: getContracts,
+    enabled: Boolean(user && ["agency", "agency_agent", "independent_agent", "proprietaire"].includes(user.role))
+  });
+
+  const tenantSuggestionsQuery = useQuery({
+    queryKey: ["property-tenant-suggestions", user?.id],
+    queryFn: getOwnerTenants,
+    enabled: Boolean(user?.role === "proprietaire")
+  });
+
   const uploadPropertyAssetMutation = useMutation({
     mutationFn: uploadPropertyAsset
+  });
+
+  const createContractMutation = useMutation({
+    mutationFn: createContract,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["property-contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["active-contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      invalidateManaged();
+    }
+  });
+
+  const updateContractMutation = useMutation({
+    mutationFn: updateContract,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["property-contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["active-contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      invalidateManaged();
+    }
+  });
+
+  const uploadContractDocumentMutation = useMutation({
+    mutationFn: uploadContractDocument
   });
 
   const updateManagedPropertyMutation = useMutation({
@@ -129,6 +168,8 @@ export const usePropertyWorkspace = () => {
     user,
     managedPropertiesQuery,
     activeContractsQuery,
+    contractsQuery,
+    tenantSuggestionsQuery,
     favoritePropertiesQuery,
     propertyPublicationsQuery,
     propertyHistoryQuery,
@@ -136,7 +177,10 @@ export const usePropertyWorkspace = () => {
     reservationMutation,
     workflowMutation,
     createManagedPropertyMutation,
+    createContractMutation,
+    uploadContractDocumentMutation,
     uploadPropertyAssetMutation,
+    updateContractMutation,
     updateManagedPropertyMutation,
     duplicateManagedPropertyMutation,
     deleteManagedPropertyMutation

@@ -70,7 +70,7 @@ const buildAgentStatsMap = async (agentIds) => {
 
 export const listDiscoverableAgents = async ({ filters }) => {
   const [members, independentAgents] = await Promise.all([
-    AgencyMember.find({ status: "active" })
+    AgencyMember.find({ status: { $ne: "removed" }, role: { $ne: "owner" } })
       .populate("userId", "firstName lastName email avatar role status")
       .populate("agencyId", "name status")
       .lean(),
@@ -81,7 +81,7 @@ export const listDiscoverableAgents = async ({ filters }) => {
 
   const agencyAgents = members
     .filter((member) => member.userId && member.agencyId)
-    .filter((member) => member.userId.status === "active" && member.userId.role === "agency_agent")
+    .filter((member) => member.userId.status === "active")
     .map((member) => ({
       type: "agency",
       userId: String(member.userId._id),
@@ -94,7 +94,8 @@ export const listDiscoverableAgents = async ({ filters }) => {
       agencyId: String(member.agencyId._id),
       agencyName: member.agencyId.name || "",
       organizationLabel: member.agencyId.name || "Agence",
-      jobTitle: member.jobTitle || ""
+      jobTitle: member.jobTitle || "",
+      membershipStatus: member.status
     }));
 
   const standaloneAgents = independentAgents.map((agent) => ({

@@ -35,6 +35,7 @@ import { OwnerRentsPage } from "../../pages/private/owner/OwnerRentsPage.jsx";
 import { OwnerTenantsPage } from "../../pages/private/owner/OwnerTenantsPage.jsx";
 import { OwnerPropertiesPage } from "../../pages/private/owner/OwnerPropertiesPage.jsx";
 import { OwnerMaintenancePage } from "../../pages/private/owner/OwnerMaintenancePage.jsx";
+import { OwnerCalendarPage } from "../../pages/private/owner/OwnerCalendarPage.jsx";
 import { ContractsPage } from "../../pages/private/contracts/ContractsPage.jsx";
 
 export const AppRouter = () => (
@@ -77,6 +78,7 @@ export const AppRouter = () => (
         <Route element={<RoleRoute allowedRoles={["proprietaire"]} />}>
           <Route path="/dashboard/owner" element={<OwnerDashboardPage />} />
           <Route path="/owner/contracts" element={<OwnerContractsPage />} />
+          <Route path="/owner/calendar" element={<OwnerCalendarPage />} />
           <Route path="/owner/rents" element={<OwnerRentsPage />} />
           <Route path="/owner/tenants" element={<OwnerTenantsPage />} />
           <Route path="/owner/properties" element={<OwnerPropertiesPage />} />

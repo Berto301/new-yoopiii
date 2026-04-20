@@ -5,12 +5,13 @@ import { Agency } from "../agencies/agency.model.js";
 import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { DataFile } from "../files/data-file.model.js";
 import { createNotifications } from "../notifications/notifications.service.js";
+import { OwnerTenant } from "../owner/models/owner-tenant.model.js";
 import { Property } from "../properties/property.model.js";
 import { User } from "../users/user.model.js";
 import { ManagementContract } from "./management-contract.model.js";
 
 const SINGLETON_DATAFILE_KINDS = new Set(["profile-avatar", "agency-logo", "agency-cover"]);
-const MANAGEABLE_CONTRACT_STATUSES = new Set(["signed", "accepted", "active"]);
+const MANAGEABLE_CONTRACT_STATUSES = new Set(["accepted", "active"]);
 
 const CONTRACT_STATUS_LABELS = {
   draft: "Brouillon",
@@ -141,11 +142,41 @@ const mapDocument = (document) => ({
   createdAt: document.createdAt
 });
 
+const mapContractTenants = (tenants = []) =>
+  (tenants || []).map((tenant) => ({
+    tenantId: tenant.tenantId ? String(tenant.tenantId) : null,
+    fullName: tenant.fullName || "",
+    phone: tenant.phone || "",
+    email: tenant.email || "",
+    isMainTenant: Boolean(tenant.isMainTenant)
+  }));
+
+const mapOwnerTenantToContractTenant = (tenant, index = 0) => ({
+  tenantId: tenant.linkedUserId ? String(tenant.linkedUserId) : tenant.tenantId ? String(tenant.tenantId) : null,
+  fullName: tenant.fullName || "",
+  phone: tenant.phone || tenant.contact || "",
+  email: tenant.email || "",
+  isMainTenant: index === 0
+});
+
 const hydrateContract = async (contract) => {
-  const [documents, coveredProperties] = await Promise.all([
+  const [documents, coveredProperties, linkedOwnerTenants] = await Promise.all([
     DataFile.find({ ownerContractId: contract._id }).sort({ createdAt: -1 }).lean(),
-    Property.find({ managementContractId: contract._id }).select("title address status area").lean()
+    Property.find({ managementContractId: contract._id }).select("title address status area").lean(),
+    OwnerTenant.find({
+      ownerId: contract.ownerUserId?._id || contract.ownerUserId,
+      $or: [
+        { managementContractId: contract._id },
+        ...(contract.propertyId ? [{ managedPropertyId: contract.propertyId }] : [])
+      ]
+    })
+      .sort({ createdAt: 1 })
+      .lean()
   ]);
+
+  const resolvedTenants = linkedOwnerTenants.length
+    ? linkedOwnerTenants.map(mapOwnerTenantToContractTenant)
+    : mapContractTenants(contract.tenants);
 
   return {
     id: String(contract._id),
@@ -184,6 +215,41 @@ const hydrateContract = async (contract) => {
           id: contract.managerUserId?._id ? String(contract.managerUserId._id) : String(contract.managerUserId || ""),
           name: [contract.managerUserId?.firstName, contract.managerUserId?.lastName].filter(Boolean).join(" ").trim() || contract.managerUserId?.email || "Agent"
         },
+    propertyId: contract.propertyId ? String(contract.propertyId) : null,
+    agency: contract.agency
+      ? {
+          id: contract.agency.id ? String(contract.agency.id) : null,
+          name: contract.agency.name || contract.agencyId?.name || "",
+          commission: Number(contract.agency.commission || 0),
+          fees: Number(contract.agency.fees || 0)
+        }
+      : null,
+    agent: contract.agent
+      ? {
+          id: contract.agent.id ? String(contract.agent.id) : contract.managerUserId?._id ? String(contract.managerUserId._id) : null,
+          name:
+            contract.agent.name ||
+            [contract.managerUserId?.firstName, contract.managerUserId?.lastName].filter(Boolean).join(" ").trim() ||
+            contract.responsibleAgent?.fullName ||
+            "",
+          commission: Number(contract.agent.commission || 0),
+          fees: Number(contract.agent.fees || 0)
+        }
+      : null,
+    tenants: resolvedTenants,
+    linkedTenants: linkedOwnerTenants.map((tenant) => ({
+      id: String(tenant._id),
+      linkedUserId: tenant.linkedUserId ? String(tenant.linkedUserId) : null,
+      fullName: tenant.fullName || "",
+      phone: tenant.phone || tenant.contact || "",
+      email: tenant.email || "",
+      cin: tenant.cin || "",
+      adresse: tenant.adresse || "",
+      sexe: tenant.sexe || "",
+      propertyId: tenant.managedPropertyId ? String(tenant.managedPropertyId) : null
+    })),
+    mainTenant: resolvedTenants.find((tenant) => tenant.isMainTenant) || null,
+    renewable: Boolean(contract.renewable),
     responsibleAgent: contract.responsibleAgentUserId
       ? {
           id: String(contract.responsibleAgentUserId._id || contract.responsibleAgentUserId),
@@ -201,6 +267,42 @@ const hydrateContract = async (contract) => {
     legalFramework: contract.legalFramework || "",
     jurisdiction: contract.jurisdiction || "",
     propertyReference: contract.propertyReference || "",
+    financial: {
+      rentAmount: Number(contract.financial?.rentAmount || 0),
+      charges: Number(contract.financial?.charges || 0),
+      deposit: Number(contract.financial?.deposit || 0),
+      currency: contract.financial?.currency || "XOF",
+      paymentFrequency: contract.financial?.paymentFrequency || "monthly",
+      paymentMethod: contract.financial?.paymentMethod || ""
+    },
+    distribution: {
+      ownerShare: Number(contract.distribution?.ownerShare || 0),
+      agencyShare: Number(contract.distribution?.agencyShare || 0)
+    },
+    paymentTracking: {
+      status: contract.paymentTracking?.status || "",
+      lastPaymentDate: contract.paymentTracking?.lastPaymentDate || null,
+      nextPaymentDate: contract.paymentTracking?.nextPaymentDate || null,
+      lastPaymentDateLabel: formatDate(contract.paymentTracking?.lastPaymentDate),
+      nextPaymentDateLabel: formatDate(contract.paymentTracking?.nextPaymentDate)
+    },
+    documentsMeta: {
+      contractFile: contract.documents?.contractFile || "",
+      attachments: contract.documents?.attachments || []
+    },
+    actions: {
+      canPublishProperty: Boolean(contract.actions?.canPublishProperty ?? true),
+      canReserveProperty: Boolean(contract.actions?.canReserveProperty ?? true),
+      canEditProperty: Boolean(contract.actions?.canEditProperty),
+      canDeleteProperty: Boolean(contract.actions?.canDeleteProperty),
+      publicationOwnerDisplay: {
+        showOwnerName: Boolean(contract.actions?.publicationOwnerDisplay?.showOwnerName),
+        showOwnerContact: Boolean(contract.actions?.publicationOwnerDisplay?.showOwnerContact),
+        allowDirectOwnerChat: Boolean(contract.actions?.publicationOwnerDisplay?.allowDirectOwnerChat)
+      }
+    },
+    notes: contract.notes || "",
+    terms: contract.terms || "",
     coveredProperties: coveredProperties.map((property) => ({
       id: String(property._id),
       title: property.title,
@@ -269,7 +371,16 @@ const validateResponsibleAgent = async ({ actor, managerRole, agencyId, managerU
     };
   }
 
-  const targetUserId = responsibleAgentUserId || managerUserId || actor.id;
+  const agency = await Agency.findById(agencyId).select("ownerUserId").lean();
+
+  if (!agency?.ownerUserId) {
+    throw new AppError("Agency not found", StatusCodes.NOT_FOUND);
+  }
+
+  const targetUserId =
+    responsibleAgentUserId ||
+    managerUserId ||
+    (actor.role === "proprietaire" ? agency.ownerUserId : actor.id);
 
   if (resolveComparableId(targetUserId) === resolveComparableId(actor.id)) {
     const actorUser = await User.findById(actor.id).select("firstName lastName email").lean();
@@ -281,6 +392,13 @@ const validateResponsibleAgent = async ({ actor, managerRole, agencyId, managerU
     return {
       id: String(actorUser._id),
       documentValue: actorUser._id
+    };
+  }
+
+  if (resolveComparableId(targetUserId) === resolveComparableId(agency.ownerUserId)) {
+    return {
+      id: String(agency.ownerUserId),
+      documentValue: agency.ownerUserId
     };
   }
 
@@ -393,7 +511,7 @@ export const listAvailableContractProperties = async (actor) => {
   }
 
   const properties = await Property.find(query)
-    .select("title address area status managementContractId")
+    .select("title address area status purpose price currency managementContractId")
     .sort({ updatedAt: -1, createdAt: -1 })
     .lean();
 
@@ -401,6 +519,9 @@ export const listAvailableContractProperties = async (actor) => {
     id: String(property._id),
     label: normalizePropertyLabel(property),
     status: property.status,
+    purpose: property.purpose,
+    price: Number(property.price || 0),
+    currency: property.currency || "XOF",
     managementContractId: property.managementContractId ? String(property.managementContractId) : null
   }));
 };
@@ -409,6 +530,7 @@ export const listManagementContracts = async ({ actor, status }) => {
   const match = buildContractActorMatch(actor);
   const query = {
     ...match,
+    ...(!status && actor.role !== "proprietaire" ? { status: { $ne: "terminated" } } : {}),
     ...(status ? { status } : {})
   };
 
@@ -463,7 +585,7 @@ export const validateActiveContractForActor = async ({ contractId, actor }) => {
   const contract = await ensureContractAccess({ contractId, actor });
 
   if (!isContractCurrentlyActive(contract)) {
-    throw new AppError("A signed, accepted or active contract is required to manage this property", StatusCodes.FORBIDDEN);
+    throw new AppError("An accepted or active contract is required to manage this property", StatusCodes.FORBIDDEN);
   }
 
   return contract;
@@ -474,10 +596,13 @@ const buildContractPayload = async ({ actor, payload, existingContract = null })
   let managerRole = existingContract?.managerRole || null;
   let agencyId = existingContract?.agencyId || null;
   let managerUserId = existingContract?.managerUserId || null;
+  let propertyId = payload.propertyId ?? existingContract?.propertyId ?? null;
 
   if (actor.role === "proprietaire") {
     ownerUserId = actor.id;
-    managerRole = payload.managerRole ?? existingContract?.managerRole;
+    managerRole =
+      payload.managerRole ??
+      (payload.contractType === "agency" ? "agency" : payload.contractType === "agent" ? "independent_agent" : existingContract?.managerRole);
 
     if (!managerRole) {
       throw new AppError("Manager role is required", StatusCodes.BAD_REQUEST);
@@ -488,7 +613,7 @@ const buildContractPayload = async ({ actor, payload, existingContract = null })
       agencyId = agency._id;
       managerUserId = null;
     } else {
-      const agent = await validateIndependentAgent(payload.managerUserId ?? existingContract?.managerUserId);
+      const agent = await validateIndependentAgent(payload.managerUserId ?? payload.agentId ?? existingContract?.managerUserId);
       managerUserId = agent._id;
       agencyId = null;
     }
@@ -512,7 +637,10 @@ const buildContractPayload = async ({ actor, payload, existingContract = null })
   return {
     reference: payload.reference ?? existingContract?.reference,
     contractType: payload.contractType ?? existingContract?.contractType,
-    status: payload.status ?? existingContract?.status ?? "draft",
+    status:
+      actor.role === "proprietaire" && !existingContract
+        ? "pending_signature"
+        : payload.status ?? existingContract?.status ?? "draft",
     signatureDate: payload.signatureDate !== undefined ? (payload.signatureDate ? new Date(payload.signatureDate) : null) : existingContract?.signatureDate || null,
     startDate: payload.startDate ? new Date(payload.startDate) : existingContract?.startDate,
     endDate: payload.endDate ? new Date(payload.endDate) : existingContract?.endDate,
@@ -522,6 +650,27 @@ const buildContractPayload = async ({ actor, payload, existingContract = null })
     managerUserId,
     responsibleAgentUserId: responsibleAgent.documentValue,
     managerRole,
+    propertyId,
+    agency: {
+      id: payload.agency?.id ?? agencyId ?? existingContract?.agency?.id ?? null,
+      name: payload.agency?.name ?? existingContract?.agency?.name ?? "",
+      commission: Number(payload.agency?.commission ?? existingContract?.agency?.commission ?? 0),
+      fees: Number(payload.agency?.fees ?? existingContract?.agency?.fees ?? 0)
+    },
+    agent: {
+      id: payload.agent?.id ?? managerUserId ?? existingContract?.agent?.id ?? null,
+      name: payload.agent?.name ?? existingContract?.agent?.name ?? "",
+      commission: Number(payload.agent?.commission ?? existingContract?.agent?.commission ?? 0),
+      fees: Number(payload.agent?.fees ?? existingContract?.agent?.fees ?? 0)
+    },
+    tenants: (payload.tenants ?? existingContract?.tenants ?? []).map((tenant) => ({
+      tenantId: tenant.tenantId || null,
+      fullName: tenant.fullName || "",
+      phone: tenant.phone || "",
+      email: tenant.email || "",
+      isMainTenant: Boolean(tenant.isMainTenant)
+    })),
+    renewable: payload.renewable ?? existingContract?.renewable ?? false,
     mandateType: payload.mandateType ?? existingContract?.mandateType ?? "",
     mission: payload.mission ?? existingContract?.mission ?? "",
     commission: payload.commission ?? existingContract?.commission ?? "",
@@ -532,6 +681,59 @@ const buildContractPayload = async ({ actor, payload, existingContract = null })
     legalFramework: payload.legalFramework ?? existingContract?.legalFramework ?? "",
     jurisdiction: payload.jurisdiction ?? existingContract?.jurisdiction ?? "",
     propertyReference: payload.propertyReference ?? existingContract?.propertyReference ?? "",
+    financial: {
+      rentAmount: Number(payload.financial?.rentAmount ?? existingContract?.financial?.rentAmount ?? 0),
+      charges: Number(payload.financial?.charges ?? existingContract?.financial?.charges ?? 0),
+      deposit: Number(payload.financial?.deposit ?? existingContract?.financial?.deposit ?? 0),
+      currency: payload.financial?.currency ?? existingContract?.financial?.currency ?? "XOF",
+      paymentFrequency: payload.financial?.paymentFrequency ?? existingContract?.financial?.paymentFrequency ?? "monthly",
+      paymentMethod: payload.financial?.paymentMethod ?? existingContract?.financial?.paymentMethod ?? ""
+    },
+    distribution: {
+      ownerShare: Number(payload.distribution?.ownerShare ?? existingContract?.distribution?.ownerShare ?? 0),
+      agencyShare: Number(payload.distribution?.agencyShare ?? existingContract?.distribution?.agencyShare ?? 0)
+    },
+    paymentTracking: {
+      status: payload.paymentTracking?.status ?? existingContract?.paymentTracking?.status ?? "",
+      lastPaymentDate:
+        payload.paymentTracking?.lastPaymentDate !== undefined
+          ? payload.paymentTracking?.lastPaymentDate
+            ? new Date(payload.paymentTracking.lastPaymentDate)
+            : null
+          : existingContract?.paymentTracking?.lastPaymentDate ?? null,
+      nextPaymentDate:
+        payload.paymentTracking?.nextPaymentDate !== undefined
+          ? payload.paymentTracking?.nextPaymentDate
+            ? new Date(payload.paymentTracking.nextPaymentDate)
+            : null
+          : existingContract?.paymentTracking?.nextPaymentDate ?? null
+    },
+    documents: {
+      contractFile: payload.documents?.contractFile ?? existingContract?.documents?.contractFile ?? "",
+      attachments: payload.documents?.attachments ?? existingContract?.documents?.attachments ?? []
+    },
+    actions: {
+      canPublishProperty: payload.actions?.canPublishProperty ?? existingContract?.actions?.canPublishProperty ?? true,
+      canReserveProperty: payload.actions?.canReserveProperty ?? existingContract?.actions?.canReserveProperty ?? true,
+      canEditProperty: payload.actions?.canEditProperty ?? existingContract?.actions?.canEditProperty ?? false,
+      canDeleteProperty: payload.actions?.canDeleteProperty ?? existingContract?.actions?.canDeleteProperty ?? false,
+      publicationOwnerDisplay: {
+        showOwnerName:
+          payload.actions?.publicationOwnerDisplay?.showOwnerName ??
+          existingContract?.actions?.publicationOwnerDisplay?.showOwnerName ??
+          false,
+        showOwnerContact:
+          payload.actions?.publicationOwnerDisplay?.showOwnerContact ??
+          existingContract?.actions?.publicationOwnerDisplay?.showOwnerContact ??
+          false,
+        allowDirectOwnerChat:
+          payload.actions?.publicationOwnerDisplay?.allowDirectOwnerChat ??
+          existingContract?.actions?.publicationOwnerDisplay?.allowDirectOwnerChat ??
+          false
+      }
+    },
+    notes: payload.notes ?? existingContract?.notes ?? "",
+    terms: payload.terms ?? existingContract?.terms ?? "",
     createdByUserId: existingContract?.createdByUserId || actor.id
   };
 };
@@ -611,7 +813,7 @@ const createContractNotifications = async ({ contract, actor, action }) => {
   const body = {
     created: `Le contrat ${contractLabel} est maintenant enregistre avec le statut ${CONTRACT_STATUS_LABELS[contract.status] || contract.status}.`,
     updated: `Le contrat ${contractLabel} a ete mis a jour. Nouveau statut: ${CONTRACT_STATUS_LABELS[contract.status] || contract.status}.`,
-    deleted: `Le contrat ${contractLabel} a ete supprime et les liaisons de gestion associees ont ete retirees.`
+    deleted: `Le contrat ${contractLabel} a ete supprime et les biens associes ont ete conserves.`
   }[action];
 
   await createNotifications(
@@ -631,6 +833,13 @@ const createContractNotifications = async ({ contract, actor, action }) => {
 };
 
 export const createManagementContract = async ({ actor, payload }) => {
+  if (actor.role !== "proprietaire") {
+    throw new AppError("Only owners can create contracts for now", StatusCodes.FORBIDDEN, null, {
+      type: "authorization_error",
+      field: "role"
+    });
+  }
+
   const data = await buildContractPayload({ actor, payload });
   const contract = await ManagementContract.create(data);
   await syncContractDocuments({ contractId: contract._id, documentIds: payload.documentIds || [], actor });
@@ -666,7 +875,22 @@ export const updateManagementContract = async ({ contractId, actor, payload }) =
 
 export const deleteManagementContract = async ({ contractId, actor }) => {
   const contract = await ensureContractAccess({ contractId, actor });
-  await Property.updateMany({ managementContractId: contractId }, { $set: { managementContractId: null } });
+  const linkedProperties = await Property.find({ managementContractId: contractId }).select("_id").lean();
+  const linkedPropertyIds = linkedProperties.map((property) => property._id);
+
+  if (linkedPropertyIds.length) {
+    await Property.updateMany(
+      { _id: { $in: linkedPropertyIds } },
+      {
+        $set: {
+          managementContractId: null,
+          ownerType: "proprietaire",
+          agencyId: null,
+          agentId: contract.ownerUserId?._id || contract.ownerUserId
+        }
+      }
+    );
+  }
 
   const files = await DataFile.find({ ownerContractId: contractId }).lean();
   await Promise.all(files.map((fileItem) => deleteFileIfExists(fileItem.storagePath)));

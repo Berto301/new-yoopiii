@@ -1,4 +1,9 @@
+import { StatusCodes } from "http-status-codes";
+import { AppError } from "../../core/errors/app-error.js";
+import { createNotifications } from "../notifications/notifications.service.js";
+import { Property } from "../properties/property.model.js";
 import { Notification } from "../notifications/notification.model.js";
+import { User } from "../users/user.model.js";
 import { OwnerContract } from "./models/owner-contract.model.js";
 import { OwnerMaintenanceTicket } from "./models/owner-maintenance-ticket.model.js";
 import { OwnerProperty } from "./models/owner-property.model.js";
@@ -56,9 +61,13 @@ const OWNER_PROPERTY_SEED = [
 ];
 
 const runOwnerWorkspaceSeed = async (ownerId) => {
-  const existingPropertiesCount = await OwnerProperty.countDocuments({ ownerId });
+  const [existingPropertiesCount, existingManagedPropertiesCount, existingRealTenantsCount] = await Promise.all([
+    OwnerProperty.countDocuments({ ownerId }),
+    Property.countDocuments({ ownerUserId: ownerId }),
+    OwnerTenant.countDocuments({ ownerId, managedPropertyId: { $ne: null } })
+  ]);
 
-  if (existingPropertiesCount) {
+  if (existingPropertiesCount || existingManagedPropertiesCount || existingRealTenantsCount) {
     return;
   }
 
@@ -113,32 +122,49 @@ const runOwnerWorkspaceSeed = async (ownerId) => {
     {
       ownerId,
       propertyId: palmier._id,
+      firstName: "Miora",
+      lastName: "Randria",
       contractId: contractPalmier._id,
       fullName: "Miora Randria",
+      email: "",
+      phone: "+261 34 12 345 67",
       contact: "+261 34 12 345 67",
+      cin: "CIN 123 456 789",
       identityDocument: "CIN 123 456 789",
       documentsCount: 4,
-      paymentHistoryLabel: "Regulier"
+      paymentHistoryLabel: "Regulier",
+      source: "legacy_seed"
     },
     {
       ownerId,
       propertyId: horizon._id,
+      firstName: "Tiana",
+      lastName: "Razan",
       contractId: contractHorizon._id,
       fullName: "Tiana Razan",
+      email: "tiana@locataire.mg",
+      phone: "",
       contact: "tiana@locataire.mg",
       identityDocument: "Passeport MG90876",
       documentsCount: 6,
-      paymentHistoryLabel: "2 retards"
+      paymentHistoryLabel: "2 retards",
+      source: "legacy_seed"
     },
     {
       ownerId,
       propertyId: riviera._id,
+      firstName: "Hasina",
+      lastName: "Andriam",
       contractId: contractRiviera._id,
       fullName: "Hasina Andriam",
+      email: "",
+      phone: "+261 32 44 556 78",
       contact: "+261 32 44 556 78",
+      cin: "CIN 987 654 321",
       identityDocument: "CIN 987 654 321",
       documentsCount: 5,
-      paymentHistoryLabel: "Sous surveillance"
+      paymentHistoryLabel: "Sous surveillance",
+      source: "legacy_seed"
     }
   ]);
 
@@ -296,19 +322,246 @@ const priorityLabelMap = {
   low: "Basse"
 };
 
+const tenantGenderLabelMap = {
+  homme: "Homme",
+  femme: "Femme",
+  autre: "Autre"
+};
+
+const resolveMaintenancePropertyLabel = (ticket) =>
+  ticket.managedPropertyId?.title ||
+  ticket.propertyId?.title ||
+  ticket.propertyLabel ||
+  "Bien non renseigne";
+
+const mapMaintenanceTicket = (ticket) => ({
+  id: String(ticket._id),
+  title: ticket.title,
+  titleSelections: String(ticket.title || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean),
+  description: ticket.description || "",
+  property: resolveMaintenancePropertyLabel(ticket),
+  propertyLabel: ticket.propertyLabel || resolveMaintenancePropertyLabel(ticket),
+  managedPropertyId: ticket.managedPropertyId?._id ? String(ticket.managedPropertyId._id) : ticket.managedPropertyId ? String(ticket.managedPropertyId) : null,
+  ownerPropertyId: ticket.propertyId?._id ? String(ticket.propertyId._id) : ticket.propertyId ? String(ticket.propertyId) : null,
+  priority: priorityLabelMap[ticket.priority] || ticket.priority,
+  priorityValue: ticket.priority,
+  assignee: ticket.assignee || "-",
+  status: maintenanceStatusLabelMap[ticket.status] || ticket.status,
+  statusValue: ticket.status,
+  lastUpdate: formatDate(ticket.lastUpdateAt || ticket.updatedAt),
+  lastUpdateAt: ticket.lastUpdateAt || ticket.updatedAt,
+  updatedAt: ticket.updatedAt
+});
+
+const resolveTenantPropertyLabel = (tenant) =>
+  tenant.managedPropertyId?.title ||
+  tenant.propertyId?.title ||
+  "Bien non renseigne";
+
+const resolveTenantContractLabel = (tenant) =>
+  tenant.managementContractId?.reference ||
+  tenant.managementContractId?.title ||
+  tenant.contractId?.title ||
+  "Aucun contrat";
+
+const buildTenantIdentity = (tenant) => tenant.cin || tenant.identityDocument || "-";
+
+const mapOwnerTenant = (tenant) => ({
+  id: String(tenant._id),
+  linkedUserId: tenant.linkedUserId?._id ? String(tenant.linkedUserId._id) : tenant.linkedUserId ? String(tenant.linkedUserId) : null,
+  managedPropertyId: tenant.managedPropertyId?._id ? String(tenant.managedPropertyId._id) : tenant.managedPropertyId ? String(tenant.managedPropertyId) : null,
+  managementContractId:
+    tenant.managementContractId?._id ? String(tenant.managementContractId._id) : tenant.managementContractId ? String(tenant.managementContractId) : null,
+  firstName: tenant.firstName || "",
+  lastName: tenant.lastName || "",
+  fullName: tenant.fullName,
+  email: tenant.email || "",
+  phone: tenant.phone || "",
+  cin: tenant.cin || "",
+  adresse: tenant.adresse || "",
+  sexe: tenant.sexe || "",
+  sexeLabel: tenantGenderLabelMap[tenant.sexe] || "Non renseigne",
+  contact: tenant.contact || tenant.phone || tenant.email || "-",
+  identity: buildTenantIdentity(tenant),
+  documents: tenant.documentsCount || 0,
+  paymentHistory: tenant.paymentHistoryLabel || "-",
+  contract: resolveTenantContractLabel(tenant),
+  property: resolveTenantPropertyLabel(tenant),
+  source: tenant.source || "manual"
+});
+
+const buildOwnerTenantDraftFromUser = ({ user, managedPropertyId, managementContractId, source }) => ({
+  linkedUserId: user._id,
+  managedPropertyId,
+  managementContractId: managementContractId || null,
+  firstName: user.firstName || "",
+  lastName: user.lastName || "",
+  fullName: [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.email || "Locataire",
+  email: user.email || "",
+  phone: user.phone || "",
+  cin: user.cin || "",
+  adresse: user.adresse || "",
+  sexe: user.sexe || "",
+  contact: user.phone || user.email || "",
+  identityDocument: user.cin || "",
+  source
+});
+
+const ensureManagedPropertyForOwnerTenant = async ({ ownerId, managedPropertyId }) => {
+  const property = await Property.findOne({ _id: managedPropertyId, ownerUserId: ownerId })
+    .select("title ownerUserId managementContractId purpose")
+    .lean();
+
+  if (!property) {
+    throw new AppError("Bien introuvable pour ce proprietaire", StatusCodes.NOT_FOUND);
+  }
+
+  if (property.purpose !== "rent") {
+    throw new AppError("Seuls les biens en location peuvent avoir des locataires", StatusCodes.BAD_REQUEST);
+  }
+
+  return property;
+};
+
+const ensureLinkedUser = async (linkedUserId) => {
+  const user = await User.findById(linkedUserId)
+    .select("firstName lastName email phone cin adresse sexe status")
+    .lean();
+
+  if (!user || user.status !== "active") {
+    throw new AppError("Utilisateur introuvable", StatusCodes.NOT_FOUND);
+  }
+
+  return user;
+};
+
+const upsertOwnerTenantFromClosedWon = async ({ ownerId, managedPropertyId, userId }) => {
+  const [property, user] = await Promise.all([
+    Property.findOne({ _id: managedPropertyId, ownerUserId: ownerId }).select("managementContractId purpose").lean(),
+    User.findById(userId).select("firstName lastName email phone cin adresse sexe").lean()
+  ]);
+
+  if (!property || property.purpose !== "rent" || !user) {
+    return null;
+  }
+
+  const tenantDraft = buildOwnerTenantDraftFromUser({
+    user,
+    managedPropertyId,
+    managementContractId: property.managementContractId || null,
+    source: "booking_closed_won"
+  });
+
+  const tenant = await OwnerTenant.findOneAndUpdate(
+    {
+      ownerId,
+      managedPropertyId,
+      linkedUserId: user._id
+    },
+    {
+      $set: {
+        ...tenantDraft,
+        ownerId
+      }
+    },
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true
+    }
+  )
+    .populate("managedPropertyId", "title")
+    .populate("managementContractId", "reference title")
+    .populate("linkedUserId", "firstName lastName email")
+    .lean();
+
+  return tenant ? mapOwnerTenant(tenant) : null;
+};
+
+const buildMaintenanceNotificationPayload = ({ ownerId, type, title, body, ticketId, managedPropertyId }) => ({
+  userId: ownerId,
+  type,
+  title,
+  body,
+  channel: "in_app",
+  data: {
+    ticketId: String(ticketId),
+    managedPropertyId: managedPropertyId ? String(managedPropertyId) : null
+  }
+});
+
+const createMaintenanceNotification = async ({ ownerId, action, ticket }) => {
+  const propertyLabel = resolveMaintenancePropertyLabel(ticket);
+  const notificationByAction = {
+    created: {
+      type: "owner.maintenance.created",
+      title: `Ticket cree: ${ticket.title}`,
+      body: `Le ticket ${ticket.title} a ete ajoute pour ${propertyLabel}.`
+    },
+    updated: {
+      type: "owner.maintenance.updated",
+      title: `Ticket mis a jour: ${ticket.title}`,
+      body: `Le ticket ${ticket.title} est maintenant ${maintenanceStatusLabelMap[ticket.status] || ticket.status} pour ${propertyLabel}.`
+    },
+    deleted: {
+      type: "owner.maintenance.deleted",
+      title: `Ticket supprime: ${ticket.title}`,
+      body: `Le ticket ${ticket.title} a ete supprime pour ${propertyLabel}.`
+    }
+  }[action];
+
+  if (!notificationByAction) {
+    return;
+  }
+
+  await createNotifications([
+    buildMaintenanceNotificationPayload({
+      ownerId,
+      ...notificationByAction,
+      ticketId: ticket._id || ticket.id,
+      managedPropertyId: ticket.managedPropertyId?._id || ticket.managedPropertyId || null
+    })
+  ]);
+};
+
+const ensureManagedPropertyOwnership = async ({ ownerId, managedPropertyId }) => {
+  const property = await Property.findOne({ _id: managedPropertyId, ownerUserId: ownerId })
+    .select("title ownerUserId")
+    .lean();
+
+  if (!property) {
+    throw new AppError("Bien introuvable pour ce proprietaire", StatusCodes.NOT_FOUND);
+  }
+
+  return property;
+};
+
 export const getOwnerWorkspace = async ({ ownerId }) => {
   await seedOwnerWorkspace(ownerId);
 
   const [properties, contracts, tenants, rents, maintenance, alerts] = await Promise.all([
     OwnerProperty.find({ ownerId }).sort({ createdAt: -1 }).lean(),
     OwnerContract.find({ ownerId }).sort({ startDate: -1 }).lean(),
-    OwnerTenant.find({ ownerId }).populate("contractId", "title").sort({ createdAt: -1 }).lean(),
+    OwnerTenant.find({ ownerId })
+      .populate("contractId", "title")
+      .populate("managementContractId", "reference title")
+      .populate("managedPropertyId", "title address")
+      .populate("linkedUserId", "firstName lastName email")
+      .sort({ createdAt: -1 })
+      .lean(),
     OwnerRentPayment.find({ ownerId })
       .populate("propertyId", "title")
       .populate("tenantId", "fullName")
       .sort({ dueDate: -1 })
       .lean(),
-    OwnerMaintenanceTicket.find({ ownerId }).populate("propertyId", "title").sort({ updatedAt: -1 }).lean(),
+    OwnerMaintenanceTicket.find({ ownerId })
+      .populate("propertyId", "title")
+      .populate("managedPropertyId", "title")
+      .sort({ updatedAt: -1 })
+      .lean(),
     Notification.find({ userId: ownerId, "data.source": OWNER_NOTIFICATION_SOURCE }).sort({ createdAt: -1 }).lean()
   ]);
 
@@ -332,7 +585,7 @@ export const getOwnerWorkspace = async ({ ownerId }) => {
     ...maintenance.slice(0, 2).map((ticket) => ({
       id: `maintenance-${ticket._id}`,
       title: ticket.title,
-      date: ticket.lastUpdateLabel || formatDate(ticket.updatedAt),
+      date: formatDate(ticket.lastUpdateAt || ticket.updatedAt),
       tag: "Maintenance"
     }))
   ].slice(0, 5);
@@ -358,9 +611,9 @@ export const getOwnerWorkspace = async ({ ownerId }) => {
     recentMaintenance: maintenance.slice(0, 3).map((ticket) => ({
       id: String(ticket._id),
       title: ticket.title,
-      property: ticket.propertyId?.title || "Bien non renseigne",
+      property: resolveMaintenancePropertyLabel(ticket),
       status: maintenanceStatusLabelMap[ticket.status] || ticket.status,
-      date: ticket.lastUpdateLabel || formatDate(ticket.updatedAt)
+      date: formatDate(ticket.lastUpdateAt || ticket.updatedAt)
     })),
     alerts: alerts.map((notification) => ({
       id: String(notification._id),
@@ -387,15 +640,7 @@ export const getOwnerWorkspace = async ({ ownerId }) => {
       status: rentStatusLabelMap[rent.status] || rent.status,
       receiptNumber: rent.receiptNumber || "-"
     })),
-    tenants: tenants.map((tenant) => ({
-      id: String(tenant._id),
-      fullName: tenant.fullName,
-      contact: tenant.contact || "-",
-      identity: tenant.identityDocument || "-",
-      documents: tenant.documentsCount || 0,
-      paymentHistory: tenant.paymentHistoryLabel || "-",
-      contract: tenant.contractId?.title || "Aucun contrat"
-    })),
+    tenants: tenants.map(mapOwnerTenant),
     properties: properties.map((property) => ({
       id: String(property._id),
       title: property.title,
@@ -405,14 +650,226 @@ export const getOwnerWorkspace = async ({ ownerId }) => {
       history: property.historyLabel || "-",
       photos: property.photosCount || 0
     })),
-    maintenance: maintenance.map((ticket) => ({
-      id: String(ticket._id),
-      title: ticket.title,
-      property: ticket.propertyId?.title || "Bien non renseigne",
-      priority: priorityLabelMap[ticket.priority] || ticket.priority,
-      assignee: ticket.assignee || "-",
-      status: maintenanceStatusLabelMap[ticket.status] || ticket.status,
-      lastUpdate: ticket.lastUpdateLabel || formatDate(ticket.updatedAt)
-    }))
+    maintenance: maintenance.map(mapMaintenanceTicket)
   };
+};
+
+export const createOwnerMaintenanceTicket = async ({ ownerId, payload }) => {
+  await seedOwnerWorkspace(ownerId);
+
+  const managedProperty = await ensureManagedPropertyOwnership({
+    ownerId,
+    managedPropertyId: payload.managedPropertyId
+  });
+
+  const ticket = await OwnerMaintenanceTicket.create({
+    ownerId,
+    propertyId: payload.propertyId || null,
+    managedPropertyId: managedProperty._id,
+    propertyLabel: payload.propertyLabel || managedProperty.title,
+    title: payload.title,
+    description: payload.description || "",
+    priority: payload.priority,
+    assignee: payload.assignee || "",
+    status: payload.status,
+    lastUpdateAt: payload.lastUpdateAt,
+    lastUpdateLabel: formatDate(payload.lastUpdateAt)
+  });
+
+  const detailedTicket = await OwnerMaintenanceTicket.findById(ticket._id)
+    .populate("propertyId", "title")
+    .populate("managedPropertyId", "title")
+    .lean();
+
+  await createMaintenanceNotification({ ownerId, action: "created", ticket: detailedTicket });
+
+  return mapMaintenanceTicket(detailedTicket);
+};
+
+export const syncOwnerTenantFromClosedWon = async ({ ownerId, managedPropertyId, userId }) =>
+  upsertOwnerTenantFromClosedWon({ ownerId, managedPropertyId, userId });
+
+export const createOwnerTenant = async ({ ownerId, payload }) => {
+  await seedOwnerWorkspace(ownerId);
+
+  const property = await ensureManagedPropertyForOwnerTenant({
+    ownerId,
+    managedPropertyId: payload.managedPropertyId
+  });
+
+  const linkedUser = payload.linkedUserId ? await ensureLinkedUser(payload.linkedUserId) : null;
+  const tenantDraft = linkedUser
+    ? {
+        ...buildOwnerTenantDraftFromUser({
+          user: linkedUser,
+          managedPropertyId: property._id,
+          managementContractId: payload.managementContractId || property.managementContractId || null,
+          source: "manual"
+        }),
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        fullName: [payload.firstName, payload.lastName].filter(Boolean).join(" ").trim(),
+        email: payload.email,
+        phone: payload.phone || "",
+        cin: payload.cin || "",
+        adresse: payload.adresse || "",
+        sexe: payload.sexe,
+        contact: payload.phone || payload.email || "",
+        identityDocument: payload.cin || ""
+      }
+    : {
+        linkedUserId: null,
+        managedPropertyId: property._id,
+        managementContractId: payload.managementContractId || property.managementContractId || null,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        fullName: [payload.firstName, payload.lastName].filter(Boolean).join(" ").trim(),
+        email: payload.email,
+        phone: payload.phone || "",
+        cin: payload.cin || "",
+        adresse: payload.adresse || "",
+        sexe: payload.sexe,
+        contact: payload.phone || payload.email || "",
+        identityDocument: payload.cin || "",
+        source: "manual"
+      };
+
+  const tenant = await OwnerTenant.create({
+    ownerId,
+    ...tenantDraft,
+    documentsCount: payload.documentsCount || 0,
+    paymentHistoryLabel: payload.paymentHistoryLabel || ""
+  });
+
+  const detailedTenant = await OwnerTenant.findById(tenant._id)
+    .populate("contractId", "title")
+    .populate("managementContractId", "reference title")
+    .populate("managedPropertyId", "title address")
+    .populate("linkedUserId", "firstName lastName email")
+    .lean();
+
+  return mapOwnerTenant(detailedTenant);
+};
+
+export const updateOwnerTenant = async ({ ownerId, tenantId, payload }) => {
+  await seedOwnerWorkspace(ownerId);
+
+  const tenant = await OwnerTenant.findOne({ _id: tenantId, ownerId });
+
+  if (!tenant) {
+    throw new AppError("Locataire introuvable", StatusCodes.NOT_FOUND);
+  }
+
+  const property = await ensureManagedPropertyForOwnerTenant({
+    ownerId,
+    managedPropertyId: payload.managedPropertyId
+  });
+
+  const linkedUser = payload.linkedUserId ? await ensureLinkedUser(payload.linkedUserId) : null;
+  const nextTenantValues = linkedUser
+    ? {
+        ...buildOwnerTenantDraftFromUser({
+          user: linkedUser,
+          managedPropertyId: property._id,
+          managementContractId: payload.managementContractId || property.managementContractId || null,
+          source: tenant.source === "booking_closed_won" ? "booking_closed_won" : "manual"
+        }),
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        fullName: [payload.firstName, payload.lastName].filter(Boolean).join(" ").trim(),
+        email: payload.email,
+        phone: payload.phone || "",
+        cin: payload.cin || "",
+        adresse: payload.adresse || "",
+        sexe: payload.sexe,
+        contact: payload.phone || payload.email || "",
+        identityDocument: payload.cin || ""
+      }
+    : {
+        linkedUserId: null,
+        managedPropertyId: property._id,
+        managementContractId: payload.managementContractId || property.managementContractId || null,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        fullName: [payload.firstName, payload.lastName].filter(Boolean).join(" ").trim(),
+        email: payload.email,
+        phone: payload.phone || "",
+        cin: payload.cin || "",
+        adresse: payload.adresse || "",
+        sexe: payload.sexe,
+        contact: payload.phone || payload.email || "",
+        identityDocument: payload.cin || "",
+        source: "manual"
+      };
+
+  Object.assign(tenant, {
+    ...nextTenantValues,
+    documentsCount: payload.documentsCount || 0,
+    paymentHistoryLabel: payload.paymentHistoryLabel || ""
+  });
+
+  await tenant.save();
+
+  const detailedTenant = await OwnerTenant.findById(tenant._id)
+    .populate("contractId", "title")
+    .populate("managementContractId", "reference title")
+    .populate("managedPropertyId", "title address")
+    .populate("linkedUserId", "firstName lastName email")
+    .lean();
+
+  return mapOwnerTenant(detailedTenant);
+};
+
+export const updateOwnerMaintenanceTicket = async ({ ownerId, ticketId, payload }) => {
+  await seedOwnerWorkspace(ownerId);
+
+  const existingTicket = await OwnerMaintenanceTicket.findOne({ _id: ticketId, ownerId });
+
+  if (!existingTicket) {
+    throw new AppError("Ticket introuvable", StatusCodes.NOT_FOUND);
+  }
+
+  const managedProperty = await ensureManagedPropertyOwnership({
+    ownerId,
+    managedPropertyId: payload.managedPropertyId
+  });
+
+  existingTicket.propertyId = payload.propertyId || null;
+  existingTicket.managedPropertyId = managedProperty._id;
+  existingTicket.propertyLabel = payload.propertyLabel || managedProperty.title;
+  existingTicket.title = payload.title;
+  existingTicket.description = payload.description || "";
+  existingTicket.priority = payload.priority;
+  existingTicket.assignee = payload.assignee || "";
+  existingTicket.status = payload.status;
+  existingTicket.lastUpdateAt = payload.lastUpdateAt;
+  existingTicket.lastUpdateLabel = formatDate(payload.lastUpdateAt);
+  await existingTicket.save();
+
+  const detailedTicket = await OwnerMaintenanceTicket.findById(existingTicket._id)
+    .populate("propertyId", "title")
+    .populate("managedPropertyId", "title")
+    .lean();
+
+  await createMaintenanceNotification({ ownerId, action: "updated", ticket: detailedTicket });
+
+  return mapMaintenanceTicket(detailedTicket);
+};
+
+export const deleteOwnerMaintenanceTicket = async ({ ownerId, ticketId }) => {
+  await seedOwnerWorkspace(ownerId);
+
+  const ticket = await OwnerMaintenanceTicket.findOne({ _id: ticketId, ownerId })
+    .populate("propertyId", "title")
+    .populate("managedPropertyId", "title")
+    .lean();
+
+  if (!ticket) {
+    throw new AppError("Ticket introuvable", StatusCodes.NOT_FOUND);
+  }
+
+  await OwnerMaintenanceTicket.deleteOne({ _id: ticketId, ownerId });
+  await createMaintenanceNotification({ ownerId, action: "deleted", ticket });
+
+  return { success: true, ticketId };
 };

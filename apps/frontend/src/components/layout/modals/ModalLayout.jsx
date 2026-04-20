@@ -12,7 +12,8 @@ export const ModalLayout = ({
   onSave,
   saveDisabled = false,
   isSaving = false,
-  panelClassName = ""
+  panelClassName = "",
+  footerContent = null
 }) => (
   <Transition appear show={open} as={Fragment}>
     <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -46,19 +47,21 @@ export const ModalLayout = ({
 
               <div className="py-6">{children}</div>
 
-              <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-4 sm:flex-row sm:justify-end">
-                <Button type="button" variant="secondary" className="px-5 py-3" onClick={onClose}>
-                  {cancelLabel}
-                </Button>
-                <Button
-                  type="button"
-                  className="px-5 py-3"
-                  disabled={saveDisabled || isSaving}
-                  onClick={onSave}
-                >
-                  {isSaving ? "Enregistrement..." : saveLabel}
-                </Button>
-              </div>
+              {footerContent ?? (
+                <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-4 sm:flex-row sm:justify-end">
+                  <Button type="button" variant="secondary" className="px-5 py-3" onClick={onClose}>
+                    {cancelLabel}
+                  </Button>
+                  <Button
+                    type="button"
+                    className="px-5 py-3"
+                    disabled={saveDisabled || isSaving}
+                    onClick={onSave}
+                  >
+                    {isSaving ? "Enregistrement..." : saveLabel}
+                  </Button>
+                </div>
+              )}
             </Dialog.Panel>
           </Transition.Child>
         </div>

@@ -58,6 +58,9 @@ export const SettingsPage = () => {
       lastName: "",
       email: "",
       phone: "",
+      cin: "",
+      adresse: "",
+      sexe: "",
       avatar: ""
     }
   });
@@ -88,6 +91,9 @@ export const SettingsPage = () => {
         lastName: profileQuery.data.lastName || "",
         email: profileQuery.data.email || "",
         phone: profileQuery.data.phone || "",
+        cin: profileQuery.data.cin || "",
+        adresse: profileQuery.data.adresse || "",
+        sexe: profileQuery.data.sexe || "",
         avatar: profileQuery.data.avatar || ""
       });
     }

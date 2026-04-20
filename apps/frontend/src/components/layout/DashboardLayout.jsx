@@ -16,6 +16,7 @@ const buildSidebarItems = (user) => {
     return [
       { to: "/dashboard/owner", label: "Dashboard", permission: null },
       { to: "/owner/contracts", label: "Gestion de contrats", permission: null },
+      { to: "/owner/calendar", label: "Calendrier", permission: null },
       { to: "/messages", label: "Messages", permission: null },
       { to: "/notifications", label: "Notifications", permission: null },
       { to: "/owner/rents", label: "Gestion de loyers", permission: null },

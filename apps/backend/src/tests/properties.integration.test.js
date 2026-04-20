@@ -2,6 +2,8 @@ import test, { after, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
 import { createApp } from "../app.js";
+import { signAccessToken } from "../core/utils/jwt.js";
+import { OwnerMaintenanceTicket } from "../modules/owner/models/owner-maintenance-ticket.model.js";
 import { Property } from "../modules/properties/property.model.js";
 import { User } from "../modules/users/user.model.js";
 import {
@@ -30,6 +32,16 @@ const createAgent = () =>
     email: `geo-${Date.now()}-${Math.random()}@yopii.test`,
     passwordHash: "hashed-password",
     role: "independent_agent",
+    status: "active"
+  });
+
+const createUser = (role = "user") =>
+  User.create({
+    firstName: "Viewer",
+    lastName: "User",
+    email: `viewer-${Date.now()}-${Math.random()}@yopii.test`,
+    passwordHash: "hashed-password",
+    role,
     status: "active"
   });
 
@@ -115,4 +127,52 @@ test("GET /api/v1/properties/search/bounds filters properties inside viewport", 
   assert.equal(response.body.data.map.bounds.northEast.lat, 5.4);
   assert.equal(response.body.data.map.center.lat, 5.35);
   assert.equal(response.body.data.pagination.total, 1);
+});
+
+test("GET /api/v1/properties/publications/feed exposes maintenance tag for properties in progress", async () => {
+  const owner = await createUser("proprietaire");
+  const viewer = await createUser("user");
+
+  const property = await Property.create({
+    title: "Villa maintenance",
+    slug: `villa-maintenance-${Date.now()}`,
+    description: "Publication avec ticket en cours",
+    type: "house",
+    purpose: "rent",
+    price: 950000,
+    currency: "Ar",
+    area: 120,
+    rooms: 4,
+    bedrooms: 3,
+    bathrooms: 2,
+    features: [],
+    address: "Analamahitsy",
+    location: { type: "Point", coordinates: [47.54, -18.87] },
+    ownerType: "proprietaire",
+    ownerUserId: owner._id,
+    agentId: owner._id,
+    status: "published",
+    publicationStatus: "approved"
+  });
+
+  await OwnerMaintenanceTicket.create({
+    ownerId: owner._id,
+    managedPropertyId: property._id,
+    propertyLabel: property.title,
+    title: "Panne electrique",
+    priority: "high",
+    assignee: "Electro Pro",
+    status: "in_progress",
+    lastUpdateAt: new Date("2026-04-19T00:00:00.000Z"),
+    lastUpdateLabel: "19 avril 2026"
+  });
+
+  const app = createApp();
+  const response = await request(app)
+    .get("/api/v1/properties/publications/feed?page=1&limit=10")
+    .set("Authorization", `Bearer ${signAccessToken(viewer)}`);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.data.items.length, 1);
+  assert.equal(response.body.data.items[0].isUnderMaintenance, true);
 });

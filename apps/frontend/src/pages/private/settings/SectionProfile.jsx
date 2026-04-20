@@ -50,6 +50,12 @@ const PermissionTooltipContent = ({ permissionCodes }) => {
   );
 };
 
+const genderOptions = [
+  { label: "Homme", value: "homme" },
+  { label: "Femme", value: "femme" },
+  { label: "Autre", value: "autre" }
+];
+
 export const SectionProfile = ({
   profile,
   profileForm,
@@ -118,6 +124,30 @@ export const SectionProfile = ({
               name="phone"
               control={profileForm.control}
               render={({ field }) => <Input label="Telephone" error={profileErrors.phone?.message} {...field} />}
+            />
+            <Controller
+              name="cin"
+              control={profileForm.control}
+              render={({ field }) => <Input label="CIN" error={profileErrors.cin?.message} {...field} />}
+            />
+            <Controller
+              name="adresse"
+              control={profileForm.control}
+              render={({ field }) => <Input label="Adresse" error={profileErrors.adresse?.message} {...field} />}
+            />
+            <Controller
+              name="sexe"
+              control={profileForm.control}
+              render={({ field }) => (
+                <BaseListBox
+                  label="Sexe"
+                  options={genderOptions}
+                  value={genderOptions.find((option) => option.value === field.value) || null}
+                  onChange={(nextValue) => field.onChange(nextValue?.value || "")}
+                  error={profileErrors.sexe?.message}
+                  placeholder="Selectionner"
+                />
+              )}
             />
             <div className="md:col-span-2 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <BlackTooltip title={<PermissionTooltipContent permissionCodes={permissionDetails} />} arrow placement="top">

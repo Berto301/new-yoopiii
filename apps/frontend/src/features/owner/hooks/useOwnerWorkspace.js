@@ -1,7 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
-import { getOwnerContracts, getOwnerDashboard, getOwnerMaintenance, getOwnerProperties, getOwnerRents, getOwnerTenants } from "../services/owner.service.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getManagedProperties } from "../../properties/services/property.service.js";
+import {
+  createOwnerTenant,
+  createOwnerMaintenanceTicket,
+  deleteOwnerMaintenanceTicket,
+  getOwnerContracts,
+  getOwnerDashboard,
+  getOwnerMaintenance,
+  getOwnerProperties,
+  getOwnerRents,
+  getOwnerTenants,
+  updateOwnerTenant,
+  updateOwnerMaintenanceTicket
+} from "../services/owner.service.js";
 
 export const useOwnerWorkspace = () => {
+  const queryClient = useQueryClient();
   const dashboardQuery = useQuery({
     queryKey: ["owner-dashboard"],
     queryFn: getOwnerDashboard
@@ -32,12 +46,60 @@ export const useOwnerWorkspace = () => {
     queryFn: getOwnerMaintenance
   });
 
+  const managedPropertiesQuery = useQuery({
+    queryKey: ["owner-maintenance-properties"],
+    queryFn: async () => {
+      const response = await getManagedProperties({ scope: "own", page: 1, limit: 100 });
+      return response.items || [];
+    }
+  });
+
+  const invalidateOwnerWorkspace = () => {
+    queryClient.invalidateQueries({ queryKey: ["owner-dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-tenants"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-maintenance"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    queryClient.invalidateQueries({ queryKey: ["property-publications"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-maintenance-properties"] });
+  };
+
+  const createMaintenanceTicketMutation = useMutation({
+    mutationFn: createOwnerMaintenanceTicket,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
+  const createTenantMutation = useMutation({
+    mutationFn: createOwnerTenant,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
+  const updateTenantMutation = useMutation({
+    mutationFn: updateOwnerTenant,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
+  const updateMaintenanceTicketMutation = useMutation({
+    mutationFn: updateOwnerMaintenanceTicket,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
+  const deleteMaintenanceTicketMutation = useMutation({
+    mutationFn: deleteOwnerMaintenanceTicket,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
   return {
     dashboardQuery,
     contractsQuery,
     rentsQuery,
     tenantsQuery,
     propertiesQuery,
-    maintenanceQuery
+    maintenanceQuery,
+    managedPropertiesQuery,
+    createTenantMutation,
+    updateTenantMutation,
+    createMaintenanceTicketMutation,
+    updateMaintenanceTicketMutation,
+    deleteMaintenanceTicketMutation
   };
 };

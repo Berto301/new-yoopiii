@@ -29,6 +29,15 @@ export const getMyProfile = async (req, res) => {
   });
 };
 
+export const getUserById = async (req, res) => {
+  const user = await getUserProfileById(req.validated.params.userId);
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data: user
+  });
+};
+
 export const patchMyProfile = async (req, res) => {
   const user = await updateMyProfile({ userId: req.user.id, payload: req.validated.body });
 

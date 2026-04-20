@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 import { Notification } from "../notifications/notification.model.js";
+import { syncOwnerTenantFromClosedWon } from "../owner/owner.service.js";
 import { Property } from "../properties/property.model.js";
 import { User } from "../users/user.model.js";
 import { Conversation } from "./conversation.model.js";
@@ -105,6 +106,14 @@ const syncAppointmentPropertyOutcome = async (appointment) => {
   property.reservedByUserId = null;
   property.reservedAt = null;
   await property.save();
+
+  if (appointment.propertyPurpose === "rent" && property.ownerUserId && appointment.clientId) {
+    await syncOwnerTenantFromClosedWon({
+      ownerId: property.ownerUserId,
+      managedPropertyId: property._id,
+      userId: appointment.clientId
+    });
+  }
 
   return property;
 };

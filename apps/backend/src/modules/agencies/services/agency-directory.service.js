@@ -143,7 +143,8 @@ export const listAgencyDirectoryAgents = async ({ agencyId, filters }) => {
 
   const members = await AgencyMember.find({
     agencyId,
-    status: "active",
+    status: { $ne: "removed" },
+    role: { $ne: "owner" },
     ...(filters.role && filters.role !== "all" ? { role: filters.role } : {})
   })
     .populate("userId", "firstName lastName email avatar role status")
@@ -195,6 +196,7 @@ export const listAgencyDirectoryAgents = async ({ agencyId, filters }) => {
         role: member.role,
         roleLabel: ROLE_LABELS[member.role] || member.role,
         jobTitle: member.jobTitle || "",
+        membershipStatus: member.status,
         agencyId: String(agency._id),
         agencyName: agency.name,
         clientRating: stats.ratedPropertiesCount ? Number((stats.ratingTotal / stats.ratedPropertiesCount).toFixed(1)) : 0,

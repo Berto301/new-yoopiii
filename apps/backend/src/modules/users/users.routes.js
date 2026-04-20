@@ -6,12 +6,13 @@ import {
   changeMyPasswordHandler,
   getDiscoverableAgents,
   getMyProfile,
+  getUserById,
   getUsers,
   patchMyProfile,
   uploadMyAvatarHandler
 } from "./users.controller.js";
 import { uploadProfileAvatar } from "./users.upload.js";
-import { changePasswordSchema, discoverAgentsSchema, updateMyProfileSchema } from "./users.validation.js";
+import { changePasswordSchema, discoverAgentsSchema, updateMyProfileSchema, userIdParamsSchema } from "./users.validation.js";
 
 export const userRouter = Router();
 
@@ -22,3 +23,4 @@ userRouter.get("/me", asyncHandler(getMyProfile));
 userRouter.post("/me/avatar", uploadProfileAvatar, asyncHandler(uploadMyAvatarHandler));
 userRouter.patch("/me/profile", validate(updateMyProfileSchema), asyncHandler(patchMyProfile));
 userRouter.patch("/me/password", validate(changePasswordSchema), asyncHandler(changeMyPasswordHandler));
+userRouter.get("/:userId", validate(userIdParamsSchema), asyncHandler(getUserById));

@@ -10,6 +10,11 @@ export const getUsers = async () => {
   return response.data.data;
 };
 
+export const getUserById = async (userId) => {
+  const response = await apiClient.get(`/users/${userId}`);
+  return response.data.data;
+};
+
 export const updateMyProfile = async (payload) => {
   const response = await apiClient.patch("/users/me/profile", payload);
   return response.data.data;

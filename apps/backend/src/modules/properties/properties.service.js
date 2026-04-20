@@ -6,6 +6,8 @@ import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { Booking } from "../bookings/booking.model.js";
 import { getActiveManagementContractIdsForActor, validateActiveContractForActor } from "../contracts/contracts.service.js";
 import { createNotifications } from "../notifications/notifications.service.js";
+import { OwnerMaintenanceTicket } from "../owner/models/owner-maintenance-ticket.model.js";
+import { ManagementContract } from "../contracts/management-contract.model.js";
 import { PropertyFavorite } from "./models/property-favorite.model.js";
 import { PropertyView } from "./models/property-view.model.js";
 import { Property } from "./property.model.js";
@@ -202,6 +204,15 @@ const mapPropertyListItem = (property, favoriteIds = new Set()) => ({
   agencyName: property.agencyName || property.agencyId?.name || null,
   ownerType: property.ownerType,
   ownerUserId: property.ownerUserId?._id ? String(property.ownerUserId._id) : property.ownerUserId || null,
+  ownerName:
+    property.ownerName ||
+    [property.ownerUserId?.firstName, property.ownerUserId?.lastName].filter(Boolean).join(" ").trim() ||
+    "",
+  ownerAvatar: property.ownerAvatar || property.ownerUserId?.avatar || null,
+  ownerPhone: property.ownerPhone || property.ownerUserId?.phone || "",
+  ownerEmail: property.ownerEmail || property.ownerUserId?.email || "",
+  publicationOwnerDisplay: property.publicationOwnerDisplay || null,
+  isUnderMaintenance: Boolean(property.isUnderMaintenance),
   managementContractId: property.managementContractId?._id ? String(property.managementContractId._id) : property.managementContractId || null,
   reservedByUserId: property.reservedByUserId?._id ? String(property.reservedByUserId._id) : property.reservedByUserId || null,
   reservedAt: property.reservedAt || null,
@@ -390,10 +401,18 @@ const ensurePropertyExists = async (propertyId) => {
   return property;
 };
 
-const ensurePropertyManagementAccess = async (property, actor) => {
+const ensurePropertyManagementAccess = async (property, actor, requiredAction = null) => {
   if (actor.role === "proprietaire") {
     if (String(property.ownerUserId || "") !== String(actor.id)) {
       throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
+    }
+
+    if (requiredAction === "publish") {
+      throw new AppError("Le proprietaire ne peut pas publier ce bien directement", StatusCodes.FORBIDDEN);
+    }
+
+    if (requiredAction === "reserve") {
+      throw new AppError("Le proprietaire ne peut pas reserver ce bien directement", StatusCodes.FORBIDDEN);
     }
 
     return;
@@ -403,7 +422,23 @@ const ensurePropertyManagementAccess = async (property, actor) => {
     throw new AppError("This property is no longer manageable because it is not linked to an active contract", StatusCodes.FORBIDDEN);
   }
 
-  await validateActiveContractForActor({ contractId: String(property.managementContractId), actor });
+  const contract = await validateActiveContractForActor({ contractId: String(property.managementContractId), actor });
+
+  if (requiredAction === "publish" && !contract.actions?.canPublishProperty) {
+    throw new AppError("Ce contrat n'autorise pas la publication du bien", StatusCodes.FORBIDDEN);
+  }
+
+  if (requiredAction === "reserve" && !contract.actions?.canReserveProperty) {
+    throw new AppError("Ce contrat n'autorise pas la reservation du bien", StatusCodes.FORBIDDEN);
+  }
+
+  if (requiredAction === "edit" && !contract.actions?.canEditProperty) {
+    throw new AppError("Ce contrat n'autorise pas la modification du bien", StatusCodes.FORBIDDEN);
+  }
+
+  if (requiredAction === "delete" && !contract.actions?.canDeleteProperty) {
+    throw new AppError("Ce contrat n'autorise pas la suppression du bien", StatusCodes.FORBIDDEN);
+  }
 
   if (actor.role === "agency") {
     if (!property.agencyId || String(property.agencyId) !== actor.agencyId) throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
@@ -438,7 +473,7 @@ const buildManagedPropertyPayload = async ({ actor, payload, existingProperty = 
   const nextType = payload.type ?? existingProperty?.type;
   const nextPurpose = payload.purpose ?? existingProperty?.purpose;
   const nextPrice = payload.price ?? existingProperty?.price;
-  const nextCurrency = payload.currency ?? existingProperty?.currency ?? "XOF";
+  const nextCurrency = (payload.currency ?? existingProperty?.currency ?? "AR").trim().toUpperCase();
   const nextArea = payload.area ?? existingProperty?.area ?? 0;
   const nextRooms = payload.rooms ?? existingProperty?.rooms ?? 0;
   const nextBedrooms = payload.bedrooms ?? existingProperty?.bedrooms ?? 0;
@@ -632,6 +667,7 @@ export const getPropertyPublications = async ({ user, filters }) => {
     Property.find(query)
       .populate("agentId", "firstName lastName")
       .populate("agencyId", "name")
+      .populate("ownerUserId", "firstName lastName email phone avatar")
       .sort({ updatedAt: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -639,11 +675,51 @@ export const getPropertyPublications = async ({ user, filters }) => {
     Property.countDocuments(query)
   ]);
 
+  const contractIds = [...new Set(items.map((item) => String(item.managementContractId || "")).filter(Boolean))];
+  const contracts = contractIds.length
+    ? await ManagementContract.find({ _id: { $in: contractIds } })
+      .populate("ownerUserId", "firstName lastName email phone avatar")
+      .select("actions ownerUserId")
+      .lean()
+    : [];
+  const contractById = new Map(
+    contracts.map((contract) => [
+      String(contract._id),
+      {
+        publicationOwnerDisplay: {
+          showOwnerName: Boolean(contract.actions?.publicationOwnerDisplay?.showOwnerName),
+          showOwnerContact: Boolean(contract.actions?.publicationOwnerDisplay?.showOwnerContact),
+          allowDirectOwnerChat: Boolean(contract.actions?.publicationOwnerDisplay?.allowDirectOwnerChat)
+        },
+        ownerUserId: contract.ownerUserId?._id ? String(contract.ownerUserId._id) : String(contract.ownerUserId || ""),
+        ownerName: [contract.ownerUserId?.firstName, contract.ownerUserId?.lastName].filter(Boolean).join(" ").trim(),
+        ownerAvatar: contract.ownerUserId?.avatar || null,
+        ownerPhone: contract.ownerUserId?.phone || "",
+        ownerEmail: contract.ownerUserId?.email || ""
+      }
+    ])
+  );
+
   const favoriteIds = await loadFavoriteIdsForUser(user?.id, items.map((item) => item._id));
+  const maintenancePropertyIds = items.length
+    ? await OwnerMaintenanceTicket.distinct("managedPropertyId", {
+      managedPropertyId: { $in: items.map((item) => item._id) },
+      status: "in_progress"
+    })
+    : [];
+  const maintenancePropertyIdSet = new Set(maintenancePropertyIds.map((propertyId) => String(propertyId)));
 
   return {
     items: items.map((item) => ({
-      ...mapPropertyListItem(item, favoriteIds),
+      ...mapPropertyListItem({
+        ...item,
+        ownerName: contractById.get(String(item.managementContractId || ""))?.ownerName || [item.ownerUserId?.firstName, item.ownerUserId?.lastName].filter(Boolean).join(" ").trim(),
+        ownerAvatar: contractById.get(String(item.managementContractId || ""))?.ownerAvatar || item.ownerUserId?.avatar || null,
+        ownerPhone: contractById.get(String(item.managementContractId || ""))?.ownerPhone || item.ownerUserId?.phone || "",
+        ownerEmail: contractById.get(String(item.managementContractId || ""))?.ownerEmail || item.ownerUserId?.email || "",
+        publicationOwnerDisplay: contractById.get(String(item.managementContractId || ""))?.publicationOwnerDisplay || null,
+        isUnderMaintenance: maintenancePropertyIdSet.has(String(item._id))
+      }, favoriteIds),
       isReservedByCurrentUser: String(item.reservedByUserId || "") === String(user?.id || "")
     })),
     pagination: buildPagination({ page, limit, total, itemsLength: items.length }),
@@ -667,7 +743,7 @@ export const createManagedProperty = async ({ actor, payload }) => {
 
 export const updateManagedProperty = async ({ propertyId, actor, payload }) => {
   const property = await ensurePropertyExists(propertyId);
-  await ensurePropertyManagementAccess(property, actor);
+  await ensurePropertyManagementAccess(property, actor, "edit");
   const previousStatus = property.status;
   const previousPublicationStatus = property.publicationStatus;
   const data = await buildManagedPropertyPayload({ actor, payload, existingProperty: property });
@@ -699,7 +775,7 @@ export const duplicateManagedProperty = async ({ propertyId, actor, payload }) =
 
 export const deleteManagedProperty = async ({ propertyId, actor }) => {
   const property = await ensurePropertyExists(propertyId);
-  await ensurePropertyManagementAccess(property, actor);
+  await ensurePropertyManagementAccess(property, actor, "delete");
   await createPropertyActivityNotification({
     property,
     actor,
@@ -715,7 +791,13 @@ export const deleteManagedProperty = async ({ propertyId, actor }) => {
 
 export const updatePropertyWorkflow = async ({ propertyId, actor, payload }) => {
   const property = await ensurePropertyExists(propertyId);
-  await ensurePropertyManagementAccess(property, actor);
+  const requiredAction =
+    payload.status === "reserved"
+      ? "reserve"
+      : payload.publicationStatus === "approved" || payload.status === "published"
+        ? "publish"
+        : null;
+  await ensurePropertyManagementAccess(property, actor, requiredAction);
   const previousStatus = property.status;
   const previousPublicationStatus = property.publicationStatus;
   if (payload.status) property.status = payload.status;

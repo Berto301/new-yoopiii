@@ -1,19 +1,18 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { useNotification } from "../../../hooks/useNotification.js";
+import { notifyApiErrors } from "../../../lib/errors/api-error.js";
+import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
 import { usePropertyWorkspace } from "../../../features/properties/hooks/usePropertyWorkspace.js";
 import { ModalManageProperty } from "./ModalManageProperty.jsx";
+import { ModalManageContract } from "../contracts/ModalManageContract.jsx";
 
-const formatPrice = (value, currency = "XOF") =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0
-  }).format(value || 0);
+const formatPrice = (value, currency = "AR") =>
+  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
 
 const formatOwnerType = (ownerType) => {
   if (ownerType === "agency") return "Agence";
@@ -89,15 +88,23 @@ const StatCard = ({ label, value, description, accent }) => (
 
 const PropertyCard = ({
   property,
+  user,
+  linkedContract,
   workflowMutation,
   duplicateManagedPropertyMutation,
   deleteManagedPropertyMutation,
   onEdit,
   onDuplicate,
-  onDelete
+  onDelete,
+  onAssociateContract
 }) => {
-  const coverImage = property.coverImage || property.media?.find((item) => item.type === "image")?.url || "";
+  const coverImage = resolveAssetUrl(property.coverImage || property.media?.find((item) => item.type === "image")?.url || "");
   const mediaCount = property.media?.length || 0;
+  const isOwnerRole = user?.role === "proprietaire";
+  const canPublish = !isOwnerRole && Boolean(linkedContract?.actions?.canPublishProperty);
+  const canReserve = !isOwnerRole && Boolean(linkedContract?.actions?.canReserveProperty);
+  const canEdit = isOwnerRole || Boolean(linkedContract?.actions?.canEditProperty);
+  const canDelete = isOwnerRole || Boolean(linkedContract?.actions?.canDeleteProperty);
   const detailItems = [
     { label: "Type", value: property.type || "--" },
     { label: "Usage", value: property.purpose || "--" },
@@ -160,30 +167,40 @@ const PropertyCard = ({
               {property.favoriteCount || 0} favoris • {mediaCount} fichiers • {property.has3DView ? "Visite 3D active" : "Sans visite 3D"}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onEdit(property)}>
-                Modifier
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-4 py-2"
-                disabled={workflowMutation.isPending || property.publicationStatus === "approved"}
-                onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { publicationStatus: "approved", status: "published" } })}
-              >
-                Publier
-              </Button>
+              {canEdit ? (
+                <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onEdit(property)}>
+                  Modifier
+                </Button>
+              ) : null}
+              {isOwnerRole ? (
+                <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onAssociateContract(property)}>
+                  Associer a un contrat
+                </Button>
+              ) : canPublish ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-4 py-2"
+                  disabled={workflowMutation.isPending || property.publicationStatus === "approved"}
+                  onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { publicationStatus: "approved", status: "published" } })}
+                >
+                  Publier
+                </Button>
+              ) : null}
               <Button type="button" variant="ghost" className="px-4 py-2" disabled={duplicateManagedPropertyMutation.isPending} onClick={() => onDuplicate(property)}>
                 Dupliquer
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="px-4 py-2"
-                disabled={workflowMutation.isPending || property.status === "reserved"}
-                onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "reserved" } })}
-              >
-                Reserver
-              </Button>
+              {canReserve ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="px-4 py-2"
+                  disabled={workflowMutation.isPending || property.status === "reserved"}
+                  onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "reserved" } })}
+                >
+                  Reserver
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
@@ -193,9 +210,11 @@ const PropertyCard = ({
               >
                 Archiver
               </Button>
-              <Button type="button" variant="ghost" className="px-4 py-2 text-red-200" disabled={deleteManagedPropertyMutation.isPending} onClick={() => onDelete(property)}>
-                Supprimer
-              </Button>
+              {canDelete ? (
+                <Button type="button" variant="ghost" className="px-4 py-2 text-red-200" disabled={deleteManagedPropertyMutation.isPending} onClick={() => onDelete(property)}>
+                  Supprimer
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -209,9 +228,14 @@ export const PropertyManagementPage = () => {
     user,
     managedPropertiesQuery,
     activeContractsQuery,
+    contractsQuery,
+    tenantSuggestionsQuery,
     workflowMutation,
     createManagedPropertyMutation,
+    createContractMutation,
+    uploadContractDocumentMutation,
     uploadPropertyAssetMutation,
+    updateContractMutation,
     updateManagedPropertyMutation,
     duplicateManagedPropertyMutation,
     deleteManagedPropertyMutation
@@ -220,6 +244,7 @@ export const PropertyManagementPage = () => {
   const [modalMode, setModalMode] = useState("create");
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [contractModalState, setContractModalState] = useState({ open: false, mode: "create", contract: null });
 
   const isOwnerRole = user?.role === "proprietaire";
 
@@ -249,17 +274,61 @@ export const PropertyManagementPage = () => {
     setIsManageModalOpen(false);
   };
 
-  const handleSaveProperty = async (payload) => {
-    if (modalMode === "edit" && selectedProperty) {
-      await updateManagedPropertyMutation.mutateAsync({
-        propertyId: selectedProperty.id,
-        payload
-      });
-    } else {
-      await createManagedPropertyMutation.mutateAsync(payload);
+  const openCreateContractModal = () => {
+    if (!selectedProperty?.id) {
+      showError("Enregistrez d'abord le bien avant d'ajouter un contrat.");
+      return;
     }
 
-    closeManageModal();
+    setContractModalState({ open: true, mode: "create", contract: null });
+  };
+
+  const openEditContractModal = (contract) => {
+    setContractModalState({ open: true, mode: "edit", contract });
+  };
+
+  const handleAssociateContract = (property) => {
+    setSelectedProperty(property);
+    setContractModalState({ open: true, mode: "create", contract: null });
+  };
+
+  const closeContractModal = () => {
+    setContractModalState({ open: false, mode: "create", contract: null });
+  };
+
+  const handleSaveProperty = async (payload) => {
+    try {
+      if (modalMode === "edit" && selectedProperty) {
+        await updateManagedPropertyMutation.mutateAsync({
+          propertyId: selectedProperty.id,
+          payload
+        });
+      } else {
+        await createManagedPropertyMutation.mutateAsync(payload);
+      }
+
+      closeManageModal();
+      showSuccess(modalMode === "edit" ? "Bien mis a jour." : "Bien cree avec succes.");
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du bien a echoue." });
+      throw error;
+    }
+  };
+
+  const handleSaveContract = async (payload) => {
+    try {
+      if (contractModalState.mode === "edit" && contractModalState.contract) {
+        await updateContractMutation.mutateAsync({ contractId: contractModalState.contract.id, payload });
+      } else {
+        await createContractMutation.mutateAsync(payload);
+      }
+
+      showSuccess(contractModalState.mode === "edit" ? "Contrat mis a jour." : "Contrat cree avec succes.");
+      closeContractModal();
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du contrat a echoue." });
+      throw error;
+    }
   };
 
   const handlePropertyAssetUpload = async ({ assetKind, mediaType, file }) => {
@@ -272,6 +341,16 @@ export const PropertyManagementPage = () => {
     }
 
     return uploadedAsset;
+  };
+
+  const handleContractDocumentUpload = async ({ kind, contractId, file }) => {
+    const uploadedDocument = await uploadContractDocumentMutation.mutateAsync({ kind, contractId, file });
+    showSuccess(
+      file?.name
+        ? `${file.name} televerse dans les documents du contrat.`
+        : "Document televerse avec succes."
+    );
+    return uploadedDocument;
   };
 
   const handleDuplicateProperty = async (property) => {
@@ -315,6 +394,42 @@ export const PropertyManagementPage = () => {
   const contractOptions = (activeContractsQuery.data || []).map((contract) => ({
     label: `${contract.reference} • ${contract.owner?.fullName || "Proprietaire"} • ${contract.endDateLabel}`,
     value: contract.id
+  }));
+  const allContracts = contractsQuery.data || activeContractsQuery.data || [];
+  const associatedContracts = (() => {
+    if (!selectedProperty?.id) {
+      return [];
+    }
+
+    const selectedPropertyId = String(selectedProperty.id);
+    const selectedContractId = selectedProperty.managementContractId ? String(selectedProperty.managementContractId) : null;
+
+    return (allContracts || []).filter((contract) => {
+      const contractId = String(contract.id || "");
+      const linkedPropertyIds = [
+        contract.propertyId,
+        ...(contract.coveredProperties || []).map((property) => property.id)
+      ]
+        .filter(Boolean)
+        .map(String);
+
+      return linkedPropertyIds.includes(selectedPropertyId) || (selectedContractId && contractId === selectedContractId);
+    });
+  })();
+  const agencyOptions = selectedProperty?.agencyId || user?.agencyId
+    ? [{ label: selectedProperty?.agencyName || "Agence courante", value: selectedProperty?.agencyId || user?.agencyId }]
+    : [];
+  const agentOptions = selectedProperty?.agentId || user?.id
+    ? [{
+        label: selectedProperty?.agentName || [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || "Agent",
+        value: selectedProperty?.agentId || user?.id
+      }]
+    : [];
+  const tenantSuggestions = (tenantSuggestionsQuery.data || []).map((tenant) => ({
+    id: tenant.id,
+    fullName: tenant.fullName,
+    phone: tenant.phone || tenant.contact || "",
+    email: tenant.email || ""
   }));
 
   return (
@@ -372,23 +487,34 @@ export const PropertyManagementPage = () => {
         {!isOwnerRole && !contractOptions.length ? (
           <Card className="border-amber-400/20 bg-amber-400/5">
             <p className="text-sm text-amber-100">
-              Aucun contrat signe, accepte ou actif n'est rattache a votre compte. La creation, la modification et la gestion des biens sont bloquees tant qu'un contrat valide avec un proprietaire n'est pas en place.
+              Aucun contrat accepte ou actif n'est rattache a votre compte. La creation, la modification et la gestion des biens sont bloquees tant qu'un contrat valide avec un proprietaire n'est pas en place.
             </p>
           </Card>
         ) : null}
 
         <div className="space-y-5">
           {items.map((property) => (
-            <PropertyCard
-              key={property.id}
-              property={property}
-              workflowMutation={workflowMutation}
-              duplicateManagedPropertyMutation={duplicateManagedPropertyMutation}
-              deleteManagedPropertyMutation={deleteManagedPropertyMutation}
-              onEdit={openEditModal}
-              onDuplicate={handleDuplicateProperty}
-              onDelete={handleDeleteProperty}
-            />
+            (() => {
+              const linkedContract = (allContracts || []).find((contract) =>
+                [contract.propertyId, ...(contract.coveredProperties || []).map((linkedProperty) => linkedProperty.id)].includes(property.id)
+              ) || null;
+
+              return (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                user={user}
+                linkedContract={linkedContract}
+                workflowMutation={workflowMutation}
+                duplicateManagedPropertyMutation={duplicateManagedPropertyMutation}
+                deleteManagedPropertyMutation={deleteManagedPropertyMutation}
+                onEdit={openEditModal}
+                onDuplicate={handleDuplicateProperty}
+                onDelete={handleDeleteProperty}
+                onAssociateContract={handleAssociateContract}
+              />
+              );
+            })()
           ))}
 
           {!items.length ? (
@@ -409,16 +535,39 @@ export const PropertyManagementPage = () => {
         open={isManageModalOpen}
         mode={modalMode}
         property={selectedProperty}
-        contractOptions={contractOptions}
-        contractRequired={!isOwnerRole}
+        associatedContracts={associatedContracts}
+        onEditContract={openEditContractModal}
         onClose={closeManageModal}
         onSubmit={handleSaveProperty}
         onUploadAsset={handlePropertyAssetUpload}
-        onUploadError={(error) => showError(error?.response?.data?.message || "Le televersement du fichier a echoue.")}
+        onUploadError={(error) => notifyApiErrors({ error, showError, fallbackMessage: "Le televersement du fichier a echoue." })}
         isUploadingAsset={uploadPropertyAssetMutation.isPending}
         isSaving={createManagedPropertyMutation.isPending || updateManagedPropertyMutation.isPending}
+      />
+
+      <ModalManageContract
+        open={contractModalState.open}
+        mode={contractModalState.mode}
+        contract={contractModalState.contract}
+        propertyId={selectedProperty?.id || ""}
+        propertyContext={selectedProperty ? {
+          id: selectedProperty.id,
+          label: selectedProperty.title,
+          purpose: selectedProperty.purpose,
+          price: selectedProperty.price,
+          currency: selectedProperty.currency
+        } : null}
+        ownerUserId={selectedProperty?.ownerUserId || ""}
+        agencyOptions={agencyOptions}
+        agentOptions={agentOptions}
+        tenantSuggestions={tenantSuggestions}
+        onUploadDocument={handleContractDocumentUpload}
+        onUploadError={(error) => notifyApiErrors({ error, showError, fallbackMessage: "Le televersement du document a echoue." })}
+        onClose={closeContractModal}
+        onSubmit={handleSaveContract}
+        isSaving={createContractMutation.isPending || updateContractMutation.isPending}
+        isUploadingDocument={uploadContractDocumentMutation.isPending}
       />
     </>
   );
 };
-

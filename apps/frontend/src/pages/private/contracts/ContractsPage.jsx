@@ -5,8 +5,10 @@ import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { useNotification } from "../../../hooks/useNotification.js";
+import { notifyApiErrors } from "../../../lib/errors/api-error.js";
 import { useContractsWorkspace } from "../../../features/contracts/useContractsWorkspace.js";
-import { ModalAddNewContract } from "./ModalAddNewContract.jsx";
+import { ModalManageContract } from "./ModalManageContract.jsx";
+import { ModalDeleteContract } from "./ModalDeleteContract.jsx";
 
 const statCards = [
   { key: "total", label: "Contrats", description: "Cadres contractuels suivis dans votre portefeuille." },
@@ -29,6 +31,9 @@ export const ContractsPage = () => {
   const { showError, showSuccess } = useNotification();
   const [selectedContractId, setSelectedContractId] = useState(null);
   const [modalState, setModalState] = useState({ open: false, mode: "create", contract: null });
+  const [deleteModalState, setDeleteModalState] = useState({ open: false, contract: null });
+  const isOwnerActor = user?.role === "proprietaire";
+  const isManagerActor = ["agency", "agency_agent", "independent_agent"].includes(user?.role || "");
 
   useEffect(() => {
     if (!selectedContractId && contractsQuery.data?.length) {
@@ -46,15 +51,25 @@ export const ContractsPage = () => {
     [ownersQuery.data]
   );
   const propertyOptions = useMemo(
-    () => (propertyOptionsQuery.data || []).map((property) => ({ label: property.label, value: property.id })),
+    () => (propertyOptionsQuery.data || []).map((property) => ({
+      label: property.label,
+      value: property.id,
+      purpose: property.purpose,
+      price: property.price,
+      currency: property.currency
+    })),
     [propertyOptionsQuery.data]
   );
   const agentOptions = useMemo(
     () => (agentOptionsQuery.data || []).map((agent) => ({ label: `${agent.label}${agent.email ? ` • ${agent.email}` : ""}`, value: agent.id })),
     [agentOptionsQuery.data]
   );
+  const agencyOptions = useMemo(
+    () => (user?.agencyId ? [{ label: "Agence courante", value: user.agencyId }] : []),
+    [user?.agencyId]
+  );
 
-  if (!user || !["agency", "independent_agent"].includes(user.role)) {
+  if (!user || !["agency", "agency_agent", "independent_agent", "proprietaire"].includes(user.role)) {
     return <Navigate to="/dashboard/user" replace />;
   }
 
@@ -75,33 +90,86 @@ export const ContractsPage = () => {
       setModalState({ open: false, mode: "create", contract: null });
       showSuccess(modalState.mode === "edit" ? "Contrat mis a jour." : "Contrat cree avec succes.");
     } catch (error) {
-      showError(error?.response?.data?.message || "La gestion du contrat a echoue.");
+      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du contrat a echoue." });
     }
   };
 
-  const handleDeleteContract = async (contract) => {
-    const confirmed = window.confirm(`Supprimer le contrat ${contract.reference} ?`);
-    if (!confirmed) return;
-
+  const handleDeleteContract = async () => {
+    if (!deleteModalState.contract) return;
     try {
-      await deleteContractMutation.mutateAsync(contract.id);
+      await deleteContractMutation.mutateAsync(deleteModalState.contract.id);
       setSelectedContractId(null);
-      showSuccess("Contrat supprime.");
+      setDeleteModalState({ open: false, contract: null });
+      showSuccess("Contrat supprime. Les biens associes ont ete conserves.");
     } catch (error) {
-      showError(error?.response?.data?.message || "La suppression du contrat a echoue.");
+      notifyApiErrors({ error, showError, fallbackMessage: "La suppression du contrat a echoue." });
     }
   };
 
   const handleUploadDocument = async ({ kind, contractId, file }) => {
+    const uploadedDocument = await uploadContractDocumentMutation.mutateAsync({ kind, contractId, file });
+    showSuccess(
+      file?.name
+        ? `${file.name} televerse dans les documents du contrat.`
+        : "Document televerse avec succes."
+    );
+    return uploadedDocument;
+  };
+
+  const handleContractStatusChange = async (contract, status, successMessage) => {
     try {
-      const document = await uploadContractDocumentMutation.mutateAsync({ kind, contractId, file });
-      showSuccess("Document televerse avec succes.");
-      return document;
+      const saved = await updateContractMutation.mutateAsync({
+        contractId: contract.id,
+        payload: { status }
+      });
+
+      setSelectedContractId(saved.id);
+      setModalState({ open: false, mode: "create", contract: null });
+      showSuccess(successMessage);
     } catch (error) {
-      showError(error?.response?.data?.message || "Le televersement du document a echoue.");
-      throw error;
+      notifyApiErrors({ error, showError, fallbackMessage: "La mise a jour du statut du contrat a echoue." });
     }
   };
+
+  const handleRefuseContract = async (contract) => {
+    try {
+      await updateContractMutation.mutateAsync({
+        contractId: contract.id,
+        payload: { status: "terminated" }
+      });
+
+      setSelectedContractId(null);
+      setModalState({ open: false, mode: "create", contract: null });
+      showSuccess("Contrat refuse. Il reste visible comme resilie chez le proprietaire.");
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: "Le refus du contrat a echoue." });
+    }
+  };
+
+  const modalFooterContent = !isOwnerActor && modalState.contract ? (
+    <div className="flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:justify-end">
+      <Button type="button" variant="secondary" className="px-5 py-3" onClick={() => setModalState({ open: false, mode: "create", contract: null })}>
+        Fermer
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        className="px-5 py-3 text-red-200"
+        disabled={updateContractMutation.isPending || modalState.contract.status === "terminated"}
+        onClick={() => handleRefuseContract(modalState.contract)}
+      >
+        Refuser
+      </Button>
+      <Button
+        type="button"
+        className="px-5 py-3"
+        disabled={updateContractMutation.isPending || modalState.contract.status === "terminated"}
+        onClick={() => handleContractStatusChange(modalState.contract, "accepted", "Contrat accepte.")}
+      >
+        Accepter
+      </Button>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -112,10 +180,16 @@ export const ContractsPage = () => {
               <SectionTitle
                 eyebrow="Mes contrats"
                 title="Cadrez juridiquement la gestion de vos biens"
-                description="Retrouvez vos contrats, les proprietaires lies, les biens couverts, les statuts, les dates critiques et l'ensemble des pieces juridiques dans un seul module plus professionnel."
+                description="Retrouvez vos contrats, les proprietaires lies, les biens couverts, les statuts et les informations de gestion dans une interface plus moderne et reutilisable."
               />
               <div className="flex flex-wrap gap-3">
-                <Button type="button" onClick={() => setModalState({ open: true, mode: "create", contract: null })}>Nouveau contrat</Button>
+                {isOwnerActor ? (
+                  <Button type="button" onClick={() => setModalState({ open: true, mode: "create", contract: null })}>Nouveau contrat</Button>
+                ) : (
+                  <Badge className="border-amber-400/30 bg-amber-500/10 text-amber-100">
+                    Creation reservee au proprietaire
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -149,13 +223,12 @@ export const ContractsPage = () => {
                   onClick={() => setSelectedContractId(contract.id)}
                   className={selectedContractId === contract.id
                     ? "w-full rounded-[1.8rem] border border-brand-500/30 bg-brand-500/10 p-5 text-left"
-                    : "w-full rounded-[1.8rem] border border-white/10 bg-white/[0.04] p-5 text-left transition hover:border-white/20 hover:bg-white/[0.06]"
-                  }
+                    : "w-full rounded-[1.8rem] border border-white/10 bg-white/[0.04] p-5 text-left transition hover:border-white/20 hover:bg-white/[0.06]"}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-lg font-semibold text-white">{contract.reference}</p>
-                      <p className="mt-1 text-sm text-stone-400">{contract.contractType}</p>
+                      <p className="mt-1 text-sm capitalize text-stone-400">{contract.contractType}</p>
                     </div>
                     <Badge className={contract.isActive ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : "border-white/10 bg-white/5 text-stone-200"}>
                       {contract.statusLabel}
@@ -163,8 +236,8 @@ export const ContractsPage = () => {
                   </div>
                   <div className="mt-4 grid gap-2 text-sm text-stone-300">
                     <p><span className="text-stone-500">Proprietaire:</span> {contract.owner?.fullName || "-"}</p>
-                    <p><span className="text-stone-500">Agent responsable:</span> {contract.responsibleAgent?.fullName || "-"}</p>
-                    <p><span className="text-stone-500">Biens couverts:</span> {contract.coveredProperties?.length || 0}</p>
+                    <p><span className="text-stone-500">Gestionnaire:</span> {contract.manager?.name || "-"}</p>
+                    <p><span className="text-stone-500">Locataire principal:</span> {contract.mainTenant?.fullName || "Sans locataire"}</p>
                     <p><span className="text-stone-500">Dates:</span> {contract.startDateLabel} - {contract.endDateLabel}</p>
                   </div>
                 </button>
@@ -178,11 +251,36 @@ export const ContractsPage = () => {
                     <div>
                       <p className="text-xs uppercase tracking-[0.24em] text-amber-100/80">Detail contrat</p>
                       <h3 className="mt-2 text-2xl font-semibold text-white">{selectedContract.reference}</h3>
-                      <p className="mt-2 text-sm text-stone-400">{selectedContract.contractType}</p>
+                      <p className="mt-2 text-sm capitalize text-stone-400">{selectedContract.contractType}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="secondary" onClick={() => setModalState({ open: true, mode: "edit", contract: selectedContract })}>Modifier</Button>
-                      <Button type="button" variant="ghost" className="text-red-200" onClick={() => handleDeleteContract(selectedContract)}>Supprimer</Button>
+                      {isOwnerActor ? (
+                        <>
+                          <Button type="button" variant="secondary" onClick={() => setModalState({ open: true, mode: "edit", contract: selectedContract })}>Modifier</Button>
+                          <Button type="button" variant="ghost" className="text-red-200" onClick={() => setDeleteModalState({ open: true, contract: selectedContract })}>Supprimer</Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button type="button" variant="secondary" onClick={() => setModalState({ open: true, mode: "edit", contract: selectedContract })}>Examiner</Button>
+                          <Button
+                            type="button"
+                            className="px-4 py-2"
+                            disabled={updateContractMutation.isPending || selectedContract.status === "terminated"}
+                            onClick={() => handleContractStatusChange(selectedContract, "accepted", "Contrat accepte.")}
+                          >
+                            Accepter
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="text-red-200"
+                            disabled={updateContractMutation.isPending || selectedContract.status === "terminated"}
+                            onClick={() => handleRefuseContract(selectedContract)}
+                          >
+                            Refuser
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -198,9 +296,16 @@ export const ContractsPage = () => {
                       <p className="mt-1 text-sm text-stone-400">{selectedContract.manager?.label || ""}</p>
                     </div>
                     <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Agent responsable</p>
-                      <p className="mt-2 text-sm font-medium text-white">{selectedContract.responsibleAgent?.fullName || "-"}</p>
-                      <p className="mt-1 text-sm text-stone-400">{selectedContract.responsibleAgent?.email || ""}</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Locataire principal</p>
+                      <p className="mt-2 text-sm font-medium text-white">{selectedContract.mainTenant?.fullName || "Sans locataire"}</p>
+                    </div>
+                    <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Loyer</p>
+                      <p className="mt-2 text-sm font-medium text-white">
+                        {selectedContract.financial?.rentAmount
+                          ? `${Number(selectedContract.financial.rentAmount).toLocaleString("fr-FR")} ${selectedContract.financial.currency || ""}`.trim()
+                          : "-"}
+                      </p>
                     </div>
                     <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
                       <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Debut</p>
@@ -224,7 +329,7 @@ export const ContractsPage = () => {
                         ))
                       ) : (
                         <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-stone-950/40 px-4 py-6 text-sm text-stone-400">
-                          Aucun bien encore rattache. Ce contrat peut etre utilise pour debloquer la creation d'un bien sous mandat actif.
+                          Aucun bien encore rattache.
                         </div>
                       )}
                     </div>
@@ -254,18 +359,30 @@ export const ContractsPage = () => {
         )}
       </section>
 
-      <ModalAddNewContract
+      <ModalManageContract
         open={modalState.open}
         mode={modalState.mode}
         contract={modalState.contract}
-        ownerOptions={ownerOptions}
         propertyOptions={propertyOptions}
+        ownerOptions={ownerOptions}
+        agencyOptions={agencyOptions}
         agentOptions={agentOptions}
+        onUploadDocument={handleUploadDocument}
+        onUploadError={(error) => notifyApiErrors({ error, showError, fallbackMessage: "Le televersement du document a echoue." })}
         onClose={() => setModalState({ open: false, mode: "create", contract: null })}
         onSubmit={handleSubmitContract}
-        onUploadDocument={handleUploadDocument}
         isSaving={createContractMutation.isPending || updateContractMutation.isPending}
         isUploadingDocument={uploadContractDocumentMutation.isPending}
+        saveDisabled={isManagerActor}
+        footerContent={modalFooterContent}
+      />
+      <ModalDeleteContract
+        open={deleteModalState.open}
+        contract={deleteModalState.contract}
+        linkedPropertiesCount={deleteModalState.contract?.coveredProperties?.length || 0}
+        onClose={() => setDeleteModalState({ open: false, contract: null })}
+        onConfirm={handleDeleteContract}
+        isDeleting={deleteContractMutation.isPending}
       />
     </>
   );

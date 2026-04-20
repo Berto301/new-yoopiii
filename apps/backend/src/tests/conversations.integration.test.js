@@ -6,6 +6,7 @@ import { signAccessToken } from "../core/utils/jwt.js";
 import { Conversation } from "../modules/conversations/conversation.model.js";
 import { Message } from "../modules/conversations/message.model.js";
 import { Notification } from "../modules/notifications/notification.model.js";
+import { OwnerTenant } from "../modules/owner/models/owner-tenant.model.js";
 import { Property } from "../modules/properties/property.model.js";
 import { User } from "../modules/users/user.model.js";
 import {
@@ -258,6 +259,112 @@ test("appointment messages can be created by an agent and updated by the client 
 
   assert.equal(listMessagesResponse.statusCode, 200);
   assert.equal(listMessagesResponse.body.data.items[0].appointment.clientFeedback, "Je serai sur place a 11:55");
+});
+
+test("closing a rent appointment as won creates an owner tenant record", async () => {
+  const owner = await createUser({ firstName: "Owner", role: "proprietaire" });
+  const client = await createUser({ firstName: "Client", role: "user" });
+  const agent = await createUser({ firstName: "Agent", role: "independent_agent" });
+  const clientToken = signAccessToken(client);
+  const agentToken = signAccessToken(agent);
+  const app = createApp();
+
+  const property = await Property.create({
+    title: "Appartement location",
+    slug: `appartement-location-${Date.now()}`,
+    description: "Appartement a louer",
+    type: "apartment",
+    purpose: "rent",
+    price: 1200000,
+    currency: "AR",
+    area: 90,
+    rooms: 4,
+    bedrooms: 2,
+    bathrooms: 1,
+    features: [],
+    address: "Antsirabe",
+    location: {
+      type: "Point",
+      coordinates: [47.03961, -19.872006]
+    },
+    status: "published",
+    publicationStatus: "approved",
+    ownerType: "proprietaire",
+    ownerUserId: owner._id,
+    agentId: agent._id
+  });
+
+  const createConversationResponse = await request(app)
+    .post("/api/v1/conversations")
+    .set("Authorization", `Bearer ${agentToken}`)
+    .send({ participantId: String(client._id) });
+
+  const conversationId = createConversationResponse.body.data.id;
+
+  const appointmentPayload = {
+    appointmentId: "appointment-rent-001",
+    propertyId: String(property._id),
+    propertyTitle: "Appartement location",
+    propertyPurpose: "rent",
+    conversationId,
+    clientId: String(client._id),
+    agentId: String(agent._id),
+    status: "pending",
+    date: "2026-04-10",
+    startTime: "09:00",
+    endTime: "09:30",
+    visitFee: 0,
+    description: "Visite location",
+    clientFeedback: "",
+    clientTakesProperty: false,
+    createdAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
+    updatedAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
+    createdBy: String(agent._id),
+    updatedBy: String(agent._id)
+  };
+
+  const sendAppointmentResponse = await request(app)
+    .post(`/api/v1/conversations/${conversationId}/messages`)
+    .set("Authorization", `Bearer ${agentToken}`)
+    .send({
+      content: "Rendez-vous location planifie",
+      messageType: "appointment",
+      appointment: appointmentPayload,
+      attachments: []
+    });
+
+  const messageId = sendAppointmentResponse.body.data.message.id;
+
+  const updateAppointmentResponse = await request(app)
+    .patch(`/api/v1/conversations/${conversationId}/messages/${messageId}`)
+    .set("Authorization", `Bearer ${clientToken}`)
+    .send({
+      content: "Je prends le bien",
+      messageType: "appointment",
+      appointment: {
+        ...appointmentPayload,
+        status: "closed_won",
+        clientFeedback: "Je confirme la location.",
+        clientTakesProperty: true,
+        updatedAt: new Date("2026-04-02T11:00:00.000Z").toISOString(),
+        updatedBy: String(client._id)
+      }
+    });
+
+  assert.equal(updateAppointmentResponse.statusCode, 200);
+
+  const refreshedProperty = await Property.findById(property._id).lean();
+  assert.equal(refreshedProperty.status, "rented");
+
+  const createdTenant = await OwnerTenant.findOne({
+    ownerId: owner._id,
+    managedPropertyId: property._id,
+    linkedUserId: client._id
+  }).lean();
+
+  assert.ok(createdTenant);
+  assert.equal(createdTenant.fullName, `${client.firstName} ${client.lastName}`);
+  assert.equal(createdTenant.source, "booking_closed_won");
 });
 
 test("communication and visit reports are persisted with generated summaries and notifications", async () => {

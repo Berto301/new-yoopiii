@@ -3,32 +3,22 @@ import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Card } from "../../components/ui/Card.jsx";
+import { formatBookingDateTime } from "../../features/bookings/booking.utils.js";
 import { useBookingsWorkspace } from "../../features/bookings/hooks/useBookingsWorkspace.js";
+import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 
-const formatPrice = (value, currency = "XOF") =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0
-  }).format(value || 0);
+const formatPrice = (value, currency = "AR") =>
+  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
 
 const formatSchedule = (booking) => {
   if (!booking.requestedDate) {
     return booking.timeSlot || "Planification en attente";
   }
 
-  const formattedDate = new Date(booking.requestedDate).toLocaleString("fr-FR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
-  return booking.timeSlot ? `${booking.timeSlot} - ${formattedDate}` : formattedDate;
+  return formatBookingDateTime(booking.requestedDate, booking.timeSlot);
 };
 
-const getPropertyCover = (property) => property?.coverImage || property?.media?.find((item) => item.type === "image")?.url || "";
+const getPropertyCover = (property) => resolveAssetUrl(property?.coverImage || property?.media?.find((item) => item.type === "image")?.url || "");
 
 const getPropertySpecs = (property) => [
   property?.type || null,

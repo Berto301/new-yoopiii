@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
-import { Autocomplete, GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
 import { Input } from "../../../components/ui/Input.jsx";
 import { ModalLayout } from "../../../components/layout/modals/ModalLayout.jsx";
 import { BaseListBox } from "../../../components/form/BaseListBox.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
+import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
 
 const propertyTypeOptions = [
   { label: "Maison", value: "house" },
@@ -38,8 +39,9 @@ const featureOptions = [
   { label: "Vue mer", value: "Vue mer" }
 ];
 
-const GOOGLE_MAPS_LIBRARIES = ["places"];
-const DEFAULT_MAP_CENTER = { lat: 48.8566, lng: 2.3522 };
+const GOOGLE_MAPS_LIBRARIES = [];
+const DEFAULT_LOCATION_ADDRESS = "Antsirabe Madagascar";
+const DEFAULT_MAP_CENTER = { lat: -19.872006, lng: 47.03961 };
 const DEFAULT_MAP_ZOOM = 14;
 const MAP_CONTAINER_CLASS = "h-[320px] w-full";
 const COVER_ACCEPT = "image/*";
@@ -73,8 +75,8 @@ const validateLocalFile = ({ file, mediaType, assetKind }) => {
 };
 
 const buildCoordinateState = (property) => ({
-  lat: property?.location?.coordinates?.[1] ?? "",
-  lng: property?.location?.coordinates?.[0] ?? ""
+  lat: property?.location?.coordinates?.[1] ?? DEFAULT_MAP_CENTER.lat,
+  lng: property?.location?.coordinates?.[0] ?? DEFAULT_MAP_CENTER.lng
 });
 
 const buildMapCenter = (location) => {
@@ -88,20 +90,19 @@ const buildMapCenter = (location) => {
   return DEFAULT_MAP_CENTER;
 };
 
-const mapPropertyToFormValues = (property, contractOptions = []) => ({
-  managementContract: contractOptions.find((item) => item.value === property?.managementContractId) || null,
+const mapPropertyToFormValues = (property) => ({
   title: property?.title || "",
   description: property?.description || "",
   type: propertyTypeOptions.find((item) => item.value === property?.type) || propertyTypeOptions[0],
   purpose: purposeOptions.find((item) => item.value === property?.purpose) || purposeOptions[0],
   price: property?.price || "",
-  currency: property?.currency || "XOF",
+  currency: property?.currency || "AR",
   area: property?.area || 0,
   rooms: property?.rooms || 0,
   bedrooms: property?.bedrooms || 0,
   bathrooms: property?.bathrooms || 0,
   features: featureOptions.filter((item) => (property?.features || []).includes(item.value)),
-  address: property?.address || "",
+  address: property?.address || DEFAULT_LOCATION_ADDRESS,
   googlePlaceId: property?.googlePlaceId || "",
   location: buildCoordinateState(property),
   coverImage: property?.coverImage || "",
@@ -117,13 +118,12 @@ const mapPropertyToFormValues = (property, contractOptions = []) => ({
 });
 
 const normalizePayload = (values) => ({
-  managementContractId: values.managementContract?.value || null,
   title: values.title,
   description: values.description,
   type: values.type.value,
   purpose: values.purpose.value,
   price: Number(values.price || 0),
-  currency: values.currency,
+  currency: values.currency.trim().toUpperCase(),
   area: Number(values.area || 0),
   rooms: Number(values.rooms || 0),
   bedrooms: Number(values.bedrooms || 0),
@@ -148,25 +148,12 @@ const normalizePayload = (values) => ({
     }))
 });
 
-const LocationSearchInput = ({ value, onChange, disabled }) => (
-  <label className="block space-y-2">
-    <span className="text-sm font-medium text-stone-200">Recherche Google Address</span>
-    <input
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      placeholder="Recherchez une adresse, un quartier ou un immeuble"
-      className="w-full rounded-2xl border border-white/10 bg-stone-950/80 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500 disabled:cursor-not-allowed disabled:opacity-60"
-    />
-  </label>
-);
-
 export const ModalManageProperty = ({
   open,
   mode,
   property,
-  contractOptions = [],
-  contractRequired = true,
+  associatedContracts = [],
+  onEditContract,
   onClose,
   onSubmit,
   onUploadAsset,
@@ -174,7 +161,7 @@ export const ModalManageProperty = ({
   isSaving = false,
   isUploadingAsset = false
 }) => {
-  const defaultValues = useMemo(() => mapPropertyToFormValues(property, contractOptions), [contractOptions, property]);
+  const defaultValues = useMemo(() => mapPropertyToFormValues(property), [property]);
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY || "";
   const { isLoaded: isMapsLoaded, loadError } = useJsApiLoader({
     id: "property-google-maps-script",
@@ -191,15 +178,13 @@ export const ModalManageProperty = ({
     formState: { errors }
   } = useForm({ defaultValues });
 
-  const autocompleteRef = useRef(null);
   const geocoderRef = useRef(null);
   const mapRef = useRef(null);
   const coverInputRef = useRef(null);
   const mediaInputRefs = useRef({});
-  const [addressQuery, setAddressQuery] = useState(defaultValues.address || "");
   const [mapCenter, setMapCenter] = useState(buildMapCenter(defaultValues.location));
   const [locationMessage, setLocationMessage] = useState(
-    defaultValues.address ? "Adresse Google pre-remplie et carte synchronisee." : "Selectionnez un emplacement sur la carte ou via Google."
+    defaultValues.address ? "Adresse Google pre-remplie et carte synchronisee." : "Cliquez sur la carte pour recuperer l'adresse complete Google de ce bien."
   );
   const [activeUploadTarget, setActiveUploadTarget] = useState(null);
 
@@ -207,6 +192,7 @@ export const ModalManageProperty = ({
   const latitude = watch("location.lat");
   const longitude = watch("location.lng");
   const coverImage = watch("coverImage");
+  const resolvedCoverImage = resolveAssetUrl(coverImage);
   const markerPosition =
     isFiniteCoordinate(latitude) && isFiniteCoordinate(longitude)
       ? { lat: Number(latitude), lng: Number(longitude) }
@@ -224,45 +210,54 @@ export const ModalManageProperty = ({
   useEffect(() => {
     if (open) {
       reset(defaultValues);
-      setAddressQuery(defaultValues.address || "");
       setMapCenter(buildMapCenter(defaultValues.location));
       setLocationMessage(
-        defaultValues.address ? "Adresse Google pre-remplie et carte synchronisee." : "Selectionnez un emplacement sur la carte ou via Google."
+        defaultValues.address ? "Adresse Google pre-remplie et carte synchronisee." : "Cliquez sur la carte pour recuperer l'adresse complete Google de ce bien."
       );
       setActiveUploadTarget(null);
     }
   }, [defaultValues, open, reset]);
+
+  useEffect(() => {
+    if (!open || markerPosition || !navigator.geolocation) {
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const nextCenter = {
+          lat: coords.latitude,
+          lng: coords.longitude
+        };
+
+        setMapCenter(nextCenter);
+        setLocationMessage("Carte centree sur votre position actuelle. Cliquez sur l'emplacement exact du bien.");
+
+        if (mapRef.current) {
+          mapRef.current.panTo(nextCenter);
+        }
+      },
+      () => {
+        setLocationMessage("Impossible d'utiliser votre position actuelle. Cliquez directement sur la carte pour definir l'emplacement du bien.");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000
+      }
+    );
+  }, [markerPosition, open]);
 
   const syncResolvedLocation = ({ lat, lng, address, placeId, sourceMessage }) => {
     setValue("address", address, { shouldDirty: true, shouldValidate: true });
     setValue("googlePlaceId", placeId || "", { shouldDirty: true });
     setValue("location.lat", lat, { shouldDirty: true, shouldValidate: true });
     setValue("location.lng", lng, { shouldDirty: true, shouldValidate: true });
-    setAddressQuery(address);
     setMapCenter({ lat, lng });
     setLocationMessage(sourceMessage);
 
     if (mapRef.current) {
       mapRef.current.panTo({ lat, lng });
     }
-  };
-
-  const handleAutocompleteChanged = () => {
-    const place = autocompleteRef.current?.getPlace?.();
-    const location = place?.geometry?.location;
-
-    if (!place || !location) {
-      setLocationMessage("Impossible de recuperer les details de cette adresse Google.");
-      return;
-    }
-
-    syncResolvedLocation({
-      lat: location.lat(),
-      lng: location.lng(),
-      address: place.formatted_address || place.name || addressQuery,
-      placeId: place.place_id || "",
-      sourceMessage: "Adresse Google selectionnee, carte recadree et marqueur mis a jour."
-    });
   };
 
   const handleMapClick = (event) => {
@@ -277,7 +272,7 @@ export const ModalManageProperty = ({
       syncResolvedLocation({
         lat,
         lng,
-        address: addressQuery || "Adresse en cours de resolution",
+        address: watch("address") || "Adresse en cours de resolution",
         placeId: "",
         sourceMessage: "Position definie sur la carte."
       });
@@ -290,7 +285,7 @@ export const ModalManageProperty = ({
       syncResolvedLocation({
         lat,
         lng,
-        address: bestMatch?.formatted_address || addressQuery || "Adresse determinee depuis la carte",
+        address: bestMatch?.formatted_address || watch("address") || "Adresse determinee depuis la carte",
         placeId: bestMatch?.place_id || "",
         sourceMessage: bestMatch
           ? "Emplacement choisi sur la carte et adresse Google recuperee automatiquement."
@@ -357,7 +352,6 @@ export const ModalManageProperty = ({
 
   const closeModal = () => {
     reset(defaultValues);
-    setAddressQuery(defaultValues.address || "");
     setMapCenter(buildMapCenter(defaultValues.location));
     setActiveUploadTarget(null);
     onClose();
@@ -370,10 +364,9 @@ export const ModalManageProperty = ({
       onClose={closeModal}
       onSave={handleSubmit(async (values) => {
         await onSubmit(normalizePayload(values));
-        reset(mapPropertyToFormValues(null, contractOptions));
-        setAddressQuery("");
+        reset(mapPropertyToFormValues(null));
         setMapCenter(DEFAULT_MAP_CENTER);
-        setLocationMessage("Selectionnez un emplacement sur la carte ou via Google.");
+        setLocationMessage("Cliquez sur la carte pour recuperer l'adresse complete Google de ce bien.");
         setActiveUploadTarget(null);
       })}
       saveLabel="Enregistrer"
@@ -387,9 +380,9 @@ export const ModalManageProperty = ({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-100/80">Localisation intelligente</p>
-                <h3 className="text-2xl font-semibold text-white">Adresse Google, carte interactive et coordonnees automatiques</h3>
+                <h3 className="text-2xl font-semibold text-white">Carte interactive et adresse Google automatique</h3>
                 <p className="max-w-2xl text-sm leading-6 text-stone-300">
-                  Recherchez une adresse Google ou cliquez directement sur la carte pour remplir automatiquement l'adresse complete, la latitude et la longitude.
+                  Cliquez directement sur la carte pour definir l'emplacement exact du bien. L'adresse complete Google, la latitude et la longitude seront remplies automatiquement.
                 </p>
               </div>
               <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs text-stone-200 backdrop-blur">
@@ -402,7 +395,7 @@ export const ModalManageProperty = ({
             <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-stone-950/70">
               {!googleMapsApiKey ? (
                 <div className="flex h-[320px] items-center justify-center px-6 text-center text-sm text-amber-100/80">
-                  Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte et l'autocomplete Google.
+                  Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte Google.
                 </div>
               ) : loadError ? (
                 <div className="flex h-[320px] items-center justify-center px-6 text-center text-sm text-red-200">
@@ -440,22 +433,6 @@ export const ModalManageProperty = ({
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
               <div className="space-y-4 rounded-[1.75rem] border border-white/10 bg-black/20 p-4 backdrop-blur">
-                {isMapsLoaded && googleMapsApiKey ? (
-                  <Autocomplete
-                    onLoad={(instance) => {
-                      autocompleteRef.current = instance;
-                    }}
-                    onPlaceChanged={handleAutocompleteChanged}
-                    options={{
-                      fields: ["formatted_address", "geometry", "name", "place_id"]
-                    }}
-                  >
-                    <LocationSearchInput value={addressQuery} onChange={(event) => setAddressQuery(event.target.value)} disabled={false} />
-                  </Autocomplete>
-                ) : (
-                  <LocationSearchInput value={addressQuery} onChange={(event) => setAddressQuery(event.target.value)} disabled />
-                )}
-
                 <Controller
                   name="address"
                   control={control}
@@ -508,8 +485,8 @@ export const ModalManageProperty = ({
             </div>
 
             <div className="mt-4 overflow-hidden rounded-[1.5rem] border border-white/10 bg-stone-950/70">
-              {coverImage ? (
-                <img src={coverImage} alt="Couverture du bien" className="h-52 w-full object-cover" />
+              {resolvedCoverImage ? (
+                <img src={resolvedCoverImage} alt="Couverture du bien" className="h-52 w-full object-cover" />
               ) : (
                 <div className="flex h-52 items-end bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.22),transparent_30%),linear-gradient(135deg,rgba(41,37,36,1),rgba(28,25,23,0.92),rgba(12,10,9,1))] p-6">
                   <div>
@@ -546,21 +523,6 @@ export const ModalManageProperty = ({
 
           <div className="grid gap-4 md:grid-cols-2">
             <Controller
-              name="managementContract"
-              control={control}
-              rules={contractRequired ? { required: "Un contrat valide est requis" } : {}}
-              render={({ field }) => (
-                <BaseListBox
-                  label={contractRequired ? "Contrat valide" : "Contrat de gestion"}
-                  options={contractOptions}
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={errors.managementContract?.message}
-                  placeholder={contractRequired ? "Selectionner le contrat valide" : "Affecter un contrat si necessaire"}
-                />
-              )}
-            />
-            <Controller
               name="title"
               control={control}
               rules={{ required: "Le titre est requis" }}
@@ -590,7 +552,24 @@ export const ModalManageProperty = ({
             <Controller name="rooms" control={control} render={({ field }) => <Input label="Pieces" type="number" {...field} />} />
             <Controller name="bedrooms" control={control} render={({ field }) => <Input label="Chambres" type="number" {...field} />} />
             <Controller name="bathrooms" control={control} render={({ field }) => <Input label="Salles de bain" type="number" {...field} />} />
-            <Controller name="currency" control={control} render={({ field }) => <Input label="Devise" {...field} />} />
+            <Controller
+              name="currency"
+              control={control}
+              rules={{
+                required: "La devise est requise",
+                validate: (value) => value?.trim()?.length === 2 || "La devise doit contenir exactement 2 caracteres"
+              }}
+              render={({ field }) => (
+                <Input
+                  label="Devise"
+                  maxLength={2}
+                  placeholder="AR"
+                  error={errors.currency?.message}
+                  {...field}
+                  onChange={(event) => field.onChange(event.target.value.toUpperCase())}
+                />
+              )}
+            />
             <Controller name="googlePlaceId" control={control} render={({ field }) => <input type="hidden" {...field} />} />
             <Controller
               name="location.lat"
@@ -605,6 +584,78 @@ export const ModalManageProperty = ({
               render={({ field }) => <input type="hidden" {...field} />}
             />
           </div>
+        </section>
+
+        <section id="sec-ctr" className="space-y-4 rounded-3xl border border-white/10 bg-black/10 p-4">
+          <div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Contrats associes</p>
+              <h3 className="mt-2 text-lg font-semibold text-white">Contrats lies a ce bien</h3>
+              <p className="mt-2 text-sm text-stone-300">Retrouvez ici uniquement les contrats deja associes a ce bien.</p>
+            </div>
+          </div>
+
+          {!property?.id ? (
+            <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-stone-950/40 px-4 py-6 text-sm text-stone-400">
+              Enregistrez d'abord le bien pour afficher ses contrats associes.
+            </div>
+          ) : associatedContracts.length ? (
+            <div className="space-y-3">
+              {associatedContracts.map((contractItem) => (
+                <div key={contractItem.id} className="rounded-[1.5rem] border border-white/10 bg-stone-950/50 p-4">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Reference</p>
+                        <p className="mt-2 text-sm font-medium text-white">{contractItem.reference || "--"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Type</p>
+                        <p className="mt-2 text-sm font-medium capitalize text-white">{contractItem.contractType || "--"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Statut</p>
+                        <p className="mt-2 text-sm font-medium text-white">{contractItem.statusLabel || contractItem.status || "--"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Loyer</p>
+                        <p className="mt-2 text-sm font-medium text-white">
+                          {contractItem.financial?.rentAmount ? `${Number(contractItem.financial.rentAmount).toLocaleString("fr-FR")} ${contractItem.financial.currency || ""}`.trim() : "--"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Debut</p>
+                        <p className="mt-2 text-sm font-medium text-white">{contractItem.startDateLabel || "--"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Fin</p>
+                        <p className="mt-2 text-sm font-medium text-white">{contractItem.endDateLabel || "--"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Locataire principal</p>
+                        <p className="mt-2 text-sm font-medium text-white">{contractItem.mainTenant?.fullName || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Agence / Agent</p>
+                        <p className="mt-2 text-sm font-medium text-white">
+                          {contractItem.contractType === "agency" ? contractItem.agency?.name || contractItem.manager?.name || "—" : contractItem.agent?.name || contractItem.manager?.name || "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onEditContract?.(contractItem)}>
+                        Modifier
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[1.4rem] border border-dashed border-amber-400/25 bg-amber-500/5 px-4 py-6 text-sm text-amber-100/90">
+              Aucun contrat associe pour le moment.
+            </div>
+          )}
         </section>
 
         <Controller

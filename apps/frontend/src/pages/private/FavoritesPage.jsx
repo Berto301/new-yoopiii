@@ -5,15 +5,12 @@ import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
+import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 
-const formatPrice = (value, currency = "XOF") =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0
-  }).format(value || 0);
+const formatPrice = (value, currency = "AR") =>
+  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
 
-const getPropertyCover = (property) => property.coverImage || property.media?.find((item) => item.type === "image")?.url || "";
+const getPropertyCover = (property) => resolveAssetUrl(property.coverImage || property.media?.find((item) => item.type === "image")?.url || "");
 
 const getPropertySpecs = (property) => [
   property.area ? `${property.area} m2` : null,
