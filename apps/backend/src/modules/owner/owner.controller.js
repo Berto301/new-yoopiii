@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import {
   createOwnerTenant,
   createOwnerMaintenanceTicket,
+  deleteOwnerTenant,
   deleteOwnerMaintenanceTicket,
   getOwnerWorkspace,
   updateOwnerTenant,
@@ -52,6 +53,15 @@ export const updateOwnerTenantHandler = async (req, res) => {
     ownerId: req.user.id,
     tenantId: req.validated.params.tenantId,
     payload: req.validated.body
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const deleteOwnerTenantHandler = async (req, res) => {
+  const data = await deleteOwnerTenant({
+    ownerId: req.user.id,
+    tenantId: req.validated.params.tenantId
   });
 
   res.status(StatusCodes.OK).json({ success: true, data });

@@ -820,6 +820,35 @@ export const updateOwnerTenant = async ({ ownerId, tenantId, payload }) => {
   return mapOwnerTenant(detailedTenant);
 };
 
+export const deleteOwnerTenant = async ({ ownerId, tenantId }) => {
+  await seedOwnerWorkspace(ownerId);
+
+  const tenant = await OwnerTenant.findOne({ _id: tenantId, ownerId });
+
+  if (!tenant) {
+    throw new AppError("Locataire introuvable", StatusCodes.NOT_FOUND);
+  }
+
+  if (tenant.managedPropertyId) {
+    const property = await Property.findOne({ _id: tenant.managedPropertyId, ownerUserId: ownerId });
+
+    if (property && property.purpose === "rent") {
+      property.status = "published";
+      property.reservedByUserId = null;
+      property.reservedAt = null;
+      await property.save();
+    }
+  }
+
+  await OwnerTenant.deleteOne({ _id: tenantId, ownerId });
+
+  return {
+    success: true,
+    tenantId,
+    releasedManagedPropertyId: tenant.managedPropertyId ? String(tenant.managedPropertyId) : null
+  };
+};
+
 export const updateOwnerMaintenanceTicket = async ({ ownerId, ticketId, payload }) => {
   await seedOwnerWorkspace(ownerId);
 

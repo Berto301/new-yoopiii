@@ -5,6 +5,7 @@ import { asyncHandler } from "../../core/utils/async-handler.js";
 import {
   createOwnerTenantHandler,
   createOwnerMaintenanceHandler,
+  deleteOwnerTenantHandler,
   deleteOwnerMaintenanceHandler,
   getOwnerContractsHandler,
   getOwnerDashboardHandler,
@@ -19,6 +20,7 @@ import {
   createOwnerTenantSchema,
   createOwnerMaintenanceTicketSchema,
   maintenanceTicketParamsSchema,
+  ownerTenantParamsSchema,
   updateOwnerTenantSchema,
   updateOwnerMaintenanceTicketSchema
 } from "./owner.validation.js";
@@ -34,6 +36,7 @@ ownerRouter.get("/rents", asyncHandler(getOwnerRentsHandler));
 ownerRouter.get("/tenants", asyncHandler(getOwnerTenantsHandler));
 ownerRouter.post("/tenants", validate(createOwnerTenantSchema), asyncHandler(createOwnerTenantHandler));
 ownerRouter.patch("/tenants/:tenantId", validate(updateOwnerTenantSchema), asyncHandler(updateOwnerTenantHandler));
+ownerRouter.delete("/tenants/:tenantId", validate(ownerTenantParamsSchema), asyncHandler(deleteOwnerTenantHandler));
 ownerRouter.get("/properties", asyncHandler(getOwnerPropertiesHandler));
 ownerRouter.get("/maintenance", asyncHandler(getOwnerMaintenanceHandler));
 ownerRouter.post("/maintenance", validate(createOwnerMaintenanceTicketSchema), asyncHandler(createOwnerMaintenanceHandler));

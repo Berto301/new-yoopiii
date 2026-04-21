@@ -259,7 +259,17 @@ export const useChatWorkspace = () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["conversations"] }),
         queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConversationId] }),
-        queryClient.invalidateQueries({ queryKey: ["notifications"] })
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+        queryClient.invalidateQueries({ queryKey: ["owner-tenants"] }),
+        queryClient.invalidateQueries({ queryKey: ["owner-contracts"] }),
+        queryClient.invalidateQueries({ queryKey: ["contracts"] }),
+        queryClient.invalidateQueries({ queryKey: ["property-contracts"] }),
+        queryClient.invalidateQueries({ queryKey: ["managed-properties"] }),
+        queryClient.invalidateQueries({ queryKey: ["owner-properties"] }),
+        queryClient.invalidateQueries({ queryKey: ["owner-maintenance-properties"] }),
+        queryClient.invalidateQueries({ queryKey: ["property-publications"] }),
+        queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["owner-dashboard"] })
       ]);
     }
   });

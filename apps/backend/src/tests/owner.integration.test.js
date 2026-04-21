@@ -232,3 +232,61 @@ test("owner can create and update a tenant with user-prefilled profile fields", 
   assert.equal(tenants.length, 1);
   assert.equal(tenants[0].adresse, "Antsirabe centre ville");
 });
+
+test("owner can delete a tenant and release the linked rental property", async () => {
+  const owner = await createUser();
+  const token = signAccessToken(owner);
+  const app = createApp();
+
+  const property = await Property.create({
+    title: "Villa a liberer",
+    slug: `villa-a-liberer-${Date.now()}`,
+    description: "Bien locatif a liberer apres suppression du locataire",
+    type: "house",
+    purpose: "rent",
+    price: 1450000,
+    currency: "AR",
+    area: 120,
+    rooms: 4,
+    bedrooms: 3,
+    bathrooms: 2,
+    features: [],
+    address: "Antananarivo",
+    location: { type: "Point", coordinates: [47.5, -18.9] },
+    ownerType: "proprietaire",
+    ownerUserId: owner._id,
+    agentId: owner._id,
+    status: "rented",
+    publicationStatus: "approved"
+  });
+
+  const tenant = await OwnerTenant.create({
+    ownerId: owner._id,
+    managedPropertyId: property._id,
+    firstName: "Sarah",
+    lastName: "Tenant",
+    fullName: "Sarah Tenant",
+    email: "sarah-tenant@yopii.test",
+    phone: "+261340001111",
+    cin: "CIN-DEL-001",
+    adresse: "Antananarivo",
+    sexe: "femme",
+    source: "manual"
+  });
+
+  const deleteResponse = await request(app)
+    .delete(`/api/v1/owner/tenants/${tenant._id}`)
+    .set("Authorization", `Bearer ${token}`);
+
+  assert.equal(deleteResponse.statusCode, 200);
+  assert.equal(deleteResponse.body.data.success, true);
+
+  const [deletedTenant, refreshedProperty] = await Promise.all([
+    OwnerTenant.findById(tenant._id).lean(),
+    Property.findById(property._id).lean()
+  ]);
+
+  assert.equal(deletedTenant, null);
+  assert.equal(refreshedProperty.status, "published");
+  assert.equal(refreshedProperty.reservedByUserId, null);
+});

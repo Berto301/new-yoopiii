@@ -43,7 +43,7 @@ export const usePropertyWorkspace = () => {
 
   const propertyPublicationsQuery = useQuery({
     queryKey: ["property-publications", user?.id],
-    queryFn: () => getPropertyPublications({ page: 1, limit: 30 }),
+    queryFn: () => getPropertyPublications({ page: 1, limit: 100 }),
     enabled: Boolean(user)
   });
 

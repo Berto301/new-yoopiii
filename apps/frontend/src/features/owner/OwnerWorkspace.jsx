@@ -1,8 +1,10 @@
+import { jsPDF } from "jspdf";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
+import { Input } from "../../components/ui/Input.jsx";
 import { useNotification } from "../../hooks/useNotification.js";
 import { notifyApiErrors } from "../../lib/errors/api-error.js";
 import {
@@ -17,6 +19,7 @@ import { useOwnerWorkspace } from "./hooks/useOwnerWorkspace.js";
 import { ModalDeleteTicket } from "../../pages/private/owner/ModalDeleteTicket.jsx";
 import { ModalManageLocataire } from "../../pages/private/owner/ModalManageLocataire.jsx";
 import { ModalManageTicket } from "../../pages/private/owner/ModalManageTicket.jsx";
+import { ModalDelete } from "../../components/layout/modals/ModalDelete.jsx";
 
 const toneClassNames = {
   alert: "border-rose-400/30 bg-rose-500/10 text-rose-100",
@@ -292,10 +295,13 @@ export const OwnerRentsModule = () => {
 };
 
 export const OwnerTenantsModule = () => {
-  const { tenantsQuery, managedPropertiesQuery, createTenantMutation, updateTenantMutation } = useOwnerWorkspace();
+  const { tenantsQuery, managedPropertiesQuery, createTenantMutation, updateTenantMutation, deleteTenantMutation } = useOwnerWorkspace();
   const { bookingsQuery } = useBookingsWorkspace();
   const { showError, showSuccess } = useNotification();
   const [modalState, setModalState] = useState({ open: false, mode: "create", tenant: null });
+  const [deleteModalState, setDeleteModalState] = useState({ open: false, tenant: null });
+  const [searchValue, setSearchValue] = useState("");
+  const [propertyFilterValue, setPropertyFilterValue] = useState("all");
   const tenants = tenantsQuery.data || [];
 
   const propertyOptions = useMemo(
@@ -344,6 +350,25 @@ export const OwnerTenantsModule = () => {
     return [...entries.values()];
   }, [bookingsQuery.data, tenants]);
 
+  const propertyFilterOptions = useMemo(
+    () => [{ value: "all", label: "Tous les biens" }, ...propertyOptions],
+    [propertyOptions]
+  );
+
+  const filteredTenants = useMemo(() => {
+    const normalizedSearch = searchValue.trim().toLowerCase();
+
+    return tenants.filter((tenant) => {
+      const matchesProperty = propertyFilterValue === "all" || tenant.managedPropertyId === propertyFilterValue;
+      const matchesSearch = !normalizedSearch
+        || tenant.fullName?.toLowerCase().includes(normalizedSearch)
+        || tenant.cin?.toLowerCase().includes(normalizedSearch)
+        || tenant.identity?.toLowerCase().includes(normalizedSearch);
+
+      return matchesProperty && matchesSearch;
+    });
+  }, [propertyFilterValue, searchValue, tenants]);
+
   if (tenantsQuery.isLoading) {
     return <DashboardLoadingState label="Chargement des locataires..." />;
   }
@@ -371,43 +396,188 @@ export const OwnerTenantsModule = () => {
     }
   };
 
+  const handleDeleteTenant = async () => {
+    if (!deleteModalState.tenant) {
+      return;
+    }
+
+    try {
+      await deleteTenantMutation.mutateAsync(deleteModalState.tenant.id);
+      setDeleteModalState({ open: false, tenant: null });
+      showSuccess("Locataire supprime et bien libere.");
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: "La suppression du locataire a echoue." });
+    }
+  };
+
+  const handleDownloadTenantSheet = (tenant) => {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
+
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, 210, 56, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Yoopii", 18, 18);
+    doc.setFontSize(24);
+    doc.text("Fiche locataire", 18, 32);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Export proprietaire", 18, 40);
+
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(14, 66, 182, 58, 10, 10, "F");
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, 66, 182, 58, 10, 10, "S");
+
+    doc.setTextColor(100, 116, 139);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Nom complet", 24, 82);
+    doc.text("Bien associe", 24, 100);
+    doc.text("Contrat", 24, 118);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(17);
+    doc.text(tenant.fullName || "-", 24, 89);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.text(tenant.property || "-", 24, 107);
+    doc.text(tenant.contract || "-", 24, 125);
+
+    doc.setTextColor(71, 85, 105);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Coordonnees", 18, 145);
+    doc.roundedRect(14, 151, 182, 58, 10, 10, "S");
+    doc.setFont("helvetica", "normal");
+    doc.text([
+      `Email : ${tenant.email || "-"}`,
+      `Telephone : ${tenant.phone || "-"}`,
+      `CIN : ${tenant.cin || tenant.identity || "-"}`,
+      `Sexe : ${tenant.sexeLabel || "-"}`,
+      `Adresse : ${tenant.adresse || "-"}`
+    ], 22, 164, { maxWidth: 166 });
+
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(9);
+    doc.text(`Genere le ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date())}`, 18, 286);
+
+    const fileName = `fiche-locataire-${String(tenant.fullName || "profil")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase() || "profil"}.pdf`;
+
+    doc.save(fileName);
+  };
+
   return (
     <>
       <DashboardPanel
         title="Gestion des locataires"
-        description="Centralisez les fiches locataires, les contacts, les identifiants, le bien loue et le contrat associe."
-        badge={`${tenants.length} locataires`}
+        description="Centralisez les fiches locataires avec un visuel plus propre, des filtres rapides et des actions de gestion completes."
+        badge={`${filteredTenants.length} / ${tenants.length} locataires`}
         action={
           <Button type="button" variant="secondary" disabled={!propertyOptions.length} onClick={() => setModalState({ open: true, mode: "create", tenant: null })}>
             Nouvelle fiche
           </Button>
         }
       >
+        <div className="mb-5 grid gap-4 rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5 lg:grid-cols-[1fr_280px]">
+          <Input
+            label="Recherche par nom ou CIN"
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
+            placeholder="Ex: Sarah, Mickael, CIN-001..."
+          />
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-stone-200">Filtrer par bien</span>
+            <select
+              value={propertyFilterValue}
+              onChange={(event) => setPropertyFilterValue(event.target.value)}
+              className="w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition focus:border-brand-500"
+            >
+              {propertyFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {tenants.map((tenant) => (
-            <Card key={tenant.id} className="border-white/10 bg-stone-950/50 p-5">
-              <div className="space-y-4">
+          {filteredTenants.map((tenant) => (
+            <Card key={tenant.id} className="overflow-hidden border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.12),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-0">
+              <div className="border-b border-white/10 px-5 py-5">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-lg font-semibold text-white">{tenant.fullName}</p>
-                    <p className="mt-1 text-sm text-stone-400">{tenant.email || tenant.contact}</p>
+                  <div className="space-y-2">
+                    <Badge className="border-white/10 bg-black/20 text-stone-200">{tenant.property || "Bien non renseigne"}</Badge>
+                    <div>
+                      <p className="text-lg font-semibold text-white">{tenant.fullName}</p>
+                      <p className="mt-1 text-sm text-stone-400">{tenant.email || tenant.contact}</p>
+                    </div>
                   </div>
+                  <Badge className="border-sky-400/30 bg-sky-500/10 text-sky-100">{tenant.sexeLabel}</Badge>
+                </div>
+              </div>
+
+              <div className="space-y-4 px-5 py-5">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Telephone</p>
+                    <p className="mt-2 text-sm text-white">{tenant.phone || "-"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">CIN</p>
+                    <p className="mt-2 text-sm text-white">{tenant.cin || tenant.identity || "-"}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Adresse</p>
+                  <p className="mt-2 text-sm text-stone-300">{tenant.adresse || "-"}</p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Contrat</p>
+                    <p className="mt-2 text-sm text-white">{tenant.contract}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Source</p>
+                    <p className="mt-2 text-sm text-white">{tenant.source === "booking_closed_won" ? "Depuis rendez-vous" : "Manuel"}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
                   <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => setModalState({ open: true, mode: "edit", tenant })}>
                     Modifier
                   </Button>
-                </div>
-                <div className="space-y-2 text-sm text-stone-300">
-                  <p><span className="text-stone-500">Telephone:</span> {tenant.phone || "-"}</p>
-                  <p><span className="text-stone-500">CIN:</span> {tenant.cin || tenant.identity}</p>
-                  <p><span className="text-stone-500">Sexe:</span> {tenant.sexeLabel}</p>
-                  <p><span className="text-stone-500">Adresse:</span> {tenant.adresse || "-"}</p>
-                  <p><span className="text-stone-500">Bien:</span> {tenant.property}</p>
-                  <p><span className="text-stone-500">Contrat:</span> {tenant.contract}</p>
+                  <Button type="button" variant="ghost" className="px-3 py-2 text-xs" onClick={() => handleDownloadTenantSheet(tenant)}>
+                    Telecharger la fiche
+                  </Button>
+                  <Button type="button" variant="ghost" className="px-3 py-2 text-xs text-red-200" onClick={() => setDeleteModalState({ open: true, tenant })}>
+                    Supprimer
+                  </Button>
                 </div>
               </div>
             </Card>
           ))}
         </div>
+
+        {!filteredTenants.length ? (
+          <DashboardEmptyState
+            title="Aucun locataire trouve"
+            description="Ajustez les filtres par bien, nom ou CIN pour retrouver rapidement une fiche."
+          />
+        ) : null}
         {!propertyOptions.length && !managedPropertiesQuery.isLoading ? (
           <p className="mt-4 text-sm text-stone-400">
             Aucun bien en location n'est disponible pour rattacher un locataire.
@@ -424,6 +594,14 @@ export const OwnerTenantsModule = () => {
         onClose={() => setModalState({ open: false, mode: "create", tenant: null })}
         onSubmit={handleSubmitTenant}
         isSaving={createTenantMutation.isPending || updateTenantMutation.isPending}
+      />
+      <ModalDelete
+        open={deleteModalState.open}
+        title="Supprimer le locataire"
+        content={`Voulez-vous vraiment supprimer la fiche de ${deleteModalState.tenant?.fullName || "ce locataire"} ? Le bien associe sera libere et redeviendra disponible.`}
+        onClose={() => setDeleteModalState({ open: false, tenant: null })}
+        onConfirm={handleDeleteTenant}
+        isDeleting={deleteTenantMutation.isPending}
       />
     </>
   );

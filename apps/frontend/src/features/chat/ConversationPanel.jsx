@@ -452,7 +452,10 @@ export const ConversationPanel = () => {
   const [appointmentModalState, setAppointmentModalState] = useState({
     open: false,
     mode: "create",
-    message: null
+    message: null,
+    conversationId: null,
+    participant: null,
+    conversation: null
   });
   const [communicationModalState, setCommunicationModalState] = useState({
     open: false,
@@ -537,7 +540,10 @@ export const ConversationPanel = () => {
     setAppointmentModalState({
       open: true,
       mode: "create",
-      message: null
+      message: null,
+      conversationId: selectedConversationId,
+      participant: selectedParticipant,
+      conversation: selectedConversation
     });
   };
 
@@ -579,7 +585,10 @@ export const ConversationPanel = () => {
     setAppointmentModalState({
       open: false,
       mode: "create",
-      message: null
+      message: null,
+      conversationId: null,
+      participant: null,
+      conversation: null
     });
   };
 
@@ -604,7 +613,10 @@ export const ConversationPanel = () => {
       setAppointmentModalState({
         open: true,
         mode: "edit",
-        message
+        message,
+        conversationId: selectedConversationId,
+        participant: selectedParticipant,
+        conversation: selectedConversation
       });
       return;
     }
@@ -658,7 +670,11 @@ export const ConversationPanel = () => {
   };
 
   const handleAppointmentSubmit = async (values) => {
-    if (!selectedConversationId || !selectedParticipant?.id) {
+    const activeConversationId = appointmentModalState.conversationId || selectedConversationId;
+    const activeParticipant = appointmentModalState.participant || selectedParticipant;
+    const activeConversation = appointmentModalState.conversation || selectedConversation;
+
+    if (!activeConversationId || !activeParticipant?.id) {
       return;
     }
 
@@ -666,9 +682,9 @@ export const ConversationPanel = () => {
     const appointmentPayload = createAppointmentPayload({
       values,
       existingAppointment,
-      selectedConversation,
+      selectedConversation: activeConversation,
       user,
-      selectedParticipant,
+      selectedParticipant: activeParticipant,
       isAgent: isAgentUser
     });
     const summary = buildAppointmentSummary(appointmentPayload, {
@@ -679,7 +695,7 @@ export const ConversationPanel = () => {
     try {
       if (appointmentModalState.mode === "edit" && appointmentModalState.message?.id) {
         await updateMessageMutation.mutateAsync({
-          conversationId: selectedConversationId,
+          conversationId: activeConversationId,
           messageId: appointmentModalState.message.id,
           content: summary,
           messageType: "appointment",
@@ -688,7 +704,7 @@ export const ConversationPanel = () => {
         showSuccess("Le rendez-vous a ete mis a jour.");
       } else {
         await sendMessageMutation.mutateAsync({
-          conversationId: selectedConversationId,
+          conversationId: activeConversationId,
           content: summary,
           messageType: "appointment",
           appointment: appointmentPayload

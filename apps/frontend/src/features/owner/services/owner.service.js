@@ -30,6 +30,11 @@ export const updateOwnerTenant = async ({ tenantId, payload }) => {
   return response.data.data;
 };
 
+export const deleteOwnerTenant = async (tenantId) => {
+  const response = await apiClient.delete(`/owner/tenants/${tenantId}`);
+  return response.data.data;
+};
+
 export const getUserById = async (userId) => {
   const response = await apiClient.get(`/users/${userId}`);
   return response.data.data;

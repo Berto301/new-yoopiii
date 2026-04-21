@@ -3,6 +3,7 @@ import { getManagedProperties } from "../../properties/services/property.service
 import {
   createOwnerTenant,
   createOwnerMaintenanceTicket,
+  deleteOwnerTenant,
   deleteOwnerMaintenanceTicket,
   getOwnerContracts,
   getOwnerDashboard,
@@ -61,6 +62,8 @@ export const useOwnerWorkspace = () => {
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
     queryClient.invalidateQueries({ queryKey: ["property-publications"] });
     queryClient.invalidateQueries({ queryKey: ["owner-maintenance-properties"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-properties"] });
+    queryClient.invalidateQueries({ queryKey: ["managed-properties"] });
   };
 
   const createMaintenanceTicketMutation = useMutation({
@@ -75,6 +78,11 @@ export const useOwnerWorkspace = () => {
 
   const updateTenantMutation = useMutation({
     mutationFn: updateOwnerTenant,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
+  const deleteTenantMutation = useMutation({
+    mutationFn: deleteOwnerTenant,
     onSuccess: invalidateOwnerWorkspace
   });
 
@@ -98,6 +106,7 @@ export const useOwnerWorkspace = () => {
     managedPropertiesQuery,
     createTenantMutation,
     updateTenantMutation,
+    deleteTenantMutation,
     createMaintenanceTicketMutation,
     updateMaintenanceTicketMutation,
     deleteMaintenanceTicketMutation

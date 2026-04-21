@@ -519,7 +519,7 @@ export const ModalManageContract = ({
                 <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Locataires</p>
                 <div className="mt-2">
                   {hasTenants ? (
-                    <Badge className="border-emerald-400/30 bg-emerald-500/10 text-emerald-100">{tenants.length} locataire(s)</Badge>
+                    <Badge className="border-emerald-400/30 bg-emerald-500/10 text-emerald-100">{linkedTenants.length} locataire(s)</Badge>
                   ) : (
                     <Badge className="border-amber-400/30 bg-amber-500/10 text-amber-100">Sans locataire</Badge>
                   )}
