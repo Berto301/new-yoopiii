@@ -1,7 +1,15 @@
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 
 export const AuthLayout = () => (
   <div className="min-h-screen bg-[linear-gradient(180deg,#0b0f0d_0%,#111827_100%)] px-6 py-10 text-white">
+    <div className="mx-auto flex max-w-6xl justify-start">
+      <Link
+        to="/"
+        className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-stone-200 transition hover:border-white/20 hover:text-white"
+      >
+        Retour a l'accueil
+      </Link>
+    </div>
     <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
       <section className="space-y-6">
         <p className="text-sm uppercase tracking-[0.3em] text-brand-100">Yopii Access</p>

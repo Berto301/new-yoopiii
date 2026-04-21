@@ -49,6 +49,11 @@ export const getPropertyPublications = async (params = {}) => {
   return response.data.data;
 };
 
+export const getPublicPropertyDetail = async (identifier) => {
+  const response = await apiClient.get(`/properties/public/${encodeURIComponent(identifier)}`);
+  return response.data.data;
+};
+
 export const getPropertyHistory = async (params = {}) => {
   const response = await apiClient.get("/properties/history/me", { params });
   return response.data.data;

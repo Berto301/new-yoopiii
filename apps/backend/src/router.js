@@ -9,6 +9,8 @@ import { conversationRouter } from "./modules/conversations/conversations.routes
 import { notificationRouter } from "./modules/notifications/notifications.routes.js";
 import { ownerRouter } from "./modules/owner/owner.routes.js";
 import { contractRouter } from "./modules/contracts/contracts.routes.js";
+import { landingRouter } from "./modules/landing/landing.routes.js";
+import { contactRouter } from "./modules/contact/contact.routes.js";
 
 export const router = Router();
 
@@ -22,3 +24,5 @@ router.use("/conversations", conversationRouter);
 router.use("/notifications", notificationRouter);
 router.use("/owner", ownerRouter);
 router.use("/contracts", contractRouter);
+router.use("/landing", landingRouter);
+router.use("/contact", contactRouter);

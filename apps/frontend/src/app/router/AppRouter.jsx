@@ -43,7 +43,7 @@ export const AppRouter = () => (
     <Route element={<PublicLayout />}>
       <Route path="/" element={<LandingPage />} />
       <Route path="/properties" element={<PropertySearchPage />} />
-      <Route path="/properties/:slug" element={<PropertyDetailPage />} />
+      <Route path="/properties/:id" element={<PropertyDetailPage />} />
     </Route>
 
     <Route element={<AuthLayout />}>

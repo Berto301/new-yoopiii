@@ -727,6 +727,63 @@ export const getPropertyPublications = async ({ user, filters }) => {
   };
 };
 
+export const getPublicPropertyDetail = async ({ identifier, user = null }) => {
+  const normalizedIdentifier = String(identifier || "").trim();
+  const publicQuery = {
+    publicationStatus: "approved",
+    status: { $in: ["published", "reserved", "sold", "rented"] }
+  };
+  const identityClauses = [{ slug: normalizedIdentifier }];
+
+  if (mongoose.isValidObjectId(normalizedIdentifier)) {
+    identityClauses.push({ _id: normalizedIdentifier });
+  }
+
+  const property = await Property.findOne({
+    ...publicQuery,
+    $or: identityClauses
+  })
+    .populate("agentId", "firstName lastName avatar")
+    .populate("agencyId", "name logo")
+    .populate("ownerUserId", "firstName lastName email phone avatar")
+    .lean();
+
+  if (!property) {
+    throw new AppError("Property not found", StatusCodes.NOT_FOUND);
+  }
+
+  const contract = property.managementContractId
+    ? await ManagementContract.findById(property.managementContractId)
+      .populate("ownerUserId", "firstName lastName email phone avatar")
+      .select("actions ownerUserId")
+      .lean()
+    : null;
+
+  const favoriteIds = await loadFavoriteIdsForUser(user?.id, [property._id]);
+  const isUnderMaintenance = await OwnerMaintenanceTicket.exists({
+    managedPropertyId: property._id,
+    status: "in_progress"
+  });
+
+  return mapPropertyListItem({
+    ...property,
+    ownerName:
+      [contract?.ownerUserId?.firstName, contract?.ownerUserId?.lastName].filter(Boolean).join(" ").trim() ||
+      [property.ownerUserId?.firstName, property.ownerUserId?.lastName].filter(Boolean).join(" ").trim(),
+    ownerAvatar: contract?.ownerUserId?.avatar || property.ownerUserId?.avatar || null,
+    ownerPhone: contract?.ownerUserId?.phone || property.ownerUserId?.phone || "",
+    ownerEmail: contract?.ownerUserId?.email || property.ownerUserId?.email || "",
+    publicationOwnerDisplay: contract
+      ? {
+          showOwnerName: Boolean(contract.actions?.publicationOwnerDisplay?.showOwnerName),
+          showOwnerContact: Boolean(contract.actions?.publicationOwnerDisplay?.showOwnerContact),
+          allowDirectOwnerChat: Boolean(contract.actions?.publicationOwnerDisplay?.allowDirectOwnerChat)
+        }
+      : null,
+    isUnderMaintenance: Boolean(isUnderMaintenance)
+  }, favoriteIds);
+};
+
 export const createManagedProperty = async ({ actor, payload }) => {
   if (!["agency", "agency_agent", "independent_agent", "proprietaire"].includes(actor.role)) throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
   const data = await buildManagedPropertyPayload({ actor, payload });

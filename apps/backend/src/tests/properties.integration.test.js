@@ -176,3 +176,51 @@ test("GET /api/v1/properties/publications/feed exposes maintenance tag for prope
   assert.equal(response.body.data.items.length, 1);
   assert.equal(response.body.data.items[0].isUnderMaintenance, true);
 });
+
+test("GET /api/v1/properties/public/:identifier returns the real published property detail by slug", async () => {
+  const owner = await createUser("proprietaire");
+
+  const property = await Property.create({
+    title: "Villa detail",
+    slug: `villa-detail-${Date.now()}`,
+    description: "Detail public reel avec galerie images",
+    type: "house",
+    purpose: "sale",
+    price: 145000000,
+    currency: "AR",
+    area: 210,
+    rooms: 6,
+    bedrooms: 4,
+    bathrooms: 3,
+    features: ["Piscine", "Garage"],
+    address: "Antsirabe centre",
+    location: { type: "Point", coordinates: [47.03961, -19.872006] },
+    coverImage: "/uploads/properties/cover-villa-detail.jpg",
+    media: [
+      {
+        type: "image",
+        url: "/uploads/properties/gallery-villa-detail-1.jpg",
+        thumbnailUrl: "/uploads/properties/gallery-villa-detail-1-thumb.jpg",
+        order: 0
+      }
+    ],
+    ownerType: "proprietaire",
+    ownerUserId: owner._id,
+    agentId: owner._id,
+    status: "published",
+    publicationStatus: "approved"
+  });
+
+  const app = createApp();
+  const response = await request(app).get(`/api/v1/properties/public/${property.slug}`);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.id, String(property._id));
+  assert.equal(response.body.data.slug, property.slug);
+  assert.equal(response.body.data.coverImage, "/uploads/properties/cover-villa-detail.jpg");
+  assert.equal(response.body.data.media.length, 1);
+  assert.equal(response.body.data.media[0].url, "/uploads/properties/gallery-villa-detail-1.jpg");
+  assert.equal(response.body.data.mapMarker.lat, -19.872006);
+  assert.equal(response.body.data.mapMarker.lng, 47.03961);
+});

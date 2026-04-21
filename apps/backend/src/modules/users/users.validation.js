@@ -9,12 +9,22 @@ const numberFromQuery = (fieldName) =>
     invalid_type_error: `${fieldName} must be a number`
   });
 const emptyStringToUndefined = (schema) => z.preprocess((value) => (value === "" ? undefined : value), schema);
-const avatarSchema = z
-  .string()
-  .trim()
-  .refine((value) => value.startsWith("/") || /^https?:\/\//i.test(value), {
-    message: "Avatar must be a public URL or an uploaded file path"
-  });
+const avatarSchema = z.preprocess(
+  (value) => {
+    if (value === "" || value === null || value === undefined) {
+      return null;
+    }
+
+    return value;
+  },
+  z
+    .string()
+    .trim()
+    .refine((value) => value.startsWith("/") || /^https?:\/\//i.test(value), {
+      message: "Avatar must be a public URL or an uploaded file path"
+    })
+    .nullable()
+);
 
 export const updateMyProfileSchema = z.object({
   body: z.object({
@@ -25,7 +35,7 @@ export const updateMyProfileSchema = z.object({
     cin: cinSchema,
     adresse: addressSchema,
     sexe: genderSchema,
-    avatar: avatarSchema.optional().nullable()
+    avatar: avatarSchema.optional()
   }),
   params: z.object({}).default({}),
   query: z.object({}).default({})
@@ -57,7 +67,7 @@ export const discoverAgentsSchema = z.object({
   query: z.object({
     search: emptyStringToUndefined(z.string().trim().max(120).optional()),
     agencyType: z.enum(["all", "agency", "independent"]).default("all"),
-    role: z.enum(["all", "manager", "supervisor", "agent", "assistant", "viewer", "independent_agent"]).default("all"),
+    role: z.enum(["all", "agency", "manager", "supervisor", "agent", "assistant", "viewer", "independent_agent"]).default("all"),
     page: numberFromQuery("page").min(1).default(1),
     limit: numberFromQuery("limit").min(1).max(100).default(20)
   })

@@ -4,13 +4,14 @@ import {
   createOwnerMaintenanceTicket,
   deleteOwnerTenant,
   deleteOwnerMaintenanceTicket,
+  getOwnerDashboard,
   getOwnerWorkspace,
   updateOwnerTenant,
   updateOwnerMaintenanceTicket
 } from "./owner.service.js";
 
 export const getOwnerDashboardHandler = async (req, res) => {
-  const workspace = await getOwnerWorkspace({ ownerId: req.user.id });
+  const workspace = await getOwnerDashboard({ ownerId: req.user.id });
 
   res.status(StatusCodes.OK).json({
     success: true,

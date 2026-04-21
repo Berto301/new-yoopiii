@@ -6,6 +6,7 @@ import {
   deleteManagedProperty,
   duplicateManagedProperty,
   getManagedProperties,
+  getPublicPropertyDetail,
   getPropertyPublications,
   getPropertyFavorites,
   getPropertyHistory,
@@ -58,6 +59,15 @@ export const getManagedPropertiesHandler = async (req, res) => {
   const data = await getManagedProperties({
     user: req.user,
     filters: req.validated.query
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const getPublicPropertyDetailHandler = async (req, res) => {
+  const data = await getPublicPropertyDetail({
+    identifier: req.validated.params.identifier,
+    user: req.user || null
   });
 
   res.status(StatusCodes.OK).json({ success: true, data });

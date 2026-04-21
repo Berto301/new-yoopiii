@@ -3,7 +3,8 @@ import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { User } from "./user.model.js";
 
 const ROLE_LABELS = {
-  owner: "Proprietaire",
+  owner: "Agence",
+  agency: "Agence",
   manager: "Manager",
   supervisor: "Superviseur",
   agent: "Agent",
@@ -70,7 +71,7 @@ const buildAgentStatsMap = async (agentIds) => {
 
 export const listDiscoverableAgents = async ({ filters }) => {
   const [members, independentAgents] = await Promise.all([
-    AgencyMember.find({ status: { $ne: "removed" }, role: { $ne: "owner" } })
+    AgencyMember.find({ status: { $ne: "removed" } })
       .populate("userId", "firstName lastName email avatar role status")
       .populate("agencyId", "name status")
       .lean(),
@@ -89,8 +90,11 @@ export const listDiscoverableAgents = async ({ filters }) => {
       lastName: member.userId.lastName || "",
       email: member.userId.email || "",
       avatar: member.userId.avatar || null,
-      role: member.role,
-      roleLabel: ROLE_LABELS[member.role] || member.role,
+      role: member.role === "owner" || member.userId.role === "agency" ? "agency" : member.role,
+      roleLabel:
+        member.role === "owner" || member.userId.role === "agency"
+          ? ROLE_LABELS.agency
+          : ROLE_LABELS[member.role] || member.role,
       agencyId: String(member.agencyId._id),
       agencyName: member.agencyId.name || "",
       organizationLabel: member.agencyId.name || "Agence",

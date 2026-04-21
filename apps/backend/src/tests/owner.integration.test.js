@@ -35,13 +35,22 @@ const createUser = (overrides = {}) =>
     status: "active"
   });
 
-test("owner workspace endpoints return seeded portfolio data for proprietaire users", async () => {
+test("owner dashboard uses real data while workspace modules keep their seeded demo portfolio", async () => {
   const owner = await createUser();
   const token = signAccessToken(owner);
   const app = createApp();
 
-  const [dashboardResponse, contractsResponse, rentsResponse, tenantsResponse, propertiesResponse, maintenanceResponse] = await Promise.all([
-    request(app).get("/api/v1/owner/dashboard").set("Authorization", `Bearer ${token}`),
+  const dashboardResponse = await request(app)
+    .get("/api/v1/owner/dashboard")
+    .set("Authorization", `Bearer ${token}`);
+
+  assert.equal(dashboardResponse.statusCode, 200);
+  assert.equal(dashboardResponse.body.data.summary.propertiesCount, 0);
+  assert.equal(dashboardResponse.body.data.summary.tenantsCount, 0);
+  assert.equal(dashboardResponse.body.data.summary.activeContractsCount, 0);
+  assert.equal(dashboardResponse.body.data.alerts.length, 0);
+
+  const [contractsResponse, rentsResponse, tenantsResponse, propertiesResponse, maintenanceResponse] = await Promise.all([
     request(app).get("/api/v1/owner/contracts").set("Authorization", `Bearer ${token}`),
     request(app).get("/api/v1/owner/rents").set("Authorization", `Bearer ${token}`),
     request(app).get("/api/v1/owner/tenants").set("Authorization", `Bearer ${token}`),
@@ -49,9 +58,6 @@ test("owner workspace endpoints return seeded portfolio data for proprietaire us
     request(app).get("/api/v1/owner/maintenance").set("Authorization", `Bearer ${token}`)
   ]);
 
-  assert.equal(dashboardResponse.statusCode, 200);
-  assert.equal(dashboardResponse.body.data.summary.propertiesCount, 4);
-  assert.equal(dashboardResponse.body.data.alerts.length, 3);
   assert.equal(contractsResponse.statusCode, 200);
   assert.equal(contractsResponse.body.data.length, 3);
   assert.equal(rentsResponse.body.data.length, 4);

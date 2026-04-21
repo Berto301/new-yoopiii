@@ -4,6 +4,7 @@ import { createNotifications } from "../notifications/notifications.service.js";
 import { Property } from "../properties/property.model.js";
 import { Notification } from "../notifications/notification.model.js";
 import { User } from "../users/user.model.js";
+import { ManagementContract } from "../contracts/management-contract.model.js";
 import { OwnerContract } from "./models/owner-contract.model.js";
 import { OwnerMaintenanceTicket } from "./models/owner-maintenance-ticket.model.js";
 import { OwnerProperty } from "./models/owner-property.model.js";
@@ -649,6 +650,192 @@ export const getOwnerWorkspace = async ({ ownerId }) => {
       status: propertyStatusLabelMap[property.status] || property.status,
       history: property.historyLabel || "-",
       photos: property.photosCount || 0
+    })),
+    maintenance: maintenance.map(mapMaintenanceTicket)
+  };
+};
+
+const propertyDashboardStatusLabelMap = {
+  draft: "Brouillon",
+  published: "Libre",
+  reserved: "Reserve",
+  rented: "Loue",
+  sold: "Vendu",
+  archived: "Archive"
+};
+
+const contractDashboardStatusLabelMap = {
+  draft: "Brouillon",
+  pending_signature: "Signature en attente",
+  signed: "Signe",
+  accepted: "Accepte",
+  active: "Actif",
+  suspended: "Suspendu",
+  expired: "Expire",
+  terminated: "Termine"
+};
+
+const contractPaymentStatusLabelMap = {
+  paid: "Paye",
+  pending: "En attente",
+  late: "En retard",
+  overdue: "En retard",
+  retard: "En retard",
+  "en retard": "En retard"
+};
+
+const resolveComparableId = (value) => String(value?._id || value || "");
+const normalizePaymentStatus = (value) => String(value || "").trim().toLowerCase();
+const isLatePaymentStatus = (value) => ["late", "overdue", "retard", "en retard"].includes(normalizePaymentStatus(value));
+const isActiveContractStatus = (value) => ["signed", "accepted", "active"].includes(String(value || "").trim().toLowerCase());
+
+const buildOwnerDashboardPropertyMetrics = ({ properties, contracts }) => {
+  const contractByPropertyId = new Map();
+
+  contracts.forEach((contract) => {
+    const propertyKey = resolveComparableId(contract.propertyId);
+
+    if (propertyKey && !contractByPropertyId.has(propertyKey)) {
+      contractByPropertyId.set(propertyKey, contract);
+    }
+  });
+
+  return properties.map((property) => {
+    const propertyKey = resolveComparableId(property._id);
+    const propertyContract = contractByPropertyId.get(propertyKey) || null;
+    const currentRevenue =
+      property.purpose === "rent" && propertyContract && isActiveContractStatus(propertyContract.status)
+        ? Number(propertyContract.financial?.rentAmount || 0)
+        : 0;
+    const ownerShare = Number(propertyContract?.distribution?.ownerShare || 0);
+    const annualYieldRate =
+      property.price > 0 && currentRevenue > 0
+        ? Number((((currentRevenue * 12) / Number(property.price || 1)) * 100).toFixed(1))
+        : 0;
+
+    return {
+      id: propertyKey,
+      title: property.title,
+      address: property.address || "-",
+      status: propertyDashboardStatusLabelMap[property.status] || property.status,
+      monthlyRevenue: currentRevenue,
+      yield: `${annualYieldRate.toFixed(1)}%`,
+      ownerShare: ownerShare ? `${ownerShare}%` : "-",
+      purpose: property.purpose
+    };
+  });
+};
+
+export const getOwnerDashboard = async ({ ownerId }) => {
+  const [properties, contracts, tenants, maintenance, notifications] = await Promise.all([
+    Property.find({ ownerUserId: ownerId })
+      .select("title address price purpose status ownerUserId createdAt updatedAt")
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean(),
+    ManagementContract.find({ ownerUserId: ownerId })
+      .select("reference status startDate endDate renewalDate propertyId financial distribution paymentTracking tenants")
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean(),
+    OwnerTenant.find({ ownerId }).sort({ createdAt: -1 }).lean(),
+    OwnerMaintenanceTicket.find({ ownerId })
+      .populate("managedPropertyId", "title")
+      .populate("propertyId", "title")
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean(),
+    Notification.find({ userId: ownerId }).sort({ createdAt: -1 }).limit(5).lean()
+  ]);
+
+  const revenueByProperty = buildOwnerDashboardPropertyMetrics({ properties, contracts });
+  const rentProperties = properties.filter((property) => property.purpose === "rent");
+  const rentedProperties = rentProperties.filter((property) => property.status === "rented");
+  const lateRentCount = contracts.filter((contract) => isLatePaymentStatus(contract.paymentTracking?.status)).length;
+  const activeContracts = contracts.filter((contract) => isActiveContractStatus(contract.status));
+  const occupancyRate = rentProperties.length ? Math.round((rentedProperties.length / rentProperties.length) * 100) : 0;
+  const monthlyRevenue = revenueByProperty.reduce((sum, property) => sum + Number(property.monthlyRevenue || 0), 0);
+  const upcomingDeadlines = [
+    ...contracts
+      .filter((contract) => contract.renewalDate || contract.endDate)
+      .sort((left, right) => new Date(left.renewalDate || left.endDate) - new Date(right.renewalDate || right.endDate))
+      .slice(0, 4)
+      .map((contract) => ({
+        id: String(contract._id),
+        title: contract.reference || "Contrat",
+        date: formatDate(contract.renewalDate || contract.endDate),
+        tag: contract.renewalDate ? "Renouvellement" : "Fin de contrat"
+      })),
+    ...maintenance
+      .filter((ticket) => ["planned", "in_progress"].includes(ticket.status))
+      .slice(0, 2)
+      .map((ticket) => ({
+        id: `maintenance-${ticket._id}`,
+        title: ticket.title,
+        date: formatDate(ticket.lastUpdateAt || ticket.updatedAt),
+        tag: "Maintenance"
+      }))
+  ].slice(0, 5);
+
+  return {
+    summary: {
+      monthlyRevenue,
+      occupancyRate,
+      lateRentCount,
+      activeContractsCount: activeContracts.length,
+      propertiesCount: properties.length,
+      tenantsCount: tenants.length,
+      maintenanceCount: maintenance.length
+    },
+    revenueByProperty: revenueByProperty.map((property) => ({
+      id: property.id,
+      name: property.title,
+      revenue: formatCurrency(property.monthlyRevenue),
+      yield: property.yield,
+      status: property.status,
+      ownerShare: property.ownerShare
+    })),
+    upcomingDeadlines,
+    recentMaintenance: maintenance.slice(0, 3).map((ticket) => ({
+      id: String(ticket._id),
+      title: ticket.title,
+      property: resolveMaintenancePropertyLabel(ticket),
+      status: maintenanceStatusLabelMap[ticket.status] || ticket.status,
+      date: formatDate(ticket.lastUpdateAt || ticket.updatedAt)
+    })),
+    alerts: notifications.map((notification) => ({
+      id: String(notification._id),
+      title: notification.title,
+      detail: notification.body,
+      tone: notification.type?.includes("late") ? "alert" : notification.type?.includes("renewal") ? "warning" : "info"
+    })),
+    contracts: activeContracts.map((contract) => ({
+      id: String(contract._id),
+      title: contract.reference || "Contrat",
+      partner: "-",
+      partnerType: "-",
+      startDate: formatDate(contract.startDate),
+      endDate: formatDate(contract.endDate),
+      renewalDate: contract.renewalDate ? formatDate(contract.renewalDate) : "-",
+      status: contractDashboardStatusLabelMap[contract.status] || contract.status
+    })),
+    rents: contracts
+      .filter((contract) => contract.propertyId)
+      .map((contract) => ({
+        id: String(contract._id),
+        tenant: contract.tenants?.find((tenant) => tenant.isMainTenant)?.fullName || contract.tenants?.[0]?.fullName || "Vacant",
+        property: revenueByProperty.find((property) => property.id === resolveComparableId(contract.propertyId))?.title || "Bien non renseigne",
+        dueDate: contract.paymentTracking?.nextPaymentDate ? formatDate(contract.paymentTracking.nextPaymentDate) : "-",
+        amount: formatCurrency(contract.financial?.rentAmount || 0),
+        status: contractPaymentStatusLabelMap[normalizePaymentStatus(contract.paymentTracking?.status)] || contract.paymentTracking?.status || "-",
+        receiptNumber: "-"
+      })),
+    tenants: tenants.map(mapOwnerTenant),
+    properties: properties.map((property) => ({
+      id: String(property._id),
+      title: property.title,
+      surface: "-",
+      location: property.address || "-",
+      status: propertyDashboardStatusLabelMap[property.status] || property.status,
+      history: property.purpose === "rent" ? "Bien locatif synchronise" : "Bien synchronise",
+      photos: 0
     })),
     maintenance: maintenance.map(mapMaintenanceTicket)
   };

@@ -8,6 +8,7 @@ import {
   duplicateManagedPropertyHandler,
   getFavoritePropertiesHandler,
   getManagedPropertiesHandler,
+  getPublicPropertyDetailHandler,
   getPropertyPublicationsHandler,
   getNearbyProperties,
   getProperties,
@@ -32,6 +33,7 @@ import {
   propertyCollectionSchema,
   propertyHistoryCreateSchema,
   propertyIdParamsSchema,
+  propertyPublicIdentifierSchema,
   propertyWorkflowSchema,
   updateManagedPropertySchema
 } from "./properties.validation.js";
@@ -42,6 +44,7 @@ export const propertyRouter = Router();
 propertyRouter.get("/search/nearby", validate(nearbyPropertiesSchema), asyncHandler(getNearbyProperties));
 propertyRouter.get("/search/bounds", validate(boundedPropertiesSchema), asyncHandler(getPropertiesInBounds));
 propertyRouter.get("/", asyncHandler(getProperties));
+propertyRouter.get("/public/:identifier", validate(propertyPublicIdentifierSchema), asyncHandler(getPublicPropertyDetailHandler));
 propertyRouter.use(asyncHandler(requireAuth));
 propertyRouter.get("/publications/feed", validate(propertyCollectionSchema), asyncHandler(getPropertyPublicationsHandler));
 propertyRouter.get("/management/mine", validate(managedPropertiesSchema), asyncHandler(getManagedPropertiesHandler));

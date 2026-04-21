@@ -1,8 +1,9 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
+import { PublicFooter } from "./PublicFooter.jsx";
 
 const navItems = [
   { to: "/", label: "Accueil" },
-  { to: "/properties", label: "Biens" },
+  { to: "/#contact", label: "Contact" },
   { to: "/login", label: "Connexion" }
 ];
 
@@ -15,13 +16,19 @@ export const PublicLayout = () => (
         </Link>
         <nav className="flex gap-5 text-sm text-stone-300">
           {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => (isActive ? "text-white" : "transition hover:text-white")}
-            >
-              {item.label}
-            </NavLink>
+            item.to.includes("#") ? (
+              <a key={item.to} href={item.to} className="transition hover:text-white">
+                {item.label}
+              </a>
+            ) : (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => (isActive ? "text-white" : "transition hover:text-white")}
+              >
+                {item.label}
+              </NavLink>
+            )
           ))}
         </nav>
       </div>
@@ -29,5 +36,6 @@ export const PublicLayout = () => (
     <main>
       <Outlet />
     </main>
+    <PublicFooter />
   </div>
 );

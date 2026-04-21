@@ -9,7 +9,14 @@ const envSchema = z.object({
   CLIENT_URL: z.string().default("http://localhost:5173"),
   MONGODB_URI: z.string().default("mongodb://localhost:27017/yopii"),
   JWT_ACCESS_SECRET: z.string().min(10).default("change-me-access-secret"),
-  JWT_REFRESH_SECRET: z.string().min(10).default("change-me-refresh-secret")
+  JWT_REFRESH_SECRET: z.string().min(10).default("change-me-refresh-secret"),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional(),
+  SMTP_SECURE: z.enum(["true", "false"]).optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
+  CONTACT_RECIPIENT_EMAIL: z.string().optional()
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -25,5 +32,12 @@ export const env = {
   clientUrl: parsed.data.CLIENT_URL,
   mongodbUri: parsed.data.MONGODB_URI,
   jwtAccessSecret: parsed.data.JWT_ACCESS_SECRET,
-  jwtRefreshSecret: parsed.data.JWT_REFRESH_SECRET
+  jwtRefreshSecret: parsed.data.JWT_REFRESH_SECRET,
+  smtpHost: parsed.data.SMTP_HOST || "",
+  smtpPort: parsed.data.SMTP_PORT || 587,
+  smtpSecure: parsed.data.SMTP_SECURE === "true",
+  smtpUser: parsed.data.SMTP_USER || "",
+  smtpPass: parsed.data.SMTP_PASS || "",
+  smtpFrom: parsed.data.SMTP_FROM || parsed.data.SMTP_USER || "",
+  contactRecipientEmail: parsed.data.CONTACT_RECIPIENT_EMAIL || parsed.data.SMTP_USER || ""
 };

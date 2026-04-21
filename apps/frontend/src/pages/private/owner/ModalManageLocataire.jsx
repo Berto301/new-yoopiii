@@ -83,7 +83,7 @@ export const ModalManageLocataire = ({
   useEffect(() => {
     if (open) {
       reset(defaultValues);
-      lastHydratedUserIdRef.current = null;
+      lastHydratedUserIdRef.current = defaultValues.linkedUserId || null;
     }
   }, [defaultValues, open, reset]);
 

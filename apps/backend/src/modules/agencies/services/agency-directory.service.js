@@ -5,7 +5,7 @@ import { Agency } from "../agency.model.js";
 import { AgencyMember } from "../models/agency-member.model.js";
 
 const ROLE_LABELS = {
-  owner: "Proprietaire",
+  owner: "Agence",
   manager: "Manager",
   supervisor: "Superviseur",
   agent: "Agent",
@@ -144,7 +144,6 @@ export const listAgencyDirectoryAgents = async ({ agencyId, filters }) => {
   const members = await AgencyMember.find({
     agencyId,
     status: { $ne: "removed" },
-    role: { $ne: "owner" },
     ...(filters.role && filters.role !== "all" ? { role: filters.role } : {})
   })
     .populate("userId", "firstName lastName email avatar role status")

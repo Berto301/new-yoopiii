@@ -27,6 +27,7 @@ const agencyStatusOptions = [
 
 const memberRoleOptions = [
   { value: "all", label: "Tous les roles" },
+  { value: "owner", label: "Agence" },
   { value: "manager", label: "Manager" },
   { value: "supervisor", label: "Superviseur" },
   { value: "agent", label: "Agent" },
@@ -42,6 +43,7 @@ const agentTypeOptions = [
 
 const globalRoleOptions = [
   { value: "all", label: "Tous les roles" },
+  { value: "agency", label: "Agence" },
   { value: "manager", label: "Manager" },
   { value: "supervisor", label: "Superviseur" },
   { value: "agent", label: "Agent" },

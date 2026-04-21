@@ -8,6 +8,7 @@ import { Card } from "../../components/ui/Card.jsx";
 import { BaseListBox } from "../../components/form/BaseListBox.jsx";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 import { createConversation } from "../../features/chat/services/chat.service.js";
+import { ModalViewDetail } from "../../features/properties/components/ModalViewDetail.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
 import { SettingsTabButton } from "./settings/SettingsTabButton.jsx";
 
@@ -328,6 +329,7 @@ export const PublicationsPage = () => {
   });
   const [activeTab, setActiveTab] = useState("list");
   const [selectedMarkerId, setSelectedMarkerId] = useState("");
+  const [detailModalIdentifier, setDetailModalIdentifier] = useState("");
   const [referenceCenter, setReferenceCenter] = useState(DEFAULT_SEARCH_CENTER);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS);
   const [rawFilters, setRawFilters] = useState({
@@ -485,11 +487,11 @@ export const PublicationsPage = () => {
   };
 
   const handleOpenDetail = (property) => {
-    if (!property.slug) {
+    if (!property?.slug && !property?.id) {
       return;
     }
 
-    navigate(`/properties/${property.slug}`);
+    setDetailModalIdentifier(property.slug || property.id);
   };
 
   if (propertyPublicationsQuery.isLoading) {
@@ -726,6 +728,12 @@ export const PublicationsPage = () => {
           )}
         </div>
       </Card>
+
+      <ModalViewDetail
+        open={Boolean(detailModalIdentifier)}
+        propertyIdentifier={detailModalIdentifier}
+        onClose={() => setDetailModalIdentifier("")}
+      />
     </section>
   );
 };

@@ -105,6 +105,14 @@ export const propertyIdParamsSchema = z.object({
   query: z.object({}).default({})
 });
 
+export const propertyPublicIdentifierSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({
+    identifier: z.string().trim().min(1)
+  }),
+  query: z.object({}).default({})
+});
+
 export const propertyWorkflowSchema = z.object({
   body: z
     .object({
