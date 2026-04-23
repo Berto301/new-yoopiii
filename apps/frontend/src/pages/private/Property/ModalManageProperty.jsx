@@ -4,8 +4,10 @@ import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
 import { Input } from "../../../components/ui/Input.jsx";
 import { ModalLayout } from "../../../components/layout/modals/ModalLayout.jsx";
 import { BaseListBox } from "../../../components/form/BaseListBox.jsx";
+import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
+import { getPropertyThreeDStatusMeta } from "../../../features/properties/property-3d.js";
 
 const propertyTypeOptions = [
   { label: "Maison", value: "house" },
@@ -106,8 +108,11 @@ const mapPropertyToFormValues = (property) => ({
   googlePlaceId: property?.googlePlaceId || "",
   location: buildCoordinateState(property),
   coverImage: property?.coverImage || "",
-  has3DView: Boolean(property?.has3DView),
+  is3DEnabled: Boolean(property?.is3DEnabled ?? property?.has3DView),
+  has3DView: Boolean(property?.is3DEnabled ?? property?.has3DView),
   threeDUrl: property?.threeDUrl || "",
+  threeDStatus: property?.threeDStatus || null,
+  threeDGeneratedAt: property?.threeDGeneratedAt || null,
   media: (property?.media || []).length
     ? property.media.map((item) => ({
         type: mediaTypeOptions.find((option) => option.value === item.type) || mediaTypeOptions[0],
@@ -136,8 +141,8 @@ const normalizePayload = (values) => ({
     placeId: values.googlePlaceId || null
   },
   coverImage: values.coverImage || null,
-  has3DView: Boolean(values.has3DView),
-  threeDUrl: values.has3DView ? values.threeDUrl || null : null,
+  is3DEnabled: Boolean(values.is3DEnabled ?? values.has3DView),
+  has3DView: Boolean(values.is3DEnabled ?? values.has3DView),
   media: values.media
     .filter((item) => item.url)
     .map((item, index) => ({
@@ -156,10 +161,12 @@ export const ModalManageProperty = ({
   onEditContract,
   onClose,
   onSubmit,
+  onGenerateThreeD,
   onUploadAsset,
   onUploadError,
   isSaving = false,
-  isUploadingAsset = false
+  isUploadingAsset = false,
+  isGeneratingThreeD = false
 }) => {
   const defaultValues = useMemo(() => mapPropertyToFormValues(property), [property]);
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY || "";
@@ -189,10 +196,18 @@ export const ModalManageProperty = ({
   const [activeUploadTarget, setActiveUploadTarget] = useState(null);
 
   const has3DView = watch("has3DView");
+  const threeDUrl = watch("threeDUrl");
+  const threeDStatus = watch("threeDStatus");
+  const threeDGeneratedAt = watch("threeDGeneratedAt");
   const latitude = watch("location.lat");
   const longitude = watch("location.lng");
   const coverImage = watch("coverImage");
   const resolvedCoverImage = resolveAssetUrl(coverImage);
+  const threeDStatusMeta = getPropertyThreeDStatusMeta({
+    is3DEnabled: has3DView,
+    status: threeDStatus
+  });
+  const threeDGeneratedLabel = threeDGeneratedAt ? new Date(threeDGeneratedAt).toLocaleString("fr-FR") : null;
   const markerPosition =
     isFiniteCoordinate(latitude) && isFiniteCoordinate(longitude)
       ? { lat: Number(latitude), lng: Number(longitude) }
@@ -355,6 +370,24 @@ export const ModalManageProperty = ({
     setMapCenter(buildMapCenter(defaultValues.location));
     setActiveUploadTarget(null);
     onClose();
+  };
+
+  const handleGenerateThreeD = async (force = true) => {
+    if (!property?.id || !onGenerateThreeD) {
+      return;
+    }
+
+    const updatedProperty = await onGenerateThreeD({ propertyId: property.id, force });
+
+    if (!updatedProperty) {
+      return;
+    }
+
+    setValue("is3DEnabled", Boolean(updatedProperty.is3DEnabled ?? updatedProperty.has3DView), { shouldDirty: false });
+    setValue("has3DView", Boolean(updatedProperty.is3DEnabled ?? updatedProperty.has3DView), { shouldDirty: false });
+    setValue("threeDUrl", updatedProperty.threeDUrl || "", { shouldDirty: false });
+    setValue("threeDStatus", updatedProperty.threeDStatus || null, { shouldDirty: false });
+    setValue("threeDGeneratedAt", updatedProperty.threeDGeneratedAt || null, { shouldDirty: false });
   };
 
   return (
@@ -793,27 +826,90 @@ export const ModalManageProperty = ({
         </div>
 
         <div className="space-y-4 rounded-3xl border border-white/10 bg-black/10 p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Visite 3D</p>
+              <h3 className="text-lg font-semibold text-white">Activation et generation automatiques</h3>
+              <p className="max-w-2xl text-sm leading-6 text-stone-300">
+                La generation priorise les fichiers televerses du bien, puis les images disponibles et enfin la couverture si besoin.
+              </p>
+            </div>
+            <Badge className={threeDStatusMeta.className}>{threeDStatusMeta.label}</Badge>
+          </div>
+
           <Controller
             name="has3DView"
             control={control}
             render={({ field }) => (
-              <label className="flex items-center gap-3 text-sm text-stone-200">
+              <label className="flex items-center justify-between gap-4 rounded-[1.4rem] border border-white/10 bg-stone-950/45 px-4 py-4 text-sm text-stone-200">
+                <div>
+                  <p className="font-medium text-white">Activer la version 3D du bien</p>
+                  <p className="mt-1 text-xs text-stone-400">
+                    L&apos;URL complete de visite sera generee et stockee automatiquement a l&apos;enregistrement.
+                  </p>
+                </div>
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border border-white/10 bg-stone-900/70"
+                  className="h-5 w-5 rounded border border-white/10 bg-stone-900/70"
                   checked={Boolean(field.value)}
-                  onChange={(event) => field.onChange(event.target.checked)}
+                  onChange={(event) => {
+                    const nextValue = event.target.checked;
+                    field.onChange(nextValue);
+                    setValue("is3DEnabled", nextValue, { shouldDirty: true, shouldValidate: false });
+                    if (!nextValue) {
+                      setValue("threeDUrl", "", { shouldDirty: true, shouldValidate: false });
+                      setValue("threeDStatus", null, { shouldDirty: true, shouldValidate: false });
+                      setValue("threeDGeneratedAt", null, { shouldDirty: true, shouldValidate: false });
+                    }
+                  }}
                 />
-                Activer la version 3D du bien
               </label>
             )}
           />
+
+          <Controller name="is3DEnabled" control={control} render={({ field }) => <input type="hidden" {...field} />} />
+          <Controller name="threeDStatus" control={control} render={({ field }) => <input type="hidden" {...field} />} />
+          <Controller name="threeDGeneratedAt" control={control} render={({ field }) => <input type="hidden" {...field} />} />
+          <Controller name="threeDUrl" control={control} render={({ field }) => <input type="hidden" {...field} />} />
+
           {has3DView ? (
-            <Controller
-              name="threeDUrl"
-              control={control}
-              render={({ field }) => <Input label="URL visite 3D" placeholder="https://my.matterport.com/..." {...field} />}
-            />
+            <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+              <div className="rounded-[1.5rem] border border-white/10 bg-stone-950/45 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Statut courant</p>
+                <p className="mt-3 text-sm font-medium text-white">{threeDStatusMeta.label}</p>
+                <p className="mt-2 text-sm leading-6 text-stone-400">
+                  {threeDStatus === "generated"
+                    ? "La visite 3D est disponible et son lien complet est deja rattache au bien."
+                    : threeDStatus === "error"
+                      ? "La derniere tentative a echoue. Verifiez les medias du bien puis relancez la generation."
+                      : "La visite 3D sera preparee a partir des medias existants du bien."}
+                </p>
+                {threeDGeneratedLabel ? (
+                  <p className="mt-4 text-xs uppercase tracking-[0.2em] text-stone-500">Generee le {threeDGeneratedLabel}</p>
+                ) : null}
+              </div>
+
+              <div className="rounded-[1.5rem] border border-white/10 bg-stone-950/45 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Lien de visite</p>
+                <p className="mt-3 break-all text-sm leading-6 text-stone-300">
+                  {threeDUrl || "Le lien sera cree automatiquement des que la generation aboutit."}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {threeDUrl ? (
+                    <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => window.open(threeDUrl, "_blank", "noopener,noreferrer")}>
+                      Voir la visite 3D
+                    </Button>
+                  ) : null}
+                  {property?.id ? (
+                    <Button type="button" variant="ghost" className="px-4 py-2" disabled={isGeneratingThreeD} onClick={() => handleGenerateThreeD(Boolean(threeDUrl))}>
+                      {isGeneratingThreeD ? "Generation..." : threeDUrl ? "Regenerer" : "Generer maintenant"}
+                    </Button>
+                  ) : (
+                    <span className="self-center text-xs text-stone-400">En creation, la generation demarrera apres l&apos;enregistrement.</span>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : null}
         </div>
       </form>

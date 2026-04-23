@@ -8,6 +8,7 @@ import {
   duplicateManagedPropertyHandler,
   getFavoritePropertiesHandler,
   getManagedPropertiesHandler,
+  getManagedPropertyDetailHandler,
   getPublicPropertyDetailHandler,
   getPropertyPublicationsHandler,
   getNearbyProperties,
@@ -15,6 +16,7 @@ import {
   getPropertiesInBounds,
   getPropertyHistoryHandler,
   patchManagedPropertyHandler,
+  postManagedPropertyThreeDGenerationHandler,
   patchPropertyWorkflowHandler,
   postManagedPropertyAssetHandler,
   postManagedPropertyHandler,
@@ -33,6 +35,7 @@ import {
   propertyCollectionSchema,
   propertyHistoryCreateSchema,
   propertyIdParamsSchema,
+  propertyThreeDGenerationSchema,
   propertyPublicIdentifierSchema,
   propertyWorkflowSchema,
   updateManagedPropertySchema
@@ -48,9 +51,11 @@ propertyRouter.get("/public/:identifier", validate(propertyPublicIdentifierSchem
 propertyRouter.use(asyncHandler(requireAuth));
 propertyRouter.get("/publications/feed", validate(propertyCollectionSchema), asyncHandler(getPropertyPublicationsHandler));
 propertyRouter.get("/management/mine", validate(managedPropertiesSchema), asyncHandler(getManagedPropertiesHandler));
+propertyRouter.get("/management/view/:identifier", validate(propertyPublicIdentifierSchema), asyncHandler(getManagedPropertyDetailHandler));
 propertyRouter.post("/management", validate(createManagedPropertySchema), asyncHandler(postManagedPropertyHandler));
 propertyRouter.post("/management/assets/:assetKind", validate(propertyAssetUploadSchema), uploadPropertyAsset, asyncHandler(postManagedPropertyAssetHandler));
 propertyRouter.patch("/management/:propertyId", validate(updateManagedPropertySchema), asyncHandler(patchManagedPropertyHandler));
+propertyRouter.post("/management/:propertyId/three-d/generate", validate(propertyThreeDGenerationSchema), asyncHandler(postManagedPropertyThreeDGenerationHandler));
 propertyRouter.post("/management/:propertyId/duplicate", validate(duplicateManagedPropertySchema), asyncHandler(duplicateManagedPropertyHandler));
 propertyRouter.delete("/management/:propertyId", validate(propertyIdParamsSchema), asyncHandler(deleteManagedPropertyHandler));
 propertyRouter.get("/favorites/me", validate(propertyCollectionSchema), asyncHandler(getFavoritePropertiesHandler));

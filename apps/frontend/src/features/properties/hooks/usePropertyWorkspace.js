@@ -8,6 +8,7 @@ import {
   createManagedProperty,
   deleteManagedProperty,
   duplicateManagedProperty,
+  generateManagedPropertyThreeD,
   getPropertyPublications,
   getFavoriteProperties,
   getManagedProperties,
@@ -150,6 +151,13 @@ export const usePropertyWorkspace = () => {
     }
   });
 
+  const generateManagedPropertyThreeDMutation = useMutation({
+    mutationFn: generateManagedPropertyThreeD,
+    onSuccess: () => {
+      invalidateManaged();
+    }
+  });
+
   const duplicateManagedPropertyMutation = useMutation({
     mutationFn: duplicateManagedProperty,
     onSuccess: () => {
@@ -182,6 +190,7 @@ export const usePropertyWorkspace = () => {
     uploadPropertyAssetMutation,
     updateContractMutation,
     updateManagedPropertyMutation,
+    generateManagedPropertyThreeDMutation,
     duplicateManagedPropertyMutation,
     deleteManagedPropertyMutation
   };

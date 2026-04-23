@@ -5,6 +5,10 @@ export default defineConfig({
   plugins: [react()],
   envPrefix: ["VITE_", "GOOGLE_"],
   envDir: "../../",
+  optimizeDeps: {
+    force: true,
+    include: ["three", "three/examples/jsm/controls/OrbitControls.js"]
+  },
   server: {
     host: "0.0.0.0",
     port: 5173

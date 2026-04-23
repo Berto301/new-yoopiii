@@ -117,7 +117,7 @@ test("agency can manage a property only after accepting a contract created by th
       type: "house",
       purpose: "rent",
       price: 250000000,
-      currency: "XOF",
+      currency: "AR",
       area: 220,
       rooms: 6,
       bedrooms: 4,
@@ -150,7 +150,7 @@ test("agency can manage a property only after accepting a contract created by th
       type: "house",
       purpose: "rent",
       price: 250000000,
-      currency: "XOF",
+      currency: "AR",
       area: 220,
       rooms: 6,
       bedrooms: 4,
@@ -204,7 +204,7 @@ test("independent agent cannot create a managed property without an active contr
       type: "house",
       purpose: "rent",
       price: 90000000,
-      currency: "XOF",
+      currency: "AR",
       area: 120,
       rooms: 4,
       bedrooms: 2,
@@ -233,7 +233,7 @@ test("proprietaire keeps visibility and can create a property without contract a
       type: "house",
       purpose: "rent",
       price: 150000000,
-      currency: "XOF",
+      currency: "AR",
       area: 145,
       rooms: 5,
       bedrooms: 3,
@@ -254,6 +254,76 @@ test("proprietaire keeps visibility and can create a property without contract a
 
   assert.equal(listResponse.statusCode, 200);
   assert.equal(listResponse.body.data.items.length, 1);
+});
+
+test("3D generation stores status, full URL and selected source media for an enabled property", async () => {
+  const owner = await createUser({ firstName: "Owner", role: "proprietaire" });
+  const token = signAccessToken(owner);
+  const app = createApp();
+
+  const createResponse = await request(app)
+    .post("/api/v1/properties/management")
+    .set("Authorization", `Bearer ${token}`)
+    .send({
+      title: "Bien visite 3D",
+      description: "Bien avec medias suffisants pour generer une visite 3D exploitable.",
+      type: "house",
+      purpose: "sale",
+      price: 175000000,
+      currency: "AR",
+      area: 180,
+      rooms: 5,
+      bedrooms: 3,
+      bathrooms: 2,
+      features: ["Parking"],
+      address: "Alarobia",
+      location: { lat: 5.37, lng: -4.01, placeId: null },
+      coverImage: "/uploads/properties/cover-tour.jpg",
+      media: [
+        {
+          type: "image",
+          url: "/uploads/properties/salon-tour.jpg",
+          thumbnailUrl: "/uploads/properties/salon-tour.jpg",
+          order: 0
+        },
+        {
+          type: "image",
+          url: "https://cdn.example.com/terrasse.jpg",
+          thumbnailUrl: "https://cdn.example.com/terrasse-thumb.jpg",
+          order: 1
+        }
+      ],
+      is3DEnabled: true
+    });
+
+  assert.equal(createResponse.statusCode, 201);
+  assert.equal(createResponse.body.data.is3DEnabled, true);
+  assert.equal(createResponse.body.data.threeDStatus, "pending");
+  assert.equal(createResponse.body.data.threeDUrl, null);
+
+  const propertyId = createResponse.body.data.id;
+
+  const generationResponse = await request(app)
+    .post(`/api/v1/properties/management/${propertyId}/three-d/generate`)
+    .set("Authorization", `Bearer ${token}`)
+    .send({ force: true });
+
+  assert.equal(generationResponse.statusCode, 200);
+  assert.equal(generationResponse.body.data.is3DEnabled, true);
+  assert.equal(generationResponse.body.data.has3DView, true);
+  assert.equal(generationResponse.body.data.threeDStatus, "generated");
+  assert.match(generationResponse.body.data.threeDUrl, /http:\/\/localhost:5173\/properties\/.+\/3d-tour$/);
+  assert.ok(generationResponse.body.data.threeDGeneratedAt);
+  assert.ok(Array.isArray(generationResponse.body.data.threeDSourceMedia));
+  assert.equal(generationResponse.body.data.threeDSourceMedia.length >= 1, true);
+  assert.equal(generationResponse.body.data.threeDSourceMedia[0].origin, "uploaded_media");
+
+  const storedProperty = await Property.findById(propertyId).lean();
+  assert.equal(storedProperty.is3DEnabled, true);
+  assert.equal(storedProperty.has3DView, true);
+  assert.equal(storedProperty.threeDStatus, "generated");
+  assert.ok(storedProperty.threeDGeneratedAt instanceof Date);
+  assert.equal(storedProperty.threeDSourceMedia.length >= 1, true);
 });
 
 test("owner deleting a contract keeps linked properties and detaches them", async () => {
@@ -312,7 +382,7 @@ test("owner deleting a contract keeps linked properties and detaches them", asyn
     type: "house",
     purpose: "rent",
     price: 100000,
-    currency: "XOF",
+    currency: "AR",
     area: 80,
     rooms: 3,
     bedrooms: 2,
@@ -407,7 +477,7 @@ test("agency deleting a contract keeps linked properties and detaches them", asy
     type: "house",
     purpose: "rent",
     price: 100000,
-    currency: "XOF",
+    currency: "AR",
     area: 80,
     rooms: 3,
     bedrooms: 2,
