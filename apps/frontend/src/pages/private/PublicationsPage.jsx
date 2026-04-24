@@ -184,7 +184,7 @@ const PublicationCard = ({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-2xl font-semibold text-white">{property.title}</h3>
-              {property.has3DView ? <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">3D</Badge> : null}
+              {(property.is3DEnabled ?? property.has3DView) ? <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">3D</Badge> : null}
             </div>
             <p className="mt-2 text-sm leading-6 text-stone-300">{property.description}</p>
           </div>

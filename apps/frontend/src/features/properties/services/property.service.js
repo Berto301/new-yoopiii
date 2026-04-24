@@ -29,6 +29,11 @@ export const updateManagedProperty = async ({ propertyId, payload }) => {
   return response.data.data;
 };
 
+export const generateManagedPropertyThreeD = async ({ propertyId, force = false }) => {
+  const response = await apiClient.post(`/properties/management/${propertyId}/three-d/generate`, { force });
+  return response.data.data;
+};
+
 export const duplicateManagedProperty = async ({ propertyId, payload = {} }) => {
   const response = await apiClient.post(`/properties/management/${propertyId}/duplicate`, payload);
   return response.data.data;
@@ -52,6 +57,25 @@ export const getPropertyPublications = async (params = {}) => {
 export const getPublicPropertyDetail = async (identifier) => {
   const response = await apiClient.get(`/properties/public/${encodeURIComponent(identifier)}`);
   return response.data.data;
+};
+
+export const getManagedPropertyDetail = async (identifier) => {
+  const response = await apiClient.get(`/properties/management/view/${encodeURIComponent(identifier)}`);
+  return response.data.data;
+};
+
+export const getPropertyThreeDDetail = async (identifier) => {
+  try {
+    return await getManagedPropertyDetail(identifier);
+  } catch (error) {
+    const statusCode = error?.response?.status;
+
+    if (![401, 403, 404].includes(statusCode)) {
+      throw error;
+    }
+  }
+
+  return getPublicPropertyDetail(identifier);
 };
 
 export const getPropertyHistory = async (params = {}) => {

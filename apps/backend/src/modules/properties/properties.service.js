@@ -11,6 +11,12 @@ import { ManagementContract } from "../contracts/management-contract.model.js";
 import { PropertyFavorite } from "./models/property-favorite.model.js";
 import { PropertyView } from "./models/property-view.model.js";
 import { Property } from "./property.model.js";
+import {
+  buildPropertyThreeDSourceMedia,
+  buildPropertyThreeDUrl,
+  PROPERTY_THREE_D_STATUSES,
+  resolvePropertyThreeDState
+} from "./properties.3d.service.js";
 
 const DEFAULT_STATUS = "published";
 const EARTH_RADIUS_KM = 6378.1;
@@ -143,8 +149,12 @@ const buildProjection = () => ({
   location: 1,
   coverImage: 1,
   media: 1,
+  is3DEnabled: 1,
   has3DView: 1,
   threeDUrl: 1,
+  threeDStatus: 1,
+  threeDGeneratedAt: 1,
+  threeDSourceMedia: 1,
   status: 1,
   publicationStatus: 1,
   averageRating: 1,
@@ -188,8 +198,12 @@ const mapPropertyListItem = (property, favoriteIds = new Set()) => ({
   location: property.location,
   coverImage: property.coverImage,
   media: property.media || [],
-  has3DView: property.has3DView,
+  is3DEnabled: property.is3DEnabled ?? property.has3DView,
+  has3DView: property.is3DEnabled ?? property.has3DView,
   threeDUrl: property.threeDUrl,
+  threeDStatus: property.threeDStatus || null,
+  threeDGeneratedAt: property.threeDGeneratedAt || null,
+  threeDSourceMedia: property.threeDSourceMedia || [],
   status: property.status,
   publicationStatus: property.publicationStatus,
   averageRating: property.averageRating,
@@ -403,7 +417,9 @@ const ensurePropertyExists = async (propertyId) => {
 
 const ensurePropertyManagementAccess = async (property, actor, requiredAction = null) => {
   if (actor.role === "proprietaire") {
-    if (String(property.ownerUserId || "") !== String(actor.id)) {
+    const ownerUserId = property.ownerUserId?._id || property.ownerUserId || "";
+
+    if (String(ownerUserId) !== String(actor.id)) {
       throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
     }
 
@@ -484,8 +500,17 @@ const buildManagedPropertyPayload = async ({ actor, payload, existingProperty = 
   const nextLng = payload.location?.lng ?? existingProperty?.location?.coordinates?.[0];
   const nextCoverImage = payload.coverImage ?? existingProperty?.coverImage ?? null;
   const nextMedia = payload.media ?? existingProperty?.media ?? [];
-  const nextHas3DView = payload.has3DView ?? existingProperty?.has3DView ?? false;
-  const nextThreeDUrl = payload.threeDUrl ?? existingProperty?.threeDUrl ?? null;
+  const nextThreeDState = resolvePropertyThreeDState({ payload, existingProperty });
+  const normalizedThreeDState =
+    duplicate && nextThreeDState.is3DEnabled
+      ? {
+          ...nextThreeDState,
+          threeDUrl: null,
+          threeDStatus: PROPERTY_THREE_D_STATUSES.PENDING,
+          threeDGeneratedAt: null,
+          threeDSourceMedia: []
+        }
+      : nextThreeDState;
   const nextStatus = duplicate ? "draft" : payload.status ?? existingProperty?.status ?? "draft";
   const nextPublicationStatus = duplicate ? "pending" : payload.publicationStatus ?? existingProperty?.publicationStatus ?? "pending";
   let ownerType = actor.role === "independent_agent" ? "independent_agent" : "agency";
@@ -552,8 +577,12 @@ const buildManagedPropertyPayload = async ({ actor, payload, existingProperty = 
       thumbnailUrl: item.thumbnailUrl || null,
       order: item.order ?? index
     })),
-    has3DView: nextHas3DView,
-    threeDUrl: nextHas3DView ? nextThreeDUrl : null,
+    is3DEnabled: normalizedThreeDState.is3DEnabled,
+    has3DView: normalizedThreeDState.has3DView,
+    threeDUrl: normalizedThreeDState.threeDUrl,
+    threeDStatus: normalizedThreeDState.threeDStatus,
+    threeDGeneratedAt: normalizedThreeDState.threeDGeneratedAt,
+    threeDSourceMedia: normalizedThreeDState.threeDSourceMedia,
     status: nextStatus,
     publicationStatus: nextPublicationStatus,
     ownerType,
@@ -784,6 +813,38 @@ export const getPublicPropertyDetail = async ({ identifier, user = null }) => {
   }, favoriteIds);
 };
 
+export const getManagedPropertyDetail = async ({ identifier, actor }) => {
+  const normalizedIdentifier = String(identifier || "").trim();
+  const identityClauses = [{ slug: normalizedIdentifier }];
+
+  if (mongoose.isValidObjectId(normalizedIdentifier)) {
+    identityClauses.push({ _id: normalizedIdentifier });
+  }
+
+  const property = await Property.findOne({ $or: identityClauses })
+    .populate("agentId", "firstName lastName avatar")
+    .populate("agencyId", "name logo")
+    .populate("ownerUserId", "firstName lastName email phone avatar")
+    .lean();
+
+  if (!property) {
+    throw new AppError("Property not found", StatusCodes.NOT_FOUND);
+  }
+
+  await ensurePropertyManagementAccess(property, actor);
+
+  const favoriteIds = await loadFavoriteIdsForUser(actor?.id, [property._id]);
+  const isUnderMaintenance = await OwnerMaintenanceTicket.exists({
+    managedPropertyId: property._id,
+    status: "in_progress"
+  });
+
+  return mapPropertyListItem({
+    ...property,
+    isUnderMaintenance: Boolean(isUnderMaintenance)
+  }, favoriteIds);
+};
+
 export const createManagedProperty = async ({ actor, payload }) => {
   if (!["agency", "agency_agent", "independent_agent", "proprietaire"].includes(actor.role)) throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
   const data = await buildManagedPropertyPayload({ actor, payload });
@@ -818,6 +879,51 @@ export const updateManagedProperty = async ({ propertyId, actor, payload }) => {
   if (previousStatus !== property.status || previousPublicationStatus !== property.publicationStatus) {
     await createPropertyWorkflowNotifications({ property, actor, previousStatus, previousPublicationStatus, eventType: "property_updated" });
   }
+
+  return mapPropertyListItem(property.toObject());
+};
+
+export const generateManagedPropertyThreeDView = async ({ propertyId, actor, force = false }) => {
+  const property = await ensurePropertyExists(propertyId);
+  await ensurePropertyManagementAccess(property, actor, "edit");
+
+  if (!(property.is3DEnabled ?? property.has3DView)) {
+    throw new AppError("La visite 3D doit d'abord etre activee sur ce bien.", StatusCodes.BAD_REQUEST);
+  }
+
+  if (!force && property.threeDStatus === PROPERTY_THREE_D_STATUSES.GENERATED && property.threeDUrl) {
+    return mapPropertyListItem(property.toObject());
+  }
+
+  property.is3DEnabled = true;
+  property.has3DView = true;
+  property.threeDStatus = PROPERTY_THREE_D_STATUSES.PROCESSING;
+  await property.save();
+
+  const selectedSources = buildPropertyThreeDSourceMedia(property);
+
+  if (!selectedSources.length) {
+    property.threeDStatus = PROPERTY_THREE_D_STATUSES.ERROR;
+    property.threeDUrl = null;
+    property.threeDGeneratedAt = null;
+    property.threeDSourceMedia = [];
+    await property.save();
+    throw new AppError("Impossible de generer la visite 3D sans image ou couverture exploitable.", StatusCodes.BAD_REQUEST);
+  }
+
+  property.threeDSourceMedia = selectedSources;
+  property.threeDUrl = buildPropertyThreeDUrl(property);
+  property.threeDGeneratedAt = new Date();
+  property.threeDStatus = PROPERTY_THREE_D_STATUSES.GENERATED;
+  await property.save();
+
+  await createPropertyActivityNotification({
+    property,
+    actor,
+    type: "property.3d.generated",
+    title: `Visite 3D generee pour ${property.title}`,
+    body: `La visite 3D du bien ${property.title} a ete preparee automatiquement a partir des medias disponibles.`
+  });
 
   return mapPropertyListItem(property.toObject());
 };

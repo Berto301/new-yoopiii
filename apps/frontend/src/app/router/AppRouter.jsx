@@ -13,6 +13,7 @@ import { RegisterAgencyPage } from "../../pages/public/RegisterAgencyPage.jsx";
 import { RegisterIndependentAgentPage } from "../../pages/public/RegisterIndependentAgentPage.jsx";
 import { PropertySearchPage } from "../../pages/public/PropertySearchPage.jsx";
 import { PropertyDetailPage } from "../../pages/public/PropertyDetailPage.jsx";
+import { PropertyThreeDViewerPage } from "../../pages/public/PropertyThreeDViewerPage.jsx";
 import { FavoritesPage } from "../../pages/private/FavoritesPage.jsx";
 import { AgenciesAgentsPage } from "../../pages/private/AgenciesAgentsPage.jsx";
 import { BookingsPage } from "../../pages/private/BookingsPage.jsx";
@@ -44,6 +45,7 @@ export const AppRouter = () => (
       <Route path="/" element={<LandingPage />} />
       <Route path="/properties" element={<PropertySearchPage />} />
       <Route path="/properties/:id" element={<PropertyDetailPage />} />
+      <Route path="/properties/:id/3d-tour" element={<PropertyThreeDViewerPage />} />
     </Route>
 
     <Route element={<AuthLayout />}>

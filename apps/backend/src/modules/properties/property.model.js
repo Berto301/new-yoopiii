@@ -15,6 +15,23 @@ const propertyMediaSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const propertyThreeDSourceSchema = new mongoose.Schema(
+  {
+    url: { type: String, required: true },
+    type: {
+      type: String,
+      enum: ["image", "video"],
+      default: "image"
+    },
+    origin: {
+      type: String,
+      enum: ["uploaded_media", "media", "cover"],
+      default: "media"
+    }
+  },
+  { _id: false }
+);
+
 const propertySchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
@@ -41,8 +58,16 @@ const propertySchema = new mongoose.Schema(
     location: { type: pointSchema, required: true },
     coverImage: { type: String, default: null },
     media: { type: [propertyMediaSchema], default: [] },
+    is3DEnabled: { type: Boolean, default: false },
     has3DView: { type: Boolean, default: false },
     threeDUrl: { type: String, default: null },
+    threeDStatus: {
+      type: String,
+      enum: ["pending", "processing", "generated", "error"],
+      default: null
+    },
+    threeDGeneratedAt: { type: Date, default: null },
+    threeDSourceMedia: { type: [propertyThreeDSourceSchema], default: [] },
     status: {
       type: String,
       enum: ["draft", "published", "reserved", "sold", "rented", "archived"],

@@ -224,3 +224,55 @@ test("GET /api/v1/properties/public/:identifier returns the real published prope
   assert.equal(response.body.data.mapMarker.lat, -19.872006);
   assert.equal(response.body.data.mapMarker.lng, 47.03961);
 });
+
+test("GET /api/v1/properties/management/view/:identifier returns a managed draft property for its owner", async () => {
+  const owner = await createUser("proprietaire");
+
+  const property = await Property.create({
+    title: "Villa 3D privee",
+    slug: `villa-3d-privee-${Date.now()}`,
+    description: "Bien non publie mais visible dans l'espace de gestion.",
+    type: "house",
+    purpose: "sale",
+    price: 175000000,
+    currency: "AR",
+    area: 240,
+    rooms: 6,
+    bedrooms: 4,
+    bathrooms: 3,
+    features: ["Piscine"],
+    address: "Anosy Avaratra",
+    location: { type: "Point", coordinates: [47.531, -18.879] },
+    coverImage: "/uploads/properties/cover-3d-private.jpg",
+    media: [
+      {
+        type: "image",
+        url: "/uploads/properties/private-3d-1.jpg",
+        thumbnailUrl: "/uploads/properties/private-3d-1.jpg",
+        order: 0
+      }
+    ],
+    is3DEnabled: true,
+    has3DView: true,
+    threeDUrl: `http://localhost:5173/properties/${`villa-3d-privee-${Date.now()}`}/3d-tour`,
+    threeDStatus: "generated",
+    threeDGeneratedAt: new Date(),
+    ownerType: "proprietaire",
+    ownerUserId: owner._id,
+    agentId: owner._id,
+    status: "draft",
+    publicationStatus: "pending"
+  });
+
+  const app = createApp();
+  const response = await request(app)
+    .get(`/api/v1/properties/management/view/${property.slug}`)
+    .set("Authorization", `Bearer ${signAccessToken(owner)}`);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.slug, property.slug);
+  assert.equal(response.body.data.status, "draft");
+  assert.equal(response.body.data.publicationStatus, "pending");
+  assert.equal(response.body.data.is3DEnabled, true);
+});
