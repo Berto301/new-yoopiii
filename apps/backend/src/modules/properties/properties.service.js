@@ -30,6 +30,8 @@ const slugify = (value) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
 
+const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const ensureUniqueSlug = async (baseValue, excludedId = null) => {
   const baseSlug = slugify(baseValue) || `property-${Date.now()}`;
   let candidate = baseSlug;
@@ -687,10 +689,36 @@ export const getPropertyPublications = async ({ user, filters }) => {
   const limit = filters.limit || 20;
   const skip = (page - 1) * limit;
   const query = {
+    ...buildPropertySearchMatch({
+      ...filters,
+      status: filters.status || undefined
+    }),
     publicationStatus: "approved",
-    status: { $in: ["published", "reserved"] },
+    ...(filters.status ? { status: filters.status } : { status: { $in: ["published", "reserved"] } }),
     ...(filters.agentId ? { agentId: filters.agentId } : {})
   };
+
+  const textClauses = [];
+
+  if (filters.search) {
+    const searchRegex = new RegExp(escapeRegex(filters.search), "i");
+    textClauses.push({
+      $or: [
+        { title: searchRegex },
+        { description: searchRegex },
+        { address: searchRegex }
+      ]
+    });
+  }
+
+  if (filters.location) {
+    const locationRegex = new RegExp(escapeRegex(filters.location), "i");
+    textClauses.push({ address: locationRegex });
+  }
+
+  if (textClauses.length) {
+    query.$and = [...(query.$and || []), ...textClauses];
+  }
 
   const [items, total] = await Promise.all([
     Property.find(query)
@@ -752,7 +780,20 @@ export const getPropertyPublications = async ({ user, filters }) => {
       isReservedByCurrentUser: String(item.reservedByUserId || "") === String(user?.id || "")
     })),
     pagination: buildPagination({ page, limit, total, itemsLength: items.length }),
-    appliedFilters: { agentId: filters.agentId || null }
+    appliedFilters: {
+      agentId: filters.agentId || null,
+      search: filters.search || null,
+      location: filters.location || null,
+      type: filters.type || null,
+      purpose: filters.purpose || null,
+      status: filters.status || null,
+      minPrice: filters.minPrice ?? null,
+      maxPrice: filters.maxPrice ?? null,
+      bedrooms: filters.bedrooms ?? null,
+      bathrooms: filters.bathrooms ?? null,
+      minArea: filters.minArea ?? null,
+      maxArea: filters.maxArea ?? null
+    }
   };
 };
 

@@ -1,6 +1,10 @@
 {
   "publicNav": {
     "home": "Accueil",
+    "about": "A propos",
+    "properties": "Biens",
+    "terrain": "Terrains",
+    "agents": "Agents",
     "contact": "Contact",
     "login": "Connexion"
   },
@@ -45,7 +49,11 @@
   "footer": {
     "eyebrow": "Contact",
     "title": "Parlons de votre projet immobilier.",
-    "description": "Une question, une demande de demo ou un besoin d'accompagnement? Ecrivez-nous depuis cette section et le message sera transmis a l'equipe Yopii.",
+    "description": "Plateforme immobiliere pour trouver, publier et gerer biens, terrains et prises de contact dans un univers plus premium.",
+    "contactTitle": "Get In Touch",
+    "linksTitle": "Quick Links",
+    "newsletterTitle": "Newsletter",
+    "newsletterDescription": "Send your recommendation",
     "home": "Accueil",
     "contact": "Contact",
     "fullName": "Nom complet",

@@ -3,15 +3,20 @@ export default {
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Montserrat", "sans-serif"],
+        serif: ["Montserrat", "sans-serif"]
+      },
       colors: {
         brand: {
-          50: "#f2f7f2",
-          100: "#d8e8d8",
-          500: "#2f855a",
-          700: "#22543d",
-          900: "#122c20"
+          50: "#f8efea",
+          100: "#edd7cc",
+          300: "#c98d70",
+          500: "#9D5D43",
+          700: "#7d4832",
+          900: "#2b1f1d"
         },
-        accent: "#d69e2e"
+        accent: "#c98d70"
       }
     }
   },

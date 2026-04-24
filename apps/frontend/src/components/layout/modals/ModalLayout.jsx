@@ -26,7 +26,7 @@ export const ModalLayout = ({
         leaveFrom="opacity-100"
         leaveTo="opacity-0"
       >
-        <div className="fixed inset-0 bg-stone-950/80 backdrop-blur-sm" />
+        <div data-ui="modal-overlay" className="fixed inset-0 bg-stone-950/80 backdrop-blur-sm" />
       </Transition.Child>
 
       <div className="fixed inset-0 overflow-y-auto">
@@ -40,7 +40,7 @@ export const ModalLayout = ({
             leaveFrom="opacity-100 translate-y-0 scale-100"
             leaveTo="opacity-0 translate-y-4 scale-95"
           >
-            <Dialog.Panel className={`w-full max-w-3xl rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,39,0.96),rgba(10,15,13,0.98))] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)] ${panelClassName}`.trim()}>
+            <Dialog.Panel data-ui="modal-panel" className={`w-full max-w-3xl rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,39,0.96),rgba(10,15,13,0.98))] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)] ${panelClassName}`.trim()}>
               <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
                 <Dialog.Title className="text-2xl font-semibold text-white">{title}</Dialog.Title>
               </div>

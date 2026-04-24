@@ -1,21 +1,59 @@
 {
   "hero": {
     "badge": "Real estate intelligence",
-    "title": "A living real estate showcase connected to Yopii's real data.",
-    "description": "The landing page presents the Yopii ecosystem in read-only mode with a more editorial, premium, and lighter approach.",
+    "title": "Manage your properties, rents, and teams from one real estate platform.",
+    "description": "Yopii brings together property publishing, rental operations, contracts, maintenance, and coordination between owners, agencies, agents, and tenants.",
+    "mockTitle": "Find A Perfect Home or Terrain To Live With Your Family",
+    "mockDescription": "The shorted distance between paradise and the place you call home.",
     "openSpace": "Open my space",
-    "login": "Log in",
-    "contact": "Contact us",
+    "login": "Discover Yopii",
+    "contact": "Talk to the team",
     "metrics": {
       "properties": "Properties",
       "agencies": "Agencies",
       "agents": "Agents",
       "tenants": "Tenants"
     },
+    "proofs": {
+      "properties": "Real-time property publishing and showcase",
+      "operations": "Rent, contract, and tenant follow-up",
+      "team": "Agency, agent, and maintenance oversight"
+    },
     "featuredAgency": "Featured agency",
     "status": "Status",
     "properties": "Properties",
     "agents": "Agents"
+  },
+  "benefits": {
+    "eyebrow": "Why Yopii",
+    "title": "A platform built to sell, rent, manage, and collaborate.",
+    "description": "The landing page now follows a conversion-first structure by showing what Yopii simplifies in real estate operations first.",
+    "cards": {
+      "publication": {
+        "eyebrow": "Visibility",
+        "title": "Publish properties with more clarity.",
+        "description": "Centralize listings, property details, visuals, and geographic reading in one showcase.",
+        "metricLabel": "Tracked properties"
+      },
+      "operations": {
+        "eyebrow": "Rental operations",
+        "title": "Keep rents, contracts, and tenants under control.",
+        "description": "Owners can monitor income, occupancy, late payments, contracts, and occupant information without switching tools.",
+        "metricLabel": "Active tenants"
+      },
+      "team": {
+        "eyebrow": "Coordination",
+        "title": "Let agencies and agents work from the same source.",
+        "description": "Yopii connects teams, managed properties, publications, and commercial follow-up in one consistent interface.",
+        "metricLabel": "Active professionals"
+      },
+      "maintenance": {
+        "eyebrow": "Daily follow-up",
+        "title": "Anticipate maintenance and sensitive actions.",
+        "description": "Private spaces extend the public showcase with ticket, intervention, and business alert management.",
+        "metricLabel": "Available properties"
+      }
+    }
   },
   "published": {
     "eyebrow": "Published properties",
@@ -33,6 +71,24 @@
     "mapLoading": "Loading Google map...",
     "agentMissing": "Agent not provided",
     "empty": "No geolocated property is available right now."
+  },
+  "socialProof": {
+    "eyebrow": "Reassurance",
+    "title": "Real data that builds trust before entering the product.",
+    "description": "Instead of abstract promises, Yopii shows the network already active on the platform: agencies, agents, tenants, and tracked volume.",
+    "columns": {
+      "agents": "Agents",
+      "agencies": "Agencies",
+      "tenants": "Tenants"
+    }
+  },
+  "finalCta": {
+    "eyebrow": "Take action",
+    "title": "Make Yopii the center of your real estate operations.",
+    "description": "Whether you manage an owner portfolio, an agency, or an agent activity, Yopii gathers the essential flows to publish, follow up, and collaborate without fragmentation.",
+    "openSpace": "Open my space",
+    "primary": "Get started",
+    "secondary": "Request a demo"
   },
   "ownerCollection": {
     "eyebrow": "Owner collection",

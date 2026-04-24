@@ -167,6 +167,17 @@ export const propertyCollectionSchema = z.object({
   params: z.object({}).default({}),
   query: z.object({
     agentId: objectIdSchema.optional(),
+    search: z.string().trim().min(1).max(120).optional(),
+    location: z.string().trim().min(1).max(120).optional(),
+    type: propertyTypeSchema.optional(),
+    purpose: propertyPurposeSchema.optional(),
+    status: propertyStatusSchema.optional(),
+    minPrice: numberFromQuery("minPrice").min(0).optional(),
+    maxPrice: numberFromQuery("maxPrice").min(0).optional(),
+    bedrooms: numberFromQuery("bedrooms").min(0).optional(),
+    bathrooms: numberFromQuery("bathrooms").min(0).optional(),
+    minArea: numberFromQuery("minArea").min(0).optional(),
+    maxArea: numberFromQuery("maxArea").min(0).optional(),
     limit: numberFromQuery("limit").min(1).max(100).default(20),
     page: numberFromQuery("page").min(1).default(1)
   })

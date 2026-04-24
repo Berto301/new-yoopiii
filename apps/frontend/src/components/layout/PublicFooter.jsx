@@ -1,100 +1,82 @@
-import { Controller, useForm } from "react-hook-form";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
-import { Button } from "../ui/Button.jsx";
-import { Input } from "../ui/Input.jsx";
-import { Textarea } from "../ui/Textarea.jsx";
 import { useNotification } from "../../hooks/useNotification.js";
-import { sendContactMessage } from "../../features/landing/services/contact.service.js";
 
 export const PublicFooter = () => {
-  const { t } = useUserPreferences();
+  const { preferences, t } = useUserPreferences();
+  const { showSuccess } = useNotification();
   const currentYear = new Date().getFullYear();
-  const { showError, showSuccess } = useNotification();
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting }
-  } = useForm({
-    defaultValues: {
-      fullName: "",
-      email: "",
-      subject: "",
-      message: ""
-    }
-  });
-
-  const onSubmit = handleSubmit(async (values) => {
-    try {
-      await sendContactMessage(values);
-      showSuccess("Votre message a bien ete envoye.");
-      reset();
-    } catch (error) {
-      showError(error?.response?.data?.message || error?.message || "Impossible d'envoyer le message.");
-    }
-  });
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const logoSrc = preferences.theme === "dark" ? "/assets/favicon-dark.png" : "/assets/favicon-light.png";
+  const isLightTheme = preferences.theme === "light";
+  const footerSurface = isLightTheme ? "#f1ece8" : "#191617";
+  const footerText = isLightTheme ? "#191617" : "#f7f9f8";
+  const footerMuted = isLightTheme ? "#5c504d" : "#d7cdca";
+  const footerBorder = isLightTheme ? "rgba(157,93,67,0.14)" : "rgba(247,249,248,0.1)";
+  const footerLinkHover = isLightTheme ? "#9d5d43" : "#f7f9f8";
 
   return (
-    <footer id="contact" className="border-t border-white/10 bg-[linear-gradient(180deg,rgba(10,10,10,0.86),rgba(10,10,10,0.98))]">
-      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#c9a66b]">{t("layout", "footer.eyebrow", "Contact")}</p>
-            <h2 className="font-serif text-4xl text-white">{t("layout", "footer.title", "Parlons de votre projet immobilier.")}</h2>
-            <p className="max-w-xl text-sm leading-7 text-stone-300">
-              {t("layout", "footer.description", "Une question, une demande de demo ou un besoin d'accompagnement? Ecrivez-nous depuis cette section et le message sera transmis a l'equipe Yopii.")}
-            </p>
+    <footer id="contact" className="mt-16" style={{ backgroundColor: footerSurface, color: footerText }}>
+      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 md:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <img src={logoSrc} alt="Yopii" className="h-7 w-7 object-contain" />
+            <span className="text-3xl font-bold text-brand-300">Yopii</span>
           </div>
+          <p className="max-w-xs text-sm leading-7" style={{ color: footerMuted }}>
+            {t("layout", "footer.description", "Plateforme immobiliere pour trouver, publier et gerer biens, terrains et prises de contact dans un univers plus premium.")}
+          </p>
+        </div>
 
-          <div className="flex flex-wrap gap-4 text-sm text-stone-400">
-            <Link to="/" className="transition hover:text-white">{t("layout", "footer.home", "Accueil")}</Link>
-            <a href="#contact" className="transition hover:text-white">{t("layout", "footer.contact", "Contact")}</a>
+        <div className="space-y-4">
+          <h3 className="text-2xl font-bold">{t("layout", "footer.contactTitle", "Get In Touch")}</h3>
+          <div className="space-y-2 text-sm" style={{ color: footerMuted }}>
+            <p>ANTSIRABE 110, Bira</p>
+            <p>+261 20 22 000 11</p>
+            <p>Yopii@gmail.com</p>
           </div>
         </div>
 
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 lg:p-8">
-          <form className="space-y-5" onSubmit={onSubmit}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Controller
-                name="fullName"
-                control={control}
-                rules={{ required: "Le nom est requis." }}
-                render={({ field }) => <Input label={t("layout", "footer.fullName", "Nom complet")} error={errors.fullName?.message} placeholder={t("layout", "footer.fullNamePlaceholder", "Votre nom")} {...field} />}
-              />
-              <Controller
-                name="email"
-                control={control}
-                rules={{ required: "L'email est requis." }}
-                render={({ field }) => <Input label={t("layout", "footer.email", "Email")} type="email" error={errors.email?.message} placeholder={t("layout", "footer.emailPlaceholder", "contact@yopii.app")} {...field} />}
-              />
-            </div>
-            <Controller
-              name="subject"
-              control={control}
-              rules={{ required: "Le sujet est requis." }}
-              render={({ field }) => <Input label={t("layout", "footer.subject", "Sujet")} error={errors.subject?.message} placeholder={t("layout", "footer.subjectPlaceholder", "Objet de votre message")} {...field} />}
+        <div className="space-y-4">
+          <h3 className="text-2xl font-bold">{t("layout", "footer.linksTitle", "Quick Links")}</h3>
+          <div className="grid gap-2 text-sm" style={{ color: footerMuted }}>
+            <Link to="/" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.home", "Home")}</Link>
+            <a href="/#about" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.about", "About")}</a>
+            <a href="/#properties" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.properties", "Property")}</a>
+            <a href="/#types" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.terrain", "Terrain")}</a>
+            <a href="/#agents" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.agents", "Agents")}</a>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-2xl font-bold">{t("layout", "footer.newsletterTitle", "Newsletter")}</h3>
+          <p className="text-sm" style={{ color: footerMuted }}>{t("layout", "footer.newsletterDescription", "Send your recommendation")}</p>
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setNewsletterEmail("");
+              showSuccess("Merci, votre email a bien ete enregistre.");
+            }}
+          >
+            <input
+              type="email"
+              value={newsletterEmail}
+              onChange={(event) => setNewsletterEmail(event.target.value)}
+              placeholder="Your email"
+              className="h-11 flex-1 rounded-md border border-white/10 bg-white px-4 text-sm text-stone-950 outline-none"
             />
-            <Controller
-              name="message"
-              control={control}
-              rules={{ required: "Le message est requis." }}
-              render={({ field }) => <Textarea label={t("layout", "footer.message", "Message")} rows={6} error={errors.message?.message} placeholder={t("layout", "footer.messagePlaceholder", "Expliquez votre besoin...")} {...field} />}
-            />
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="text-sm text-stone-400">{t("layout", "footer.helper", "Le message est envoye directement vers l'email de contact configure sur le backend.")}</p>
-              <Button type="submit" disabled={isSubmitting} className="bg-[#c9a66b] text-stone-950 hover:bg-[#d9b983]">
-                {isSubmitting ? t("layout", "footer.submitting", "Envoi...") : t("layout", "footer.submit", "Envoyer")}
-              </Button>
-            </div>
+            <button type="submit" className="rounded-md bg-brand-500 px-4 text-sm font-medium text-white transition hover:bg-brand-700">
+              Suscribe
+            </button>
           </form>
         </div>
       </div>
 
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-5 text-sm text-stone-500 md:flex-row md:items-center md:justify-between">
-          <p>{t("layout", "footer.copyright", "Copyright {year} Yopii. Tous droits reserves.").replace("{year}", String(currentYear))}</p>
-          <p>{t("layout", "footer.tagline", "Experience immobiliere synchronisee, vitrine publique et gestion temps reel.")}</p>
+      <div className="border-t" style={{ borderColor: footerBorder }}>
+        <div className="mx-auto max-w-7xl px-6 py-5 text-center text-xs" style={{ color: footerMuted }}>
+          {t("layout", "footer.copyright", "Copyright {year} Yopii. Tous droits reserves.").replace("{year}", String(currentYear))}
         </div>
       </div>
     </footer>

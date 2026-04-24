@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
-import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, MarkerF } from "@react-google-maps/api";
 import { Input } from "../../../components/ui/Input.jsx";
 import { ModalLayout } from "../../../components/layout/modals/ModalLayout.jsx";
 import { BaseListBox } from "../../../components/form/BaseListBox.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
+import { useSharedGoogleMapsLoader } from "../../../lib/utils/google-maps.js";
 import { getPropertyThreeDStatusMeta } from "../../../features/properties/property-3d.js";
 
 const propertyTypeOptions = [
@@ -41,7 +42,6 @@ const featureOptions = [
   { label: "Vue mer", value: "Vue mer" }
 ];
 
-const GOOGLE_MAPS_LIBRARIES = [];
 const DEFAULT_LOCATION_ADDRESS = "Antsirabe Madagascar";
 const DEFAULT_MAP_CENTER = { lat: -19.872006, lng: 47.03961 };
 const DEFAULT_MAP_ZOOM = 14;
@@ -169,12 +169,7 @@ export const ModalManageProperty = ({
   isGeneratingThreeD = false
 }) => {
   const defaultValues = useMemo(() => mapPropertyToFormValues(property), [property]);
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY || "";
-  const { isLoaded: isMapsLoaded, loadError } = useJsApiLoader({
-    id: "property-google-maps-script",
-    googleMapsApiKey,
-    libraries: GOOGLE_MAPS_LIBRARIES
-  });
+  const { googleMapsApiKey, isLoaded: isMapsLoaded, loadError } = useSharedGoogleMapsLoader();
 
   const {
     control,

@@ -29,11 +29,12 @@ export const BaseListBox = ({
       : placeholder;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-ui="listbox-root">
       {label ? <span className="text-sm font-medium text-stone-200">{label}</span> : null}
       <Listbox value={value} onChange={onChange} multiple={multiple} disabled={disabled}>
         <div className="relative">
           <Listbox.Button
+            data-ui="listbox-button"
             className={cn(
               "w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-left text-sm text-white transition focus:border-brand-500 focus:outline-none",
               error && "border-red-400/60",
@@ -48,7 +49,7 @@ export const BaseListBox = ({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Listbox.Options className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-white/10 bg-stone-950/95 p-2 shadow-xl focus:outline-none">
+            <Listbox.Options data-ui="listbox-options" className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-white/10 bg-stone-950/95 p-2 shadow-xl focus:outline-none">
               {options.map((option) => (
                 <Listbox.Option
                   key={typeof option === "string" ? option : option[optionValueKey]}

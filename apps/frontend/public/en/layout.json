@@ -1,6 +1,10 @@
 {
   "publicNav": {
     "home": "Home",
+    "about": "About",
+    "properties": "Property",
+    "terrain": "Terrain",
+    "agents": "Agents",
     "contact": "Contact",
     "login": "Login"
   },
@@ -45,7 +49,11 @@
   "footer": {
     "eyebrow": "Contact",
     "title": "Let's talk about your real estate project.",
-    "description": "A question, a demo request, or support need? Write to us here and your message will be sent to the Yopii team.",
+    "description": "A premium real estate platform to discover, publish, and manage properties, land, and client contact flows.",
+    "contactTitle": "Get In Touch",
+    "linksTitle": "Quick Links",
+    "newsletterTitle": "Newsletter",
+    "newsletterDescription": "Send your recommendation",
     "home": "Home",
     "contact": "Contact",
     "fullName": "Full name",

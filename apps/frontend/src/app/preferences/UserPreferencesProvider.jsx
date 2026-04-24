@@ -39,6 +39,19 @@ export const UserPreferencesProvider = ({ children }) => {
     document.body.dataset.theme = preferences.theme;
     document.documentElement.dataset.theme = preferences.theme;
     document.documentElement.style.colorScheme = preferences.theme;
+
+    const faviconHref = preferences.theme === "dark" ? "/assets/favicon-dark.png" : "/assets/favicon-light.png";
+    let favicon = document.querySelector("link[data-app-favicon='true']");
+
+    if (!favicon) {
+      favicon = document.createElement("link");
+      favicon.setAttribute("rel", "icon");
+      favicon.setAttribute("type", "image/png");
+      favicon.setAttribute("data-app-favicon", "true");
+      document.head.appendChild(favicon);
+    }
+
+    favicon.setAttribute("href", faviconHref);
   }, [preferences.theme]);
 
   useEffect(() => {

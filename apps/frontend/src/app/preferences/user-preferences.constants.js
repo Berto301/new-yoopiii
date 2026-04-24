@@ -2,7 +2,7 @@ export const USER_PREFERENCES_STORAGE_KEY = "yopii-user-preferences";
 
 export const USER_PREFERENCES_DEFAULTS = {
   language: "fr",
-  theme: "dark",
+  theme: "light",
   currency: "USD",
   contractDefaultCommission: 0
 };

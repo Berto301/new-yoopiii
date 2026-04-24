@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, MarkerF } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
 import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
 import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
@@ -8,13 +8,13 @@ import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { BaseListBox } from "../../components/form/BaseListBox.jsx";
+import { useSharedGoogleMapsLoader } from "../../lib/utils/google-maps.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 import { createConversation } from "../../features/chat/services/chat.service.js";
 import { ModalViewDetail } from "../../features/properties/components/ModalViewDetail.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
 import { SettingsTabButton } from "./settings/SettingsTabButton.jsx";
 
-const GOOGLE_MAPS_LIBRARIES = [];
 const DEFAULT_SEARCH_CENTER = { lat: -19.872006, lng: 47.03961 };
 const DEFAULT_MAP_ZOOM = 12;
 const INITIAL_VISIBLE_ITEMS = 12;
@@ -332,12 +332,7 @@ export const PublicationsPage = () => {
   const { t } = useUserPreferences();
   const navigate = useNavigate();
   const { user, propertyPublicationsQuery, favoriteMutation, reservationMutation } = usePropertyWorkspace();
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY || "";
-  const { isLoaded: isMapsLoaded, loadError } = useJsApiLoader({
-    id: "property-google-maps-script",
-    googleMapsApiKey,
-    libraries: GOOGLE_MAPS_LIBRARIES
-  });
+  const { googleMapsApiKey, isLoaded: isMapsLoaded, loadError } = useSharedGoogleMapsLoader();
   const [activeTab, setActiveTab] = useState("list");
   const [selectedMarkerId, setSelectedMarkerId] = useState("");
   const [detailModalIdentifier, setDetailModalIdentifier] = useState("");

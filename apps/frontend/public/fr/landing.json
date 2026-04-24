@@ -1,21 +1,59 @@
 {
   "hero": {
     "badge": "Real estate intelligence",
-    "title": "Une vitrine immobiliere vivante, branchee sur les vraies donnees de Yopii.",
-    "description": "La landing met en scene l'ecosysteme Yopii en lecture seule avec une approche plus editoriale, plus premium et plus legere.",
+    "title": "Pilotez vos biens, vos loyers et vos equipes depuis une seule plateforme immobiliere.",
+    "description": "Yopii centralise la publication des biens, la gestion locative, les contrats, la maintenance et la coordination entre proprietaires, agences, agents et locataires.",
+    "mockTitle": "Find A Perfect Home or Terrain To Live With Your Family",
+    "mockDescription": "The shorted distance between paradise and the place you call home.",
     "openSpace": "Ouvrir mon espace",
-    "login": "Se connecter",
-    "contact": "Nous contacter",
+    "login": "Decouvrir Yopii",
+    "contact": "Parler a l'equipe",
     "metrics": {
       "properties": "Biens",
       "agencies": "Agences",
       "agents": "Agents",
       "tenants": "Locataires"
     },
+    "proofs": {
+      "properties": "Publication et vitrine des biens en temps reel",
+      "operations": "Suivi des loyers, contrats et locataires",
+      "team": "Pilotage agence, agents et maintenance"
+    },
     "featuredAgency": "Agence mise en avant",
     "status": "Statut",
     "properties": "Biens",
     "agents": "Agents"
+  },
+  "benefits": {
+    "eyebrow": "Pourquoi Yopii",
+    "title": "Une plateforme pensee pour vendre, louer, gerer et collaborer.",
+    "description": "La landing suit maintenant une logique de conversion: elle montre d'abord ce que Yopii simplifie concretement dans le quotidien immobilier.",
+    "cards": {
+      "publication": {
+        "eyebrow": "Visibilite",
+        "title": "Publiez vos biens avec plus de clarte.",
+        "description": "Centralisez les annonces, les details des biens, les visuels et la lecture geographique depuis une meme vitrine.",
+        "metricLabel": "Biens suivis"
+      },
+      "operations": {
+        "eyebrow": "Gestion locative",
+        "title": "Gardez loyers, contrats et locataires sous controle.",
+        "description": "Les proprietaires suivent revenus, occupations, retards, contrats et informations occupants sans changer d'outil.",
+        "metricLabel": "Locataires actifs"
+      },
+      "team": {
+        "eyebrow": "Coordination",
+        "title": "Faites travailler agences et agents sur la meme base.",
+        "description": "Yopii relie les equipes, les biens geres, les publications et le suivi commercial dans une interface coherente.",
+        "metricLabel": "Professionnels actifs"
+      },
+      "maintenance": {
+        "eyebrow": "Suivi quotidien",
+        "title": "Anticipez la maintenance et les actions sensibles.",
+        "description": "Les espaces prives prolongent la vitrine publique avec le pilotage des tickets, interventions et alertes metier.",
+        "metricLabel": "Biens disponibles"
+      }
+    }
   },
   "published": {
     "eyebrow": "Biens publies",
@@ -33,6 +71,24 @@
     "mapLoading": "Chargement de la carte Google...",
     "agentMissing": "Agent non renseigne",
     "empty": "Aucun bien geolocalise n'est disponible pour le moment."
+  },
+  "socialProof": {
+    "eyebrow": "Reassurance",
+    "title": "Des donnees reelles pour rassurer avant l'entree dans l'outil.",
+    "description": "Au lieu de promesses abstraites, Yopii montre le reseau deja actif sur la plateforme: agences, agents, locataires et volumes suivis.",
+    "columns": {
+      "agents": "Agents",
+      "agencies": "Agences",
+      "tenants": "Locataires"
+    }
+  },
+  "finalCta": {
+    "eyebrow": "Passez a l'action",
+    "title": "Mettez Yopii au centre de votre gestion immobiliere.",
+    "description": "Que vous geriez un portefeuille proprietaire, une agence ou une activite d'agent, Yopii rassemble les flux essentiels pour publier, suivre et collaborer sans dispersion.",
+    "openSpace": "Ouvrir mon espace",
+    "primary": "Commencer maintenant",
+    "secondary": "Demander une demonstration"
   },
   "ownerCollection": {
     "eyebrow": "Collection proprietaire",

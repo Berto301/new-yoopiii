@@ -1,26 +1,39 @@
-import { useEffect, useMemo, useState } from "react";
-import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
+import { useMemo, useState } from "react";
+import { GoogleMap, MarkerF } from "@react-google-maps/api";
 import { Link, useNavigate } from "react-router-dom";
-import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
-import { Badge } from "../../components/ui/Badge.jsx";
-import { Button } from "../../components/ui/Button.jsx";
-import { Card } from "../../components/ui/Card.jsx";
 import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
+import { Button } from "../../components/ui/Button.jsx";
+import { resolveAvatarUrl } from "../../components/profile/avatar.utils.js";
+import { Card } from "../../components/ui/Card.jsx";
 import { useLandingOverview } from "../../features/landing/hooks/useLandingOverview.js";
-import { ModalViewDetail } from "../../features/properties/components/ModalViewDetail.jsx";
+import { useSharedGoogleMapsLoader } from "../../lib/utils/google-maps.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 
-const GOOGLE_MAPS_LIBRARIES = [];
+const HERO_IMAGE = "/assets/hero-bg.jpg";
 const DEFAULT_MAP_CENTER = { lat: -19.872006, lng: 47.03961 };
-
-const OWNER_STATUS_LABELS = {
-  loue: "Loue",
-  libre: "Disponible",
-  en_travaux: "En travaux",
-  Loue: "Loue",
-  Libre: "Disponible",
-  "En travaux": "En travaux"
-};
+const PROPERTY_FILTER_OPTIONS = [
+  { value: "", label: "Type" },
+  { value: "apartment", label: "Appartement" },
+  { value: "house", label: "Maison / Villa" },
+  { value: "commercial", label: "Commercial / Shop" },
+  { value: "office", label: "Building / Office" },
+  { value: "warehouse", label: "Garage / Warehouse" },
+  { value: "land", label: "Terrain" }
+];
+const PROPERTY_TYPES = [
+  { id: "appartement", label: "Appartement", category: "property", keywords: ["appartement", "apartment"] },
+  { id: "villa", label: "Villa", category: "property", keywords: ["villa"] },
+  { id: "building", label: "Building", category: "property", keywords: ["building", "immeuble"] },
+  { id: "shop", label: "Shop", category: "property", keywords: ["shop", "boutique", "commerce", "commercial local"] },
+  { id: "garage", label: "Garage", category: "property", keywords: ["garage"] },
+  { id: "terrain-residentiel", label: "Terrain residentiel", category: "terrain", keywords: ["terrain residentiel", "residential land"] },
+  { id: "terrain-commercial", label: "Terrain commercial", category: "terrain", keywords: ["terrain commercial", "commercial land"] },
+  { id: "terrain-agricole", label: "Terrain agricole", category: "terrain", keywords: ["terrain agricole", "farm land", "agricultural land"] },
+  { id: "lotissement", label: "Lotissement", category: "terrain", keywords: ["lotissement", "lot"] },
+  { id: "parcelle-angle", label: "Parcelle angle", category: "terrain", keywords: ["parcelle angle", "corner lot"] },
+  { id: "terrain-investissement", label: "Terrain d'investissement", category: "terrain", keywords: ["terrain d'investissement", "terrain investissement", "investment land"] }
+];
 
 const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
 
@@ -32,453 +45,333 @@ const buildInitials = (name) =>
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
 
-const SectionHeading = ({ eyebrow, title, description }) => (
-  <div className="max-w-3xl space-y-3">
-    <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#c9a66b]">{eyebrow}</p>
-    <h2 className="font-serif text-3xl leading-tight text-white md:text-5xl">{title}</h2>
-    <p className="text-sm leading-7 text-stone-300 md:text-base">{description}</p>
+const normalizeTypeLabel = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const getTypeCounts = (properties = []) => {
+  const counts = Object.fromEntries(PROPERTY_TYPES.map((item) => [item.id, 0]));
+
+  properties.forEach((property) => {
+    const normalizedType = normalizeTypeLabel(property.type);
+    const matchedType = PROPERTY_TYPES.find((item) => item.keywords.some((keyword) => normalizeTypeLabel(keyword) === normalizedType));
+
+    if (matchedType) {
+      counts[matchedType.id] += 1;
+    }
+  });
+
+  return counts;
+};
+
+const HomeIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-7 w-7">
+    <path d="M12 3.8 3.5 10v10.2h6.2v-6h4.6v6h6.2V10L12 3.8Zm6.4 14.8h-2.2v-6H7.8v6H5.6v-7.8l6.4-4.7 6.4 4.7v7.8Z" fill="currentColor" />
+  </svg>
+);
+
+const PinIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+    <path d="M12 2.8a6.1 6.1 0 0 0-6.1 6.1c0 4.2 5.1 10.7 5.4 11l.7.9.7-.9c.3-.3 5.4-6.8 5.4-11A6.1 6.1 0 0 0 12 2.8Zm0 8.6a2.5 2.5 0 1 1 0-5a2.5 2.5 0 0 1 0 5Z" fill="currentColor" />
+  </svg>
+);
+
+const BedIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+    <path d="M5 7.5a2 2 0 1 1 4 0v1h6V7.2a1.9 1.9 0 1 1 3.8 0V14H4V7.5h1Zm-1 8.1h16v2H4v-2Z" fill="currentColor" />
+  </svg>
+);
+
+const BathIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+    <path d="M7 6.5a3.5 3.5 0 0 1 7 0V8h2.2v2H4.5V8H12V6.5a1.5 1.5 0 0 0-3 0V8H7V6.5Zm-2.5 5h14.7c0 3.8-2.3 6.2-5.9 6.2H10.4c-3.6 0-5.9-2.4-5.9-6.2Z" fill="currentColor" />
+  </svg>
+);
+
+const AreaIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+    <path d="M4 4h5v2H6v3H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z" fill="currentColor" />
+  </svg>
+);
+
+const SectionHeading = ({ eyebrow, title, description, align = "left" }) => (
+  <div className={align === "center" ? "mx-auto max-w-3xl text-center" : "max-w-3xl"}>
+    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-500">{eyebrow}</p>
+    <h2 className="mt-3 text-3xl font-bold leading-tight text-stone-950 md:text-5xl">{title}</h2>
+    <p className="mt-4 text-sm leading-7 text-stone-500 md:text-base">{description}</p>
   </div>
 );
 
 const LandingSkeleton = () => (
-  <section className="mx-auto max-w-7xl space-y-14 px-6 py-16">
-    <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
-        <div className="space-y-5 animate-pulse">
-          <div className="h-4 w-44 rounded-full bg-white/10" />
-          <div className="h-14 w-4/5 rounded-[1rem] bg-white/10" />
-          <div className="h-5 w-full rounded-full bg-white/10" />
-          <div className="h-5 w-5/6 rounded-full bg-white/10" />
-        </div>
+  <section className="mx-auto max-w-7xl px-6 py-14">
+    <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+      <div className="space-y-4">
+        <div className="h-5 w-32 animate-pulse rounded-full bg-stone-200" />
+        <div className="h-16 w-5/6 animate-pulse rounded-[1.5rem] bg-stone-200" />
+        <div className="h-5 w-4/5 animate-pulse rounded-full bg-stone-200" />
+        <div className="h-14 w-40 animate-pulse rounded-full bg-stone-200" />
       </div>
-      <div className="h-[420px] animate-pulse rounded-[2rem] border border-white/10 bg-white/10" />
-    </div>
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {Array.from({ length: 8 }).map((_, index) => (
-        <div key={index} className="h-40 animate-pulse rounded-[2rem] border border-white/10 bg-white/[0.04]" />
-      ))}
+      <div className="h-[420px] animate-pulse rounded-[2rem] bg-stone-200" />
     </div>
   </section>
 );
 
-const EditorialHero = ({ summary, currentUser, featuredAgency, t }) => {
-  const highlightMetrics = [
-    { label: t("landing", "hero.metrics.properties", "Biens"), value: summary.propertiesCount || 0 },
-    { label: t("landing", "hero.metrics.agencies", "Agences"), value: summary.agenciesCount || 0 },
-    { label: t("landing", "hero.metrics.agents", "Agents"), value: summary.agentsCount || 0 },
-    { label: t("landing", "hero.metrics.tenants", "Locataires"), value: summary.tenantsCount || 0 }
-  ];
+const HeroSearchBar = ({ navigate }) => {
+  const [keyword, setKeyword] = useState("");
+  const [type, setType] = useState("");
+  const [location, setLocation] = useState("");
+
+  const handleSearch = () => {
+    const searchParams = new URLSearchParams();
+
+    if (keyword.trim()) {
+      searchParams.set("search", keyword.trim());
+    }
+
+    if (type) {
+      searchParams.set("type", type);
+    }
+
+    if (location.trim()) {
+      searchParams.set("location", location.trim());
+    }
+
+    const nextPath = searchParams.toString() ? `/properties?${searchParams.toString()}` : "/properties";
+    navigate(nextPath);
+  };
 
   return (
-    <section className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(201,166,107,0.18),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(45,89,74,0.32),transparent_28%),linear-gradient(145deg,rgba(16,16,16,0.94),rgba(28,22,18,0.98))] px-6 py-8 md:px-8 lg:px-10 lg:py-10">
-      <div className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.03),transparent)]" />
-      <div className="relative grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch">
-        <div className="space-y-8">
-          <div className="space-y-5">
-            <Badge className="border-[#c9a66b]/30 bg-[#c9a66b]/10 text-[#f4dec1]">{t("landing", "hero.badge", "Real estate intelligence")}</Badge>
-            <div className="space-y-4">
-              <h1 className="max-w-4xl font-serif text-4xl leading-[1.02] text-white sm:text-5xl lg:text-7xl">
-                {t("landing", "hero.title", "Une vitrine immobiliere vivante, branchee sur les vraies donnees de Yopii.")}
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-stone-300">
-                {t("landing", "hero.description", "La landing met en scene l'ecosysteme Yopii en lecture seule avec une approche plus editoriale, plus premium et plus legere.")}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Button as={Link} to={currentUser?.role === "proprietaire" ? "/dashboard/owner" : "/login"} className="bg-[#c9a66b] text-stone-950 hover:bg-[#d9b983]">
-              {currentUser?.role === "proprietaire" ? t("landing", "hero.openSpace", "Ouvrir mon espace") : t("landing", "hero.login", "Se connecter")}
-            </Button>
-            <Button as={Link} to="/#contact" variant="secondary">
-              {t("landing", "hero.contact", "Nous contacter")}
-            </Button>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {highlightMetrics.map((item) => (
-              <div key={item.label} className="rounded-[1.6rem] border border-white/10 bg-black/20 px-5 py-5 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.22em] text-stone-500">{item.label}</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{item.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid gap-4">
-          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-stone-900 min-h-[360px] lg:min-h-[430px]">
-            {featuredAgency?.logo ? (
-              <img src={resolveAssetUrl(featuredAgency.logo)} alt={featuredAgency.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="h-full w-full bg-[linear-gradient(145deg,rgba(201,166,107,0.28),rgba(20,20,20,0.96))]" />
-            )}
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.05),rgba(5,5,5,0.72))]" />
-            {featuredAgency ? (
-              <div className="absolute inset-x-0 bottom-0 p-6">
-                <div className="rounded-[1.75rem] border border-white/10 bg-black/35 p-5 backdrop-blur-xl">
-                  <Badge className="border-white/10 bg-white/10 text-white">{t("landing", "hero.featuredAgency", "Agence mise en avant")}</Badge>
-                  <h3 className="mt-4 font-serif text-3xl text-white">{featuredAgency.name}</h3>
-                  <p className="mt-2 text-sm text-stone-300">{t("landing", "hero.status", "Statut")}: {featuredAgency.status}</p>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[1.2rem] border border-white/10 bg-stone-950/45 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("landing", "hero.properties", "Biens")}</p>
-                      <p className="mt-2 text-2xl font-semibold text-[#f4dec1]">{featuredAgency.managedPropertiesCount || 0}</p>
-                    </div>
-                    <div className="rounded-[1.2rem] border border-white/10 bg-stone-950/45 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("landing", "hero.agents", "Agents")}</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">{featuredAgency.activeAgentsCount || 0}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </div>
+    <div className="rounded-[2rem] bg-brand-500 p-4 shadow-[0_18px_40px_rgba(157,93,67,0.24)]">
+      <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+        <input
+          value={keyword}
+          onChange={(event) => setKeyword(event.target.value)}
+          placeholder="Keywords"
+          className="h-12 rounded-xl border border-white/50 bg-white px-4 text-sm text-stone-950 outline-none transition focus:border-stone-950/20"
+        />
+        <select
+          value={type}
+          onChange={(event) => setType(event.target.value)}
+          className="h-12 rounded-xl border border-white/50 bg-white px-4 text-sm text-stone-950 outline-none transition focus:border-stone-950/20"
+        >
+          {PROPERTY_FILTER_OPTIONS.map((item) => (
+            <option key={item.value || "all"} value={item.value}>{item.label}</option>
+          ))}
+        </select>
+        <input
+          value={location}
+          onChange={(event) => setLocation(event.target.value)}
+          placeholder="Location"
+          className="h-12 rounded-xl border border-white/50 bg-white px-4 text-sm text-stone-950 outline-none transition focus:border-stone-950/20"
+        />
+        <Button type="button" className="h-12 rounded-xl bg-stone-950 px-6 text-white hover:bg-stone-800" onClick={handleSearch}>
+          Search
+        </Button>
       </div>
-    </section>
+    </div>
   );
 };
 
-const StoryMetricCard = ({ label, value, description, accentClassName }) => (
-  <div className={`rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 ${accentClassName}`}>
-    <p className="text-xs uppercase tracking-[0.24em] text-stone-500">{label}</p>
-    <p className="mt-4 font-serif text-4xl text-white">{value}</p>
-    <p className="mt-3 text-sm leading-7 text-stone-300">{description}</p>
-  </div>
+const TypeCard = ({ label, countLabel }) => (
+  <Card className="rounded-[1.8rem] border-[rgba(157,93,67,0.12)] bg-white p-8 text-center shadow-[0_16px_35px_rgba(45,30,23,0.08)]">
+    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-brand-300/50 text-brand-500">
+      <HomeIcon />
+    </div>
+    <h3 className="mt-5 text-xl font-semibold text-stone-950">{label}</h3>
+    <p className="mt-2 text-sm text-brand-500">{countLabel}</p>
+  </Card>
 );
 
-const PersonaCard = ({ avatar, name, subtitle, stats, badgeLabel, accent = "default" }) => (
-  <article className={`rounded-[2rem] border border-white/10 p-5 ${accent === "gold" ? "bg-[linear-gradient(145deg,rgba(201,166,107,0.08),rgba(255,255,255,0.02))]" : "bg-white/[0.04]"}`}>
-    <div className="flex items-start gap-4">
-      {avatar ? (
-        <img src={resolveAssetUrl(avatar)} alt={name} className="h-16 w-16 rounded-[1.4rem] object-cover" />
-      ) : (
-        <div className="flex h-16 w-16 items-center justify-center rounded-[1.4rem] border border-white/10 bg-black/25 text-sm font-semibold text-white">
-          {buildInitials(name)}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        {badgeLabel ? <Badge className="border-white/10 bg-white/5 text-stone-200">{badgeLabel}</Badge> : null}
-        <h3 className="mt-3 text-xl font-semibold text-white">{name}</h3>
-        <p className="mt-1 text-sm text-stone-400">{subtitle}</p>
-      </div>
+const PropertyCard = ({ property, onView }) => (
+  <article className="overflow-hidden rounded-[1.75rem] border border-[rgba(157,93,67,0.12)] bg-white shadow-[0_18px_40px_rgba(45,30,23,0.1)] transition hover:-translate-y-1">
+    <div className="relative h-56 overflow-hidden">
+      <img src={property.coverImage ? resolveAssetUrl(property.coverImage) : HERO_IMAGE} alt={property.title} className="h-full w-full object-cover" />
+      <span className="absolute left-4 top-4 rounded-full bg-brand-500 px-3 py-1 text-xs font-medium text-white">{property.purpose || "For Sell"}</span>
     </div>
-    {stats?.length ? (
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        {stats.map((item) => (
-          <div key={item.label} className="rounded-[1.25rem] border border-white/10 bg-stone-950/45 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{item.label}</p>
-            <p className="mt-2 text-lg font-semibold text-white">{item.value}</p>
-          </div>
-        ))}
+    <div className="space-y-4 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="rounded-full bg-[#f4e1d7] px-3 py-1 text-xs font-medium text-brand-500">{property.type || "Property"}</span>
+        <span className="text-sm font-medium text-brand-500">{formatPrice(property.price, property.currency)}</span>
       </div>
-    ) : null}
+      <div>
+        <h3 className="text-xl font-semibold text-stone-950">{property.title}</h3>
+        <p className="mt-2 flex items-center gap-2 text-sm text-stone-500">
+          <PinIcon />
+          <span>{property.address || "Antsirabe, Madagascar"}</span>
+        </p>
+      </div>
+      <div className="grid grid-cols-3 gap-3 border-t border-stone-200 pt-4 text-xs text-stone-500">
+        <span className="flex items-center gap-1.5"><BedIcon /> {property.bedrooms || 3} Beds</span>
+        <span className="flex items-center gap-1.5"><BathIcon /> {property.bathrooms || 3} Baths</span>
+        <span className="flex items-center gap-1.5"><AreaIcon /> {property.area || 1000} m2</span>
+      </div>
+      <Button type="button" className="w-full bg-brand-500 text-white hover:bg-brand-700" onClick={onView}>
+        Voir le detail
+      </Button>
+    </div>
   </article>
 );
 
-const PropertyStatusBadge = ({ value }) => {
-  const className =
-    value === "published"
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
-      : value === "reserved"
-        ? "border-amber-500/30 bg-amber-500/10 text-amber-100"
-        : value === "sold"
-          ? "border-sky-500/30 bg-sky-500/10 text-sky-100"
-          : "border-white/10 bg-white/5 text-stone-200";
+const AgentCard = ({ agent }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+  const avatarSrc = imageFailed ? "" : resolveAvatarUrl(agent?.avatar, "");
 
-  return <Badge className={className}>{value}</Badge>;
+  return (
+    <Card className="overflow-hidden rounded-[1.6rem] border-[rgba(157,93,67,0.12)] bg-white p-0 shadow-[0_12px_30px_rgba(45,30,23,0.08)]">
+      <div className="aspect-[0.95] bg-[#f4e6df]">
+        {avatarSrc ? (
+          <img
+            src={avatarSrc}
+            alt={agent.fullName}
+            className="h-full w-full object-cover"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-5xl font-bold text-brand-500">{buildInitials(agent.fullName)}</div>
+        )}
+      </div>
+      <div className="space-y-2 p-4 text-center">
+        <h3 className="text-lg font-semibold text-stone-950">{agent.fullName}</h3>
+        <p className="text-sm text-stone-500">{agent.agencyName || "Agent Yopii"}</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-brand-500">{agent.managedPropertiesCount || 0} biens geres</p>
+      </div>
+    </Card>
+  );
 };
 
-const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, onOpenPublicDetail, t }) => {
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY || "";
-  const { isLoaded: isMapsLoaded, loadError } = useJsApiLoader({
-    id: "property-google-maps-script",
-    googleMapsApiKey,
-    libraries: GOOGLE_MAPS_LIBRARIES
-  });
-  const propertyItems = useMemo(() => (properties || []).slice(0, 3), [properties]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState(propertyItems[0]?.id || "");
-
-  useEffect(() => {
-    if (!propertyItems.length) {
-      setSelectedPropertyId("");
-      return;
-    }
-
-    if (!propertyItems.find((property) => property.id === selectedPropertyId)) {
-      setSelectedPropertyId(propertyItems[0].id);
-    }
-  }, [propertyItems, selectedPropertyId]);
-
-  const selectedProperty = propertyItems.find((property) => property.id === selectedPropertyId) || propertyItems[0] || null;
-  const mapItems = propertyItems.filter(
-    (property) => Number.isFinite(property?.mapMarker?.lat) && Number.isFinite(property?.mapMarker?.lng)
+const PublishedMapPanel = ({ properties, navigate, t }) => {
+  const { googleMapsApiKey, isLoaded: isMapsLoaded, loadError } = useSharedGoogleMapsLoader();
+  const mapItems = useMemo(
+    () => (properties || []).filter((property) => Number.isFinite(property?.mapMarker?.lat) && Number.isFinite(property?.mapMarker?.lng)),
+    [properties]
   );
+  const [selectedPropertyId, setSelectedPropertyId] = useState(mapItems[0]?.id || "");
+  const selectedProperty = mapItems.find((property) => property.id === selectedPropertyId) || mapItems[0] || null;
   const mapCenter = selectedProperty?.mapMarker || mapItems[0]?.mapMarker || DEFAULT_MAP_CENTER;
 
   return (
-    <section className="space-y-6">
-      <SectionHeading
-        eyebrow={t("landing", "published.eyebrow", "Biens publies")}
-        title={t("landing", "published.title", "Trois biens publies, lus comme une selection editoriale.")}
-        description={t("landing", "published.description", "La landing affiche maintenant une courte liste de biens reellement publies, accompagnee d'une carte interactive pour situer instantanement chaque opportunite.")}
-      />
+    <Card className="rounded-[2rem] border-[rgba(157,93,67,0.12)] bg-white p-0 shadow-[0_20px_45px_rgba(45,30,23,0.1)]">
+      <div className="border-b border-stone-200 px-6 py-5">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-500">{t("landing", "published.mapTitle", "Carte interactive")}</p>
+        <h3 className="mt-2 text-2xl font-bold text-stone-950">{t("landing", "published.mapHeading", "Les biens se lisent aussi par emplacement.")}</h3>
+      </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-4">
-          {propertyItems.map((property) => {
-            const isActive = property.id === selectedProperty?.id;
-
-            return (
-              <Card
-                key={property.id}
-                className={`overflow-hidden border-white/10 p-0 transition ${isActive ? "bg-[linear-gradient(145deg,rgba(201,166,107,0.12),rgba(255,255,255,0.03))]" : "bg-white/[0.04]"}`}
-              >
-                <div className="grid gap-0 md:grid-cols-[220px_1fr]">
-                  <div className="h-52 bg-stone-900 md:h-full">
-                    {property.coverImage ? (
-                      <img src={resolveAssetUrl(property.coverImage)} alt={property.title} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full items-end bg-[radial-gradient(circle_at_top_left,rgba(201,166,107,0.24),transparent_32%),linear-gradient(135deg,rgba(41,37,36,1),rgba(12,10,9,1))] p-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("landing", "published.publication", "Publication")}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-4 p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xl font-semibold text-white">{property.title}</p>
-                        <p className="mt-1 text-sm text-stone-400">{property.address || t("landing", "published.addressMissing", "Adresse non renseignee")}</p>
-                      </div>
-                      <PropertyStatusBadge value={property.status} />
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Badge className="border-white/10 bg-white/5 text-stone-200">{property.type}</Badge>
-                      <Badge className="border-white/10 bg-white/5 text-stone-200">{property.purpose}</Badge>
-                      <Badge className="border-white/10 bg-white/5 text-stone-200">{property.area} m2</Badge>
-                    </div>
-
-                    <p className="text-sm leading-7 text-stone-300">{property.description || t("landing", "published.descriptionMissing", "Description indisponible.")}</p>
-
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-                      <p className="text-lg font-semibold text-[#f4dec1]">{formatPrice(property.price, property.currency)}</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" variant="secondary" onClick={() => setSelectedPropertyId(property.id)}>
-                          {t("landing", "published.showOnMap", "Voir sur la carte")}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => {
-                            if (currentUser) {
-                              onOpenDetail(property.slug || property.id);
-                              return;
-                            }
-
-                            onOpenPublicDetail(property.slug || property.id);
-                          }}
-                        >
-                          {t("landing", "published.viewDetail", "Voir detail")}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
+      <div className="space-y-4 p-5">
+        <div className="overflow-hidden rounded-[1.5rem] border border-stone-200 bg-[#f7f9f8]">
+          {!googleMapsApiKey ? (
+            <div className="flex h-[360px] items-center justify-center px-6 text-center text-sm text-stone-500">
+              {t("landing", "published.mapMissingKey", "Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte.")}
+            </div>
+          ) : loadError ? (
+            <div className="flex h-[360px] items-center justify-center px-6 text-center text-sm text-red-400">
+              {t("landing", "published.mapError", "Impossible de charger Google Maps pour le moment.")}
+            </div>
+          ) : !isMapsLoaded ? (
+            <div className="flex h-[360px] items-center justify-center px-6 text-center text-sm text-stone-500">
+              {t("landing", "published.mapLoading", "Chargement de la carte Google...")}
+            </div>
+          ) : (
+            <GoogleMap
+              mapContainerClassName="h-[360px] w-full"
+              center={mapCenter}
+              zoom={selectedProperty?.mapMarker ? 14 : 12}
+              options={{
+                disableDefaultUI: true,
+                zoomControl: true,
+                streetViewControl: false,
+                mapTypeControl: false,
+                fullscreenControl: false,
+                clickableIcons: false
+              }}
+            >
+              {mapItems.map((property) => (
+                <MarkerF key={property.id} position={property.mapMarker} onClick={() => setSelectedPropertyId(property.id)} />
+              ))}
+            </GoogleMap>
+          )}
         </div>
 
-        <Card className="overflow-hidden rounded-[2rem] border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-0">
-          <div className="border-b border-white/10 px-6 py-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-stone-500">{t("landing", "published.mapTitle", "Carte interactive")}</p>
-            <h3 className="mt-2 font-serif text-3xl text-white">{t("landing", "published.mapHeading", "Les biens se lisent aussi par emplacement.")}</h3>
-          </div>
-
-          <div className="space-y-5 p-5">
-            <div className="overflow-hidden rounded-[1.7rem] border border-white/10 bg-stone-950/70">
-              {!googleMapsApiKey ? (
-                <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-amber-100/80">
-                  {t("landing", "published.mapMissingKey", "Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte.")}
-                </div>
-              ) : loadError ? (
-                <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-red-200">
-                  {t("landing", "published.mapError", "Impossible de charger Google Maps pour le moment.")}
-                </div>
-              ) : !isMapsLoaded ? (
-                <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-stone-300">
-                  {t("landing", "published.mapLoading", "Chargement de la carte Google...")}
-                </div>
-              ) : (
-                <GoogleMap
-                  mapContainerClassName="h-[420px] w-full"
-                  center={mapCenter}
-                  zoom={selectedProperty?.mapMarker ? 14 : 12}
-                  options={{
-                    disableDefaultUI: true,
-                    zoomControl: true,
-                    streetViewControl: false,
-                    mapTypeControl: false,
-                    fullscreenControl: false,
-                    clickableIcons: false
-                  }}
+        {selectedProperty ? (
+          <div className="space-y-4 rounded-[1.5rem] border border-stone-200 bg-[#fdf8f5] p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xl font-semibold text-stone-950">{selectedProperty.title}</p>
+                <p className="mt-1 text-sm text-stone-500">{selectedProperty.address || t("landing", "published.addressMissing", "Adresse non renseignee")}</p>
+              </div>
+              <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-medium text-white">{selectedProperty.type || "Property"}</span>
+            </div>
+            <p className="text-lg font-semibold text-brand-500">{formatPrice(selectedProperty.price, selectedProperty.currency)}</p>
+            <p className="text-sm leading-7 text-stone-500">{selectedProperty.description || t("landing", "published.descriptionMissing", "Description indisponible.")}</p>
+            <div className="flex flex-wrap gap-2">
+              {mapItems.slice(0, 3).map((property) => (
+                <button
+                  key={property.id}
+                  type="button"
+                  className={`rounded-full border px-3 py-2 text-xs transition ${property.id === selectedProperty.id ? "border-brand-500 bg-brand-500 text-white" : "border-brand-300/50 text-brand-500 hover:bg-brand-500 hover:text-white"}`}
+                  onClick={() => setSelectedPropertyId(property.id)}
                 >
-                  {mapItems.map((property) => (
-                    <MarkerF
-                      key={property.id}
-                      position={property.mapMarker}
-                      onClick={() => setSelectedPropertyId(property.id)}
-                    />
-                  ))}
-                </GoogleMap>
-              )}
+                  {property.title}
+                </button>
+              ))}
             </div>
-
-            {selectedProperty ? (
-              <div className="rounded-[1.5rem] border border-white/10 bg-stone-950/45 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xl font-semibold text-white">{selectedProperty.title}</p>
-                    <p className="mt-1 text-sm text-stone-400">{selectedProperty.address || t("landing", "published.addressMissing", "Adresse non renseignee")}</p>
-                  </div>
-                  <PropertyStatusBadge value={selectedProperty.status} />
-                </div>
-                <p className="mt-4 text-lg font-semibold text-[#f4dec1]">{formatPrice(selectedProperty.price, selectedProperty.currency)}</p>
-                <p className="mt-3 text-sm leading-7 text-stone-300">{selectedProperty.description || t("landing", "published.descriptionMissing", "Description indisponible.")}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Badge className="border-white/10 bg-white/5 text-stone-200">{selectedProperty.type}</Badge>
-                  <Badge className="border-white/10 bg-white/5 text-stone-200">{selectedProperty.purpose}</Badge>
-                  <Badge className="border-white/10 bg-white/5 text-stone-200">{selectedProperty.agentName || t("landing", "published.agentMissing", "Agent non renseigne")}</Badge>
-                </div>
-                <div className="mt-5">
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      if (currentUser) {
-                        onOpenDetail(selectedProperty.slug || selectedProperty.id);
-                        return;
-                      }
-
-                      onOpenPublicDetail(selectedProperty.slug || selectedProperty.id);
-                    }}
-                  >
-                    {t("landing", "published.viewDetail", "Voir detail")}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-[1.5rem] border border-white/10 bg-stone-950/45 p-5 text-sm text-stone-300">
-                {t("landing", "published.empty", "Aucun bien geolocalise n'est disponible pour le moment.")}
-              </div>
-            )}
+            <Button type="button" className="bg-brand-500 text-white hover:bg-brand-700" onClick={() => navigate(`/properties/${selectedProperty.slug || selectedProperty.id}`)}>
+              {t("landing", "published.viewDetail", "Voir detail")}
+            </Button>
           </div>
-        </Card>
+        ) : (
+          <div className="rounded-[1.5rem] border border-stone-200 bg-[#fdf8f5] p-5 text-sm text-stone-500">
+            {t("landing", "published.empty", "Aucun bien geolocalise n'est disponible pour le moment.")}
+          </div>
+        )}
       </div>
-    </section>
+    </Card>
   );
 };
 
-const OwnerCollection = ({ data }) => {
-  const ownerProperties = data?.properties || [];
-  const rentedCount = ownerProperties.filter((property) => OWNER_STATUS_LABELS[property.status] === "Loue").length;
-  const availableCount = ownerProperties.filter((property) => OWNER_STATUS_LABELS[property.status] === "Disponible").length;
-
-  return (
-    <section className="space-y-6">
-      <SectionHeading
-        eyebrow="Collection proprietaire"
-        title="Une lecture portefeuille, pas un dashboard."
-        description="Pour le proprietaire connecte, la landing garde une lecture premium de son portefeuille, sans section biens supplementaire."
-      />
-
-      <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-[2.2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(201,166,107,0.14),transparent_30%),linear-gradient(145deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-7">
-          <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Signature proprietaire</p>
-          <h3 className="mt-4 font-serif text-4xl text-white">Portefeuille vivant</h3>
-          <p className="mt-4 text-sm leading-7 text-stone-300">
-            Vos biens, vos locataires et vos revenus se lisent ici comme une collection premium, avec une hierarchie plus claire et plus valorisante.
-          </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
-            <StoryMetricCard label="Mes biens" value={data?.summary?.propertiesCount || 0} description="Volume actuel de biens suivis dans votre portefeuille." />
-            <StoryMetricCard label="Loues" value={rentedCount} description="Biens actuellement occupes par un locataire." />
-            <StoryMetricCard label="Disponibles" value={availableCount} description="Biens libres ou prets pour une nouvelle occupation." />
-            <StoryMetricCard label="Revenus" value={formatPrice(data?.summary?.monthlyRevenue || 0, "AR")} description="Lecture synthétique de votre revenu mensuel." />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <Card className="rounded-[2rem] border-white/10 bg-white/[0.04]">
-            <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Locataires</p>
-            <h4 className="mt-2 font-serif text-3xl text-white">{data?.summary?.tenantsCount || 0} fiches actives</h4>
-            <div className="mt-5 space-y-3">
-              {(data?.tenants || []).slice(0, 3).map((tenant) => (
-                <div key={tenant.id} className="rounded-[1.4rem] border border-white/10 bg-stone-950/45 p-4">
-                  <p className="text-base font-semibold text-white">{tenant.fullName}</p>
-                  <p className="mt-1 text-sm text-stone-400">{tenant.property || "Bien non renseigne"}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="rounded-[2rem] border-white/10 bg-white/[0.04]">
-            <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Biens signature</p>
-            <div className="mt-5 grid gap-3">
-              {ownerProperties.slice(0, 3).map((property) => (
-                <div key={property.id} className="rounded-[1.4rem] border border-white/10 bg-stone-950/45 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-base font-semibold text-white">{property.title}</p>
-                      <p className="mt-1 text-sm text-stone-400">{property.location}</p>
-                    </div>
-                    <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-100">
-                      {OWNER_STATUS_LABELS[property.status] || property.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
+const TestimonialBlock = ({ featuredAgency, summary }) => (
+  <section className="grid gap-8 lg:grid-cols-[0.42fr_0.58fr] lg:items-center">
+    <div className="mx-auto h-40 w-40 overflow-hidden rounded-full border-4 border-brand-500 bg-[#f4e1d7] shadow-[0_16px_35px_rgba(45,30,23,0.12)]">
+      {featuredAgency?.logo ? (
+        <img src={resolveAssetUrl(featuredAgency.logo)} alt={featuredAgency.name} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full items-center justify-center text-4xl font-bold text-brand-500">{buildInitials(featuredAgency?.name)}</div>
+      )}
+    </div>
+    <div className="space-y-4">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-500">Our Clients Say!</p>
+      <h2 className="text-3xl font-bold text-stone-950 md:text-4xl">{featuredAgency?.name || "Yopii"}</h2>
+      <p className="max-w-2xl text-base leading-8 text-stone-500">
+        Yopii connecte vitrine publique, biens publies, agences actives et agents disponibles dans une experience immobiliere claire, moderne et rassurante.
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.propertiesCount || 0} biens</span>
+        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.agenciesCount || 0} agences</span>
+        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.agentsCount || 0} agents</span>
       </div>
-    </section>
-  );
-};
+    </div>
+  </section>
+);
 
 export const LandingPage = () => {
   const navigate = useNavigate();
-  const { t } = useUserPreferences();
-  const { currentUser, landingQuery, ownerOverviewQuery } = useLandingOverview();
+  const { t, preferences } = useUserPreferences();
+  const { currentUser, landingQuery } = useLandingOverview();
+  const [activeTypeTab, setActiveTypeTab] = useState("property");
+  const isLightTheme = preferences?.theme === "light";
+  const activeTabColor = isLightTheme ? "#9d5d43" : "#c98d70";
+  const inactiveTabColor = isLightTheme ? "#5c504d" : "#d7cdca";
+
   const landingData = landingQuery.data;
-  const [detailModalIdentifier, setDetailModalIdentifier] = useState("");
-
-  const editorialMetrics = useMemo(() => {
-    const summary = landingData?.summary || {};
-
-    return [
-      {
-        label: "Proprietaires",
-        value: summary.ownersCount || 0,
-        description: "Comptes proprietaires actifs relies aux biens reellement suivis."
-      },
-      {
-        label: "Biens en location",
-        value: summary.rentPropertiesCount || 0,
-        description: "Lecture immediate du volume location sur l'ecosysteme."
-      },
-      {
-        label: "Biens disponibles",
-        value: summary.availablePropertiesCount || 0,
-        description: "Annonces ouvertes a la consultation et a la reservation."
-      },
-      {
-        label: "Biens vendus",
-        value: summary.soldPropertiesCount || 0,
-        description: "Biens conclus visibles dans l'historique plateforme."
-      }
-    ];
-  }, [landingData?.summary]);
+  const summary = landingData?.summary || {};
+  const featuredAgency = (landingData?.agencies || [])[0] || null;
+  const recentProperties = useMemo(() => (landingData?.recentProperties || []).slice(0, 6), [landingData?.recentProperties]);
+  const mapProperties = useMemo(() => landingData?.propertyMap || [], [landingData?.propertyMap]);
+  const featuredAgents = useMemo(() => (landingData?.agents || []).slice(0, 4), [landingData?.agents]);
+  const typeCounts = useMemo(() => getTypeCounts(mapProperties), [mapProperties]);
+  const typeItems = PROPERTY_TYPES.filter((item) => item.category === activeTypeTab);
 
   if (landingQuery.isLoading) {
     return <LandingSkeleton />;
@@ -487,126 +380,179 @@ export const LandingPage = () => {
   if (landingQuery.isError) {
     return (
       <section className="mx-auto max-w-7xl px-6 py-16">
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
-          <p className="text-xs uppercase tracking-[0.3em] text-[#c9a66b]">Landing</p>
-          <h1 className="mt-4 font-serif text-4xl text-white">Vue globale indisponible</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-300">
-            Les donnees reelles n'ont pas pu etre chargees depuis l'API pour le moment. Reessayez dans quelques instants.
-          </p>
-        </div>
+        <Card className="rounded-[2rem] border-[rgba(157,93,67,0.12)] bg-white text-stone-600">
+          <h1 className="text-3xl font-bold text-stone-950">Landing indisponible</h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7">Les donnees n'ont pas pu etre chargees pour le moment. Reessayez dans quelques instants.</p>
+        </Card>
       </section>
     );
   }
 
-  const featuredAgency = (landingData?.agencies || [])[0] || null;
-
   return (
-    <section className="mx-auto max-w-7xl space-y-14 px-6 py-16">
-      <EditorialHero summary={landingData?.summary || {}} currentUser={currentUser} featuredAgency={featuredAgency} t={t} />
+    <div className="relative overflow-hidden">
+      <div className="absolute left-0 top-[26rem] hidden h-[900px] w-48 bg-[radial-gradient(circle,rgba(157,93,67,0.12)_1px,transparent_1px)] [background-size:18px_18px] lg:block" />
+      <div className="absolute right-0 top-[70rem] hidden h-[900px] w-48 bg-[radial-gradient(circle,rgba(157,93,67,0.12)_1px,transparent_1px)] [background-size:18px_18px] lg:block" />
 
-      <section className="space-y-6">
-        <SectionHeading
-          eyebrow="Lecture plateforme"
-          title="Des chiffres presentes comme une histoire de marche."
-          description="La landing ne s'affiche plus comme un tableau de bord. Les metriques deviennent des reperes editoriaux pour comprendre rapidement l'etat de la plateforme."
-        />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {editorialMetrics.map((item, index) => (
-            <StoryMetricCard
-              key={item.label}
-              label={item.label}
-              value={item.value}
-              description={item.description}
-              accentClassName={index === 0 ? "bg-[linear-gradient(145deg,rgba(201,166,107,0.1),rgba(255,255,255,0.03))]" : ""}
+      <section className="mx-auto max-w-7xl px-6 pb-8 pt-12 md:pt-16">
+        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="space-y-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-500">{t("landing", "hero.badge", "Yopii Real Estate")}</p>
+            <h1 className="max-w-2xl text-5xl font-bold leading-[1.04] text-stone-950 md:text-6xl">
+              {t("landing", "hero.mockTitle", "Find A Perfect Home or Terrain To Live With Your Family")}
+            </h1>
+            <p className="max-w-lg text-base leading-8 text-stone-500">
+              {t("landing", "hero.mockDescription", "The shorted distance between paradise and the place you call home.")}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button as={Link} to={currentUser ? "/properties" : "/login"} className="bg-brand-500 px-8 text-white hover:bg-brand-700">
+                {currentUser?.role === "proprietaire" ? "Ouvrir mon espace" : "Get Started"}
+              </Button>
+              <Button as={Link} to="/properties" variant="secondary" className="border-brand-500/20 text-brand-500 hover:border-brand-500/40">
+                Explorer les biens
+              </Button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(45,30,23,0.08)]">
+                <p className="text-sm text-stone-500">Properties</p>
+                <p className="mt-2 text-2xl font-bold text-stone-950">{summary.propertiesCount || 0}</p>
+              </div>
+              <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(45,30,23,0.08)]">
+                <p className="text-sm text-stone-500">Agencies</p>
+                <p className="mt-2 text-2xl font-bold text-stone-950">{summary.agenciesCount || 0}</p>
+              </div>
+              <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(45,30,23,0.08)]">
+                <p className="text-sm text-stone-500">Published</p>
+                <p className="mt-2 text-2xl font-bold text-stone-950">{mapProperties.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute -left-4 top-12 hidden h-32 w-24 bg-brand-500 lg:block" />
+            <div className="relative overflow-hidden rounded-[2.4rem] bg-white p-4 shadow-[0_24px_60px_rgba(45,30,23,0.12)]">
+              <img src={HERO_IMAGE} alt="Maison hero Yopii" className="h-full w-full rounded-[2rem] object-cover" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10">
+          <HeroSearchBar navigate={navigate} />
+        </div>
+      </section>
+
+      <section id="types" className="mx-auto max-w-7xl px-6 py-14">
+        <div className="grid gap-10 xl:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <div
+              className="flex flex-wrap items-end gap-6 border-b"
+              style={{ borderColor: isLightTheme ? "rgba(157,93,67,0.18)" : "rgba(247,249,248,0.14)" }}
+            >
+              <button
+                type="button"
+                aria-pressed={activeTypeTab === "property"}
+                className="-mb-px border-b-[3px] px-2 pb-4 pt-1 text-lg font-semibold transition md:text-2xl hover:border-brand-300/40 hover:text-brand-500"
+                style={{
+                  borderBottomColor: activeTypeTab === "property" ? activeTabColor : "transparent",
+                  color: activeTypeTab === "property" ? activeTabColor : inactiveTabColor
+                }}
+                onClick={() => setActiveTypeTab("property")}
+              >
+                Property Types
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTypeTab === "terrain"}
+                className="-mb-px border-b-[3px] px-2 pb-4 pt-1 text-lg font-semibold transition md:text-2xl hover:border-brand-300/40 hover:text-brand-500"
+                style={{
+                  borderBottomColor: activeTypeTab === "terrain" ? activeTabColor : "transparent",
+                  color: activeTypeTab === "terrain" ? activeTabColor : inactiveTabColor
+                }}
+                onClick={() => setActiveTypeTab("terrain")}
+              >
+                Terrain Types
+              </button>
+            </div>
+            <div className="mt-10 grid gap-6 md:grid-cols-2">
+              {typeItems.map((item) => (
+                <TypeCard key={item.id} label={item.label} countLabel={`${typeCounts[item.id] || 0} publies`} />
+              ))}
+            </div>
+          </div>
+
+          <PublishedMapPanel properties={mapProperties} navigate={navigate} t={t} />
+        </div>
+      </section>
+
+      <section id="about" className="mx-auto max-w-7xl px-6 py-16">
+        <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+          <div className="relative">
+            <div className="absolute -left-3 top-10 hidden h-40 w-24 bg-brand-500 lg:block" />
+            <div className="relative overflow-hidden rounded-[1.5rem] bg-white p-4 shadow-[0_20px_45px_rgba(45,30,23,0.1)]">
+              <img src={HERO_IMAGE} alt="Maison Yopii" className="h-full w-full rounded-[1.2rem] object-cover" />
+            </div>
+          </div>
+          <div className="space-y-5">
+            <SectionHeading
+              eyebrow="About Us"
+              title="First Place To Find The Perfect Property and Terrain"
+              description="Yopii met en avant les biens, les terrains, les agents et les agences dans une vitrine claire, premium et facile a parcourir depuis le web ou le mobile."
             />
+            <ul className="grid gap-3 text-sm text-stone-600 md:grid-cols-2">
+              <li className="flex items-center gap-2"><span className="text-brand-500">✓</span> Modern Home</li>
+              <li className="flex items-center gap-2"><span className="text-brand-500">✓</span> Affordable Price</li>
+              <li className="flex items-center gap-2"><span className="text-brand-500">✓</span> Right Papers</li>
+              <li className="flex items-center gap-2"><span className="text-brand-500">✓</span> Verified Agents</li>
+            </ul>
+            <Button as={Link} to="/properties" className="bg-brand-500 text-white hover:bg-brand-700">Read More</Button>
+          </div>
+        </div>
+      </section>
+
+      <section id="properties" className="mx-auto max-w-7xl px-6 py-14">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <SectionHeading
+            eyebrow="Property List"
+            title="Choose your favorite house and add this in your cart."
+            description="Une selection de biens recents publies sur Yopii avec leur visuel principal, leur localisation et leurs caracteristiques essentielles."
+          />
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white">Featured</span>
+            <span className="rounded-md border border-brand-300/60 px-4 py-2 text-sm text-stone-500">For Sell</span>
+            <span className="rounded-md border border-brand-300/60 px-4 py-2 text-sm text-stone-500">Allocate</span>
+          </div>
+        </div>
+
+        <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {recentProperties.map((property) => (
+            <PropertyCard key={property.id} property={property} onView={() => navigate(`/properties/${property.slug || property.id}`)} />
+          ))}
+        </div>
+
+        <div className="mt-10 flex justify-center">
+          <Button as={Link} to="/properties" className="bg-brand-500 px-8 text-white hover:bg-brand-700">
+            Browse More Property
+          </Button>
+        </div>
+      </section>
+
+      <section id="agents" className="mx-auto max-w-7xl px-6 py-16">
+        <SectionHeading
+          eyebrow="Property and Terrain Agent"
+          title="Let's contact an Agent with our Platform."
+          description="Retrouvez quelques profils actifs relies a l'ecosysteme Yopii pour prolonger l'experience de la vitrine vers la prise de contact."
+          align="center"
+        />
+        <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          {featuredAgents.map((agent) => (
+            <AgentCard key={agent.id} agent={agent} />
           ))}
         </div>
       </section>
 
-      <PublishedPropertiesShowcase
-        properties={landingData?.recentProperties || []}
-        currentUser={currentUser}
-        onOpenDetail={setDetailModalIdentifier}
-        onOpenPublicDetail={(identifier) => navigate(`/properties/${identifier}`)}
-        t={t}
-      />
-
-      <section className="space-y-6">
-        <SectionHeading
-          eyebrow="Reseau professionnel"
-          title="Agents, agences et locataires dans une grammaire plus editoriale."
-          description="Chaque section reste en lecture seule mais gagne un vrai traitement vitrine, plus premium et plus clair que l'ancien rendu en panneaux."
-        />
-
-        <div className="grid gap-5 xl:grid-cols-3">
-          <div className="space-y-4">
-            <h3 className="font-serif text-2xl text-white">Agents</h3>
-            {(landingData?.agents || []).slice(0, 3).map((agent) => (
-              <PersonaCard
-                key={agent.id}
-                avatar={agent.avatar}
-                name={agent.fullName}
-                subtitle={agent.agencyName || "Independant"}
-                badgeLabel={agent.roleLabel}
-                stats={[{ label: "Biens geres", value: agent.managedPropertiesCount || 0 }]}
-              />
-            ))}
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="font-serif text-2xl text-white">Agences</h3>
-            {(landingData?.agencies || []).slice(0, 3).map((agency) => (
-              <PersonaCard
-                key={agency.id}
-                avatar={agency.logo}
-                name={agency.name}
-                subtitle={`Statut: ${agency.status}`}
-                badgeLabel="Agence"
-                accent="gold"
-                stats={[
-                  { label: "Biens", value: agency.managedPropertiesCount || 0 },
-                  { label: "Agents", value: agency.activeAgentsCount || 0 }
-                ]}
-              />
-            ))}
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="font-serif text-2xl text-white">Locataires</h3>
-            {(landingData?.tenants || []).slice(0, 3).map((tenant) => (
-              <PersonaCard
-                key={tenant.id}
-                avatar={tenant.avatar}
-                name={tenant.fullName}
-                subtitle={tenant.propertyTitle}
-                badgeLabel="Locataire"
-                stats={[{ label: "Source", value: tenant.source || "manual" }]}
-              />
-            ))}
-          </div>
-        </div>
+      <section className="mx-auto max-w-7xl px-6 py-16">
+        <TestimonialBlock featuredAgency={featuredAgency} summary={summary} />
       </section>
-
-      {currentUser?.role === "proprietaire" ? (
-        ownerOverviewQuery.isLoading ? (
-          <Card className="rounded-[2rem] border-white/10 bg-white/[0.04] text-stone-300">
-            Chargement de votre collection proprietaire...
-          </Card>
-        ) : ownerOverviewQuery.isError ? (
-          <Card className="rounded-[2rem] border-white/10 bg-white/[0.04] text-stone-300">
-            La vue proprietaire n'a pas pu etre chargee pour le moment.
-          </Card>
-        ) : (
-          <OwnerCollection data={ownerOverviewQuery.data} />
-        )
-      ) : null}
-
-      <ModalViewDetail
-        open={Boolean(detailModalIdentifier)}
-        propertyIdentifier={detailModalIdentifier}
-        onClose={() => setDetailModalIdentifier("")}
-      />
-    </section>
+    </div>
   );
 };
 
