@@ -1,0 +1,56 @@
+{
+  "hero": {
+    "badge": "Real estate intelligence",
+    "title": "Une vitrine immobiliere vivante, branchee sur les vraies donnees de Yopii.",
+    "description": "La landing met en scene l'ecosysteme Yopii en lecture seule avec une approche plus editoriale, plus premium et plus legere.",
+    "openSpace": "Ouvrir mon espace",
+    "login": "Se connecter",
+    "contact": "Nous contacter",
+    "metrics": {
+      "properties": "Biens",
+      "agencies": "Agences",
+      "agents": "Agents",
+      "tenants": "Locataires"
+    },
+    "featuredAgency": "Agence mise en avant",
+    "status": "Statut",
+    "properties": "Biens",
+    "agents": "Agents"
+  },
+  "published": {
+    "eyebrow": "Biens publies",
+    "title": "Trois biens publies, lus comme une selection editoriale.",
+    "description": "La landing affiche maintenant une courte liste de biens reellement publies, accompagnee d'une carte interactive pour situer instantanement chaque opportunite.",
+    "publication": "Publication",
+    "addressMissing": "Adresse non renseignee",
+    "descriptionMissing": "Description indisponible.",
+    "showOnMap": "Voir sur la carte",
+    "viewDetail": "Voir detail",
+    "mapTitle": "Carte interactive",
+    "mapHeading": "Les biens se lisent aussi par emplacement.",
+    "mapMissingKey": "Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte.",
+    "mapError": "Impossible de charger Google Maps pour le moment.",
+    "mapLoading": "Chargement de la carte Google...",
+    "agentMissing": "Agent non renseigne",
+    "empty": "Aucun bien geolocalise n'est disponible pour le moment."
+  },
+  "ownerCollection": {
+    "eyebrow": "Collection proprietaire",
+    "title": "Une lecture portefeuille, pas un dashboard.",
+    "description": "Pour le proprietaire connecte, la landing garde une lecture premium de son portefeuille, sans section biens supplementaire.",
+    "signature": "Signature proprietaire",
+    "heading": "Portefeuille vivant",
+    "body": "Vos biens, vos locataires et vos revenus se lisent ici comme une collection premium, avec une hierarchie plus claire et plus valorisante.",
+    "myProperties": "Mes biens",
+    "myPropertiesDescription": "Volume actuel de biens suivis dans votre portefeuille.",
+    "rented": "Loues",
+    "rentedDescription": "Biens actuellement occupes par un locataire.",
+    "available": "Disponibles",
+    "availableDescription": "Biens libres ou prets pour une nouvelle occupation.",
+    "revenue": "Revenus",
+    "revenueDescription": "Lecture synthetique de votre revenu mensuel.",
+    "tenants": "Locataires",
+    "activeFiles": "fiches actives",
+    "propertyMissing": "Bien non renseigne"
+  }
+}

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
+import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
+import { formatMoney } from "../../../app/preferences/user-preferences.utils.js";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
@@ -11,41 +13,19 @@ import { usePropertyWorkspace } from "../../../features/properties/hooks/useProp
 import { ModalManageProperty } from "./ModalManageProperty.jsx";
 import { ModalManageContract } from "../contracts/ModalManageContract.jsx";
 
-const formatPrice = (value, currency = "AR") =>
-  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
+const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
 
-const formatOwnerType = (ownerType) => {
-  if (ownerType === "agency") return "Agence";
-  if (ownerType === "proprietaire") return "Proprietaire";
-  return "Agent independant";
+const replaceTemplate = (template, values = {}) =>
+  Object.entries(values).reduce(
+    (currentValue, [key, value]) => currentValue.replaceAll(`{${key}}`, String(value)),
+    template
+  );
+
+const formatOwnerType = (ownerType, t) => {
+  if (ownerType === "agency") return t("private", "properties.card.ownerTypeAgency", "Agence");
+  if (ownerType === "proprietaire") return t("private", "properties.card.ownerTypeOwner", "Proprietaire");
+  return t("private", "properties.card.ownerTypeIndependentAgent", "Agent independant");
 };
-
-const summaryCards = [
-  {
-    key: "total",
-    label: "Biens total",
-    description: "Portefeuille global sous supervision",
-    accent: "from-amber-400/30 via-orange-400/15 to-transparent"
-  },
-  {
-    key: "published",
-    label: "Publies",
-    description: "Biens visibles et actifs",
-    accent: "from-emerald-400/30 via-emerald-300/10 to-transparent"
-  },
-  {
-    key: "pendingApproval",
-    label: "En attente",
-    description: "Elements a valider ou publier",
-    accent: "from-sky-400/30 via-cyan-300/10 to-transparent"
-  },
-  {
-    key: "totalFavorites",
-    label: "Favoris cumules",
-    description: "Interet total capte sur la vitrine",
-    accent: "from-fuchsia-400/25 via-rose-300/10 to-transparent"
-  }
-];
 
 const getPublicationBadgeClassName = (publicationStatus) => {
   if (publicationStatus === "approved") {
@@ -98,6 +78,7 @@ const PropertyCard = ({
   onDelete,
   onAssociateContract
 }) => {
+  const { t } = useUserPreferences();
   const coverImage = resolveAssetUrl(property.coverImage || property.media?.find((item) => item.type === "image")?.url || "");
   const mediaCount = property.media?.length || 0;
   const isOwnerRole = user?.role === "proprietaire";
@@ -106,10 +87,10 @@ const PropertyCard = ({
   const canEdit = isOwnerRole || Boolean(linkedContract?.actions?.canEditProperty);
   const canDelete = isOwnerRole || Boolean(linkedContract?.actions?.canDeleteProperty);
   const detailItems = [
-    { label: "Type", value: property.type || "--" },
-    { label: "Usage", value: property.purpose || "--" },
-    { label: "Fichiers", value: mediaCount },
-    { label: "Gestion", value: formatOwnerType(property.ownerType) }
+    { label: t("private", "properties.card.type", "Type"), value: property.type || "--" },
+    { label: t("private", "properties.card.usage", "Usage"), value: property.purpose || "--" },
+    { label: t("private", "properties.card.files", "Fichiers"), value: mediaCount },
+    { label: t("private", "properties.card.management", "Gestion"), value: formatOwnerType(property.ownerType, t) }
   ];
 
   return (
@@ -131,7 +112,7 @@ const PropertyCard = ({
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-stone-200/80">{property.slug || "propriete"}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-stone-200/80">{property.slug || t("private", "properties.card.slugFallback", "propriete")}</p>
               <div>
                 <h3 className="text-2xl font-semibold text-white">{property.title}</h3>
                 <p className="mt-2 max-w-sm text-sm leading-6 text-stone-200/85">{property.address}</p>
@@ -144,11 +125,11 @@ const PropertyCard = ({
         <div className="flex flex-col gap-6 p-5 lg:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Resume du bien</p>
-              <p className="max-w-3xl text-sm leading-7 text-stone-300">{property.description || "Aucune description disponible pour le moment."}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("private", "properties.card.summary", "Resume du bien")}</p>
+              <p className="max-w-3xl text-sm leading-7 text-stone-300">{property.description || t("private", "properties.card.summaryEmpty", "Aucune description disponible pour le moment.")}</p>
             </div>
             <div className="rounded-[1.5rem] border border-white/10 bg-black/20 px-4 py-3 text-right backdrop-blur">
-              <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Favoris</p>
+              <p className="text-xs uppercase tracking-[0.24em] text-stone-500">{t("private", "properties.card.favorites", "Favoris")}</p>
               <p className="mt-2 text-2xl font-semibold text-white">{property.favoriteCount || 0}</p>
             </div>
           </div>
@@ -169,12 +150,12 @@ const PropertyCard = ({
             <div className="flex flex-wrap gap-2">
               {canEdit ? (
                 <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onEdit(property)}>
-                  Modifier
+                  {t("private", "properties.card.edit", "Modifier")}
                 </Button>
               ) : null}
               {isOwnerRole ? (
                 <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onAssociateContract(property)}>
-                  Associer a un contrat
+                  {t("private", "properties.card.associateContract", "Associer a un contrat")}
                 </Button>
               ) : canPublish ? (
                 <Button
@@ -184,11 +165,11 @@ const PropertyCard = ({
                   disabled={workflowMutation.isPending || property.publicationStatus === "approved"}
                   onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { publicationStatus: "approved", status: "published" } })}
                 >
-                  Publier
+                  {t("private", "properties.card.publish", "Publier")}
                 </Button>
               ) : null}
               <Button type="button" variant="ghost" className="px-4 py-2" disabled={duplicateManagedPropertyMutation.isPending} onClick={() => onDuplicate(property)}>
-                Dupliquer
+                {t("private", "properties.card.duplicate", "Dupliquer")}
               </Button>
               {canReserve ? (
                 <Button
@@ -198,7 +179,7 @@ const PropertyCard = ({
                   disabled={workflowMutation.isPending || property.status === "reserved"}
                   onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "reserved" } })}
                 >
-                  Reserver
+                  {t("private", "properties.card.reserve", "Reserver")}
                 </Button>
               ) : null}
               <Button
@@ -208,11 +189,11 @@ const PropertyCard = ({
                 disabled={workflowMutation.isPending || property.status === "archived"}
                 onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "archived" } })}
               >
-                Archiver
+                {t("private", "properties.card.archive", "Archiver")}
               </Button>
               {canDelete ? (
                 <Button type="button" variant="ghost" className="px-4 py-2 text-red-200" disabled={deleteManagedPropertyMutation.isPending} onClick={() => onDelete(property)}>
-                  Supprimer
+                  {t("private", "properties.card.delete", "Supprimer")}
                 </Button>
               ) : null}
             </div>
@@ -224,12 +205,12 @@ const PropertyCard = ({
 };
 
 export const PropertyManagementPage = () => {
+  const { t } = useUserPreferences();
   const {
     user,
     managedPropertiesQuery,
     activeContractsQuery,
     contractsQuery,
-    tenantSuggestionsQuery,
     workflowMutation,
     createManagedPropertyMutation,
     createContractMutation,
@@ -245,6 +226,32 @@ export const PropertyManagementPage = () => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [contractModalState, setContractModalState] = useState({ open: false, mode: "create", contract: null });
+  const summaryCards = [
+    {
+      key: "total",
+      label: t("private", "properties.summary.total", "Biens total"),
+      description: t("private", "properties.summary.totalDescription", "Portefeuille global sous supervision"),
+      accent: "from-amber-400/30 via-orange-400/15 to-transparent"
+    },
+    {
+      key: "published",
+      label: t("private", "properties.summary.published", "Publies"),
+      description: t("private", "properties.summary.publishedDescription", "Biens visibles et actifs"),
+      accent: "from-emerald-400/30 via-emerald-300/10 to-transparent"
+    },
+    {
+      key: "pendingApproval",
+      label: t("private", "properties.summary.pendingApproval", "En attente"),
+      description: t("private", "properties.summary.pendingApprovalDescription", "Elements a valider ou publier"),
+      accent: "from-sky-400/30 via-cyan-300/10 to-transparent"
+    },
+    {
+      key: "totalFavorites",
+      label: t("private", "properties.summary.totalFavorites", "Favoris cumules"),
+      description: t("private", "properties.summary.totalFavoritesDescription", "Interet total capte sur la vitrine"),
+      accent: "from-fuchsia-400/25 via-rose-300/10 to-transparent"
+    }
+  ];
 
   const isOwnerRole = user?.role === "proprietaire";
 
@@ -254,7 +261,7 @@ export const PropertyManagementPage = () => {
 
   const openCreateModal = () => {
     if (!isOwnerRole && !(activeContractsQuery.data || []).length) {
-      showError("Aucun contrat valide ne permet actuellement de gerer ou creer un bien.");
+      showError(t("private", "properties.createBlocked", "Aucun contrat valide ne permet actuellement de gerer ou creer un bien."));
       return;
     }
 
@@ -272,15 +279,6 @@ export const PropertyManagementPage = () => {
   const closeManageModal = () => {
     setSelectedProperty(null);
     setIsManageModalOpen(false);
-  };
-
-  const openCreateContractModal = () => {
-    if (!selectedProperty?.id) {
-      showError("Enregistrez d'abord le bien avant d'ajouter un contrat.");
-      return;
-    }
-
-    setContractModalState({ open: true, mode: "create", contract: null });
   };
 
   const openEditContractModal = (contract) => {
@@ -308,9 +306,9 @@ export const PropertyManagementPage = () => {
       }
 
       closeManageModal();
-      showSuccess(modalMode === "edit" ? "Bien mis a jour." : "Bien cree avec succes.");
+      showSuccess(modalMode === "edit" ? t("private", "properties.propertyUpdateSuccess", "Bien mis a jour.") : t("private", "properties.propertyCreateSuccess", "Bien cree avec succes."));
     } catch (error) {
-      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du bien a echoue." });
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.propertySaveError", "La gestion du bien a echoue.") });
       throw error;
     }
   };
@@ -323,10 +321,10 @@ export const PropertyManagementPage = () => {
         await createContractMutation.mutateAsync(payload);
       }
 
-      showSuccess(contractModalState.mode === "edit" ? "Contrat mis a jour." : "Contrat cree avec succes.");
+      showSuccess(contractModalState.mode === "edit" ? t("private", "properties.contractUpdateSuccess", "Contrat mis a jour.") : t("private", "properties.contractCreateSuccess", "Contrat cree avec succes."));
       closeContractModal();
     } catch (error) {
-      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du contrat a echoue." });
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.contractSaveError", "La gestion du contrat a echoue.") });
       throw error;
     }
   };
@@ -335,9 +333,9 @@ export const PropertyManagementPage = () => {
     const uploadedAsset = await uploadPropertyAssetMutation.mutateAsync({ assetKind, mediaType, file });
 
     if (assetKind === "cover") {
-      showSuccess("Image de couverture televersee avec succes.");
+      showSuccess(t("private", "properties.coverUploaded", "Image de couverture televersee avec succes."));
     } else {
-      showSuccess(mediaType === "video" ? "Video televersee avec succes." : "Image televersee avec succes.");
+      showSuccess(mediaType === "video" ? t("private", "properties.videoUploaded", "Video televersee avec succes.") : t("private", "properties.imageUploaded", "Image televersee avec succes."));
     }
 
     return uploadedAsset;
@@ -347,8 +345,8 @@ export const PropertyManagementPage = () => {
     const uploadedDocument = await uploadContractDocumentMutation.mutateAsync({ kind, contractId, file });
     showSuccess(
       file?.name
-        ? `${file.name} televerse dans les documents du contrat.`
-        : "Document televerse avec succes."
+        ? replaceTemplate(t("private", "properties.documentUploadedNamed", "{name} televerse dans les documents du contrat."), { name: file.name })
+        : t("private", "properties.documentUploaded", "Document televerse avec succes.")
     );
     return uploadedDocument;
   };
@@ -361,7 +359,7 @@ export const PropertyManagementPage = () => {
   };
 
   const handleDeleteProperty = async (property) => {
-    const confirmed = window.confirm(`Supprimer definitivement ${property.title} ?`);
+    const confirmed = window.confirm(replaceTemplate(t("private", "properties.confirmDelete", "Supprimer definitivement {name} ?"), { name: property.title }));
     if (!confirmed) return;
     await deleteManagedPropertyMutation.mutateAsync(property.id);
   };
@@ -369,9 +367,9 @@ export const PropertyManagementPage = () => {
   if (managedPropertiesQuery.isLoading) {
     return (
       <section className="space-y-8">
-        <SectionTitle eyebrow="Gestion biens" title="Pilotage des proprietes" description="Chargement des proprietes sous votre responsabilite." />
+        <SectionTitle eyebrow={t("private", "properties.loadingEyebrow", "Gestion biens")} title={t("private", "properties.loadingTitle", "Pilotage des proprietes")} description={t("private", "properties.loadingDescription", "Chargement des proprietes sous votre responsabilite.")} />
         <Card className="border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))]">
-          <p className="text-sm text-stone-300">Chargement des proprietes...</p>
+          <p className="text-sm text-stone-300">{t("private", "properties.loading", "Chargement des proprietes...")}</p>
         </Card>
       </section>
     );
@@ -380,9 +378,9 @@ export const PropertyManagementPage = () => {
   if (managedPropertiesQuery.isError) {
     return (
       <section className="space-y-8">
-        <SectionTitle eyebrow="Gestion biens" title="Pilotage des proprietes" description="L'espace de gestion n'a pas pu etre charge." />
+        <SectionTitle eyebrow={t("private", "properties.loadingEyebrow", "Gestion biens")} title={t("private", "properties.loadingTitle", "Pilotage des proprietes")} description={t("private", "properties.errorDescription", "L'espace de gestion n'a pas pu etre charge.")} />
         <Card className="border-red-500/20 bg-red-500/5">
-          <p className="text-sm text-red-200">Une erreur est survenue lors du chargement des proprietes.</p>
+          <p className="text-sm text-red-200">{t("private", "properties.error", "Une erreur est survenue lors du chargement des proprietes.")}</p>
         </Card>
       </section>
     );
@@ -425,13 +423,21 @@ export const PropertyManagementPage = () => {
         value: selectedProperty?.agentId || user?.id
       }]
     : [];
-  const tenantSuggestions = (tenantSuggestionsQuery.data || []).map((tenant) => ({
-    id: tenant.id,
-    fullName: tenant.fullName,
-    phone: tenant.phone || tenant.contact || "",
-    email: tenant.email || ""
-  }));
-
+  const propertyOptions = selectedProperty?.id
+    ? [{
+        label: selectedProperty.title || "Bien associe",
+        value: selectedProperty.id,
+        purpose: selectedProperty.purpose,
+        price: selectedProperty.price,
+        currency: selectedProperty.currency
+      }]
+    : [];
+  const ownerOptions = selectedProperty?.ownerUserId
+    ? [{
+        label: `${selectedProperty.ownerName || "Proprietaire"}${selectedProperty.ownerEmail ? ` • ${selectedProperty.ownerEmail}` : selectedProperty.ownerPhone ? ` • ${selectedProperty.ownerPhone}` : ""}`,
+        value: selectedProperty.ownerUserId
+      }]
+    : [];
   return (
     <>
       <section className="space-y-8">
@@ -439,23 +445,23 @@ export const PropertyManagementPage = () => {
           <div className="grid gap-8 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
             <div className="space-y-5">
               <SectionTitle
-                eyebrow={isOwnerRole ? "Mes biens" : "Gestion biens"}
-                title={isOwnerRole ? "Pilotage proprietaire des biens" : "Pilotage des proprietes"}
+                eyebrow={isOwnerRole ? t("private", "properties.ownerEyebrow", "Mes biens") : t("private", "properties.managerEyebrow", "Gestion biens")}
+                title={isOwnerRole ? t("private", "properties.ownerTitle", "Pilotage proprietaire des biens") : t("private", "properties.managerTitle", "Pilotage des proprietes")}
                 description={
                   isOwnerRole
-                    ? "Retrouvez tous vos biens, rattachez-les a un contrat quand c'est utile et gardez une vue claire sur votre portefeuille."
-                    : "Suivez les performances, soignez la presentation et pilotez chaque bien depuis un espace plus clair, plus rapide et plus professionnel."
+                    ? t("private", "properties.ownerDescription", "Retrouvez tous vos biens, rattachez-les a un contrat quand c'est utile et gardez une vue claire sur votre portefeuille.")
+                    : t("private", "properties.managerDescription", "Suivez les performances, soignez la presentation et pilotez chaque bien depuis un espace plus clair, plus rapide et plus professionnel.")
                 }
               />
               <div className="flex flex-wrap gap-3">
                 <Button type="button" className="px-5 py-3" onClick={openCreateModal}>
-                  Ajout de Bien
+                  {t("private", "properties.addProperty", "Ajout de Bien")}
                 </Button>
                 <div className="rounded-full border border-white/10 bg-black/20 px-4 py-3 text-xs uppercase tracking-[0.24em] text-stone-300 backdrop-blur">
-                  {items.length} biens charges dans l'espace de gestion
+                  {replaceTemplate(t("private", "properties.loadedCount", "{count} biens charges dans l'espace de gestion"), { count: items.length })}
                 </div>
                 <div className="rounded-full border border-white/10 bg-black/20 px-4 py-3 text-xs uppercase tracking-[0.24em] text-stone-300 backdrop-blur">
-                  {contractOptions.length} contrats valides
+                  {replaceTemplate(t("private", "properties.validContracts", "{count} contrats valides"), { count: contractOptions.length })}
                 </div>
               </div>
             </div>
@@ -476,18 +482,18 @@ export const PropertyManagementPage = () => {
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Portefeuille actif</p>
-            <h3 className="mt-2 text-2xl font-semibold text-white">Biens recents et operations rapides</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("private", "properties.activePortfolio", "Portefeuille actif")}</p>
+            <h3 className="mt-2 text-2xl font-semibold text-white">{t("private", "properties.recentTitle", "Biens recents et operations rapides")}</h3>
           </div>
           <p className="max-w-2xl text-sm leading-6 text-stone-400">
-            Les cartes ci-dessous regroupent les infos essentielles, le visuel principal et les actions de publication pour gagner du temps sans perdre en lisibilite.
+            {t("private", "properties.recentDescription", "Les cartes ci-dessous regroupent les infos essentielles, le visuel principal et les actions de publication pour gagner du temps sans perdre en lisibilite.")}
           </p>
         </div>
 
         {!isOwnerRole && !contractOptions.length ? (
           <Card className="border-amber-400/20 bg-amber-400/5">
             <p className="text-sm text-amber-100">
-              Aucun contrat accepte ou actif n'est rattache a votre compte. La creation, la modification et la gestion des biens sont bloquees tant qu'un contrat valide avec un proprietaire n'est pas en place.
+              {t("private", "properties.blockedByContract", "Aucun contrat accepte ou actif n'est rattache a votre compte. La creation, la modification et la gestion des biens sont bloquees tant qu'un contrat valide avec un proprietaire n'est pas en place.")}
             </p>
           </Card>
         ) : null}
@@ -519,11 +525,11 @@ export const PropertyManagementPage = () => {
 
           {!items.length ? (
             <Card className="border-dashed border-white/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] text-center">
-              <p className="text-sm font-medium text-white">Aucune propriete a gerer pour le moment.</p>
-              <p className="mt-2 text-sm leading-6 text-stone-400">Commencez par ajouter un bien pour structurer votre portefeuille et centraliser sa publication.</p>
+              <p className="text-sm font-medium text-white">{t("private", "properties.emptyTitle", "Aucune propriete a gerer pour le moment.")}</p>
+              <p className="mt-2 text-sm leading-6 text-stone-400">{t("private", "properties.emptyDescription", "Commencez par ajouter un bien pour structurer votre portefeuille et centraliser sa publication.")}</p>
               <div className="mt-5">
                 <Button type="button" className="px-5 py-3" onClick={openCreateModal}>
-                  Creer le premier bien
+                  {t("private", "properties.createFirst", "Creer le premier bien")}
                 </Button>
               </div>
             </Card>
@@ -540,7 +546,7 @@ export const PropertyManagementPage = () => {
         onClose={closeManageModal}
         onSubmit={handleSaveProperty}
         onUploadAsset={handlePropertyAssetUpload}
-        onUploadError={(error) => notifyApiErrors({ error, showError, fallbackMessage: "Le televersement du fichier a echoue." })}
+        onUploadError={(error) => notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.uploadAssetError", "Le televersement du fichier a echoue.") })}
         isUploadingAsset={uploadPropertyAssetMutation.isPending}
         isSaving={createManagedPropertyMutation.isPending || updateManagedPropertyMutation.isPending}
       />
@@ -558,11 +564,12 @@ export const PropertyManagementPage = () => {
           currency: selectedProperty.currency
         } : null}
         ownerUserId={selectedProperty?.ownerUserId || ""}
+        propertyOptions={propertyOptions}
+        ownerOptions={ownerOptions}
         agencyOptions={agencyOptions}
         agentOptions={agentOptions}
-        tenantSuggestions={tenantSuggestions}
         onUploadDocument={handleContractDocumentUpload}
-        onUploadError={(error) => notifyApiErrors({ error, showError, fallbackMessage: "Le televersement du document a echoue." })}
+        onUploadError={(error) => notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.uploadDocumentError", "Le televersement du document a echoue.") })}
         onClose={closeContractModal}
         onSubmit={handleSaveContract}
         isSaving={createContractMutation.isPending || updateContractMutation.isPending}

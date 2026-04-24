@@ -1,0 +1,65 @@
+{
+  "publicNav": {
+    "home": "Home",
+    "contact": "Contact",
+    "login": "Login"
+  },
+  "mainNav": {
+    "home": "Home",
+    "properties": "Properties",
+    "dashboard": "Dashboard",
+    "propertyManagement": "Property management",
+    "messages": "Messages"
+  },
+  "dashboard": {
+    "connected": "Connected",
+    "logout": "Log out",
+    "userFallback": "User",
+    "ownerRole": "owner",
+    "owner": {
+      "dashboard": "Dashboard",
+      "contracts": "Contract management",
+      "calendar": "Calendar",
+      "messages": "Messages",
+      "notifications": "Notifications",
+      "rents": "Rent management",
+      "tenants": "Tenant management",
+      "properties": "My properties",
+      "maintenance": "Maintenance management",
+      "settings": "Settings"
+    },
+    "shared": {
+      "overview": "Overview",
+      "publications": "Property publications",
+      "favorites": "Favorites",
+      "bookings": "Bookings",
+      "agenciesAgents": "Agencies and agents",
+      "calendar": "Calendar",
+      "messages": "Messages",
+      "notifications": "Notifications",
+      "settings": "Settings",
+      "propertyManagement": "Property management",
+      "contracts": "My contracts"
+    }
+  },
+  "footer": {
+    "eyebrow": "Contact",
+    "title": "Let's talk about your real estate project.",
+    "description": "A question, a demo request, or support need? Write to us here and your message will be sent to the Yopii team.",
+    "home": "Home",
+    "contact": "Contact",
+    "fullName": "Full name",
+    "email": "Email",
+    "subject": "Subject",
+    "message": "Message",
+    "fullNamePlaceholder": "Your name",
+    "emailPlaceholder": "contact@yopii.app",
+    "subjectPlaceholder": "Subject of your message",
+    "messagePlaceholder": "Tell us about your needs...",
+    "submit": "Send",
+    "submitting": "Sending...",
+    "helper": "The message is sent directly to the contact email configured on the backend.",
+    "copyright": "Copyright {year} Yopii. All rights reserved.",
+    "tagline": "Synchronized real estate experience, public showcase, and real-time management."
+  }
+}

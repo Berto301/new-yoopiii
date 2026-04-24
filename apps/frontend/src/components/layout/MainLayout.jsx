@@ -1,5 +1,6 @@
 import { useSelector } from "react-redux";
 import { Link, Outlet } from "react-router-dom";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { selectCurrentUser, selectIsAuthenticated } from "../../app/store/session.store.js";
 
 const getDashboardPath = (user) => {
@@ -31,16 +32,17 @@ const getPropertyManagementPath = (user) => {
 };
 
 export const MainLayout = () => {
+  const { t } = useUserPreferences();
   const user = useSelector(selectCurrentUser);
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const propertyManagementPath = getPropertyManagementPath(user);
 
   const navigation = [
-    { to: "/", label: "Accueil" },
-    { to: "/properties", label: "Biens" },
-    { to: getDashboardPath(user), label: "Dashboard" },
-    ...(propertyManagementPath ? [{ to: propertyManagementPath, label: "Gestion biens" }] : []),
-    ...(isAuthenticated ? [{ to: "/messages", label: "Messages" }] : [])
+    { to: "/", label: t("layout", "mainNav.home", "Accueil") },
+    { to: "/properties", label: t("layout", "mainNav.properties", "Biens") },
+    { to: getDashboardPath(user), label: t("layout", "mainNav.dashboard", "Dashboard") },
+    ...(propertyManagementPath ? [{ to: propertyManagementPath, label: t("layout", "mainNav.propertyManagement", "Gestion biens") }] : []),
+    ...(isAuthenticated ? [{ to: "/messages", label: t("layout", "mainNav.messages", "Messages") }] : [])
   ];
 
   return (

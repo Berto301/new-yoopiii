@@ -1,0 +1,30 @@
+{
+  "profile": {
+    "updated": "Profile updated successfully.",
+    "avatarUpdated": "Profile photo updated successfully.",
+    "passwordUpdated": "Password changed successfully."
+  },
+  "agency": {
+    "updated": "Agency updated successfully.",
+    "coverUpdated": "Cover image updated successfully.",
+    "logoUpdated": "Logo updated successfully."
+  },
+  "members": {
+    "updated": "Agent updated successfully.",
+    "created": "Agent added successfully.",
+    "deleted": "Agent deleted successfully."
+  },
+  "preferences": {
+    "saved": "Settings saved successfully."
+  },
+  "errors": {
+    "profileUpdate": "Unable to update the profile.",
+    "avatarUpload": "Unable to upload the profile photo.",
+    "passwordUpdate": "Unable to change the password.",
+    "preferencesUpdate": "Unable to update settings.",
+    "agencyUpdate": "Unable to update the agency.",
+    "agencyAssetUpload": "Unable to upload the image.",
+    "memberUpdate": "Unable to manage the agent.",
+    "memberDelete": "Unable to delete the agent."
+  }
+}

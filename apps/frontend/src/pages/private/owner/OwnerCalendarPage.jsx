@@ -3,8 +3,9 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import { format, getDay, parse, startOfWeek } from "date-fns";
-import { fr } from "date-fns/locale";
+import { enUS, fr } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
@@ -14,30 +15,7 @@ import { getConversationMessages, getConversations } from "../../../features/cha
 import { useOwnerWorkspace } from "../../../features/owner/hooks/useOwnerWorkspace.js";
 import { selectCurrentUser } from "../../../app/store/session.store.js";
 
-const locales = { fr };
-
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: () => startOfWeek(new Date(), { locale: fr }),
-  getDay,
-  locales
-});
-
-const calendarMessages = {
-  today: "Aujourd'hui",
-  previous: "Precedent",
-  next: "Suivant",
-  month: "Mois",
-  week: "Semaine",
-  day: "Jour",
-  agenda: "Agenda",
-  date: "Date",
-  time: "Heure",
-  event: "Rendez-vous",
-  noEventsInRange: "Aucun rendez-vous sur cette periode",
-  showMore: (total) => `+${total} de plus`
-};
+const localeMap = { fr, en: enUS };
 
 const getStatusTone = (status) => {
   if (status === "closed_won") {
@@ -112,8 +90,33 @@ const buildOwnerCalendarEvent = ({ message, conversation, currentUser }) => {
 
 export const OwnerCalendarPage = () => {
   const currentUser = useSelector(selectCurrentUser);
+  const { preferences, t } = useUserPreferences();
   const { managedPropertiesQuery } = useOwnerWorkspace();
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const calendarLocale = localeMap[preferences.language] || fr;
+
+  const localizer = useMemo(() => dateFnsLocalizer({
+    format,
+    parse,
+    startOfWeek: () => startOfWeek(new Date(), { locale: calendarLocale }),
+    getDay,
+    locales: localeMap
+  }), [calendarLocale]);
+
+  const calendarMessages = useMemo(() => ({
+    today: t("private", "owner.calendar.messages.today", "Aujourd'hui"),
+    previous: t("private", "owner.calendar.messages.previous", "Precedent"),
+    next: t("private", "owner.calendar.messages.next", "Suivant"),
+    month: t("private", "owner.calendar.messages.month", "Mois"),
+    week: t("private", "owner.calendar.messages.week", "Semaine"),
+    day: t("private", "owner.calendar.messages.day", "Jour"),
+    agenda: t("private", "owner.calendar.messages.agenda", "Agenda"),
+    date: t("private", "owner.calendar.messages.date", "Date"),
+    time: t("private", "owner.calendar.messages.time", "Heure"),
+    event: t("private", "owner.calendar.messages.event", "Rendez-vous"),
+    noEventsInRange: t("private", "owner.calendar.messages.noEventsInRange", "Aucun rendez-vous sur cette periode"),
+    showMore: (total) => t("private", "owner.calendar.messages.showMore", "+{total} de plus").replace("{total}", total)
+  }), [t]);
 
   const conversationsQuery = useQuery({
     queryKey: ["owner-calendar-conversations", currentUser?.id],
@@ -193,17 +196,21 @@ export const OwnerCalendarPage = () => {
 
     return [{
       value: selectedEvent.appointment.propertyId,
-      label: selectedEvent.appointment.propertyTitle || "Bien selectionne",
+      label: selectedEvent.appointment.propertyTitle || t("private", "owner.calendar.selectedProperty", "Bien selectionne"),
       purpose: selectedEvent.appointment.propertyPurpose || null
     }];
-  }, [selectedEvent]);
+  }, [selectedEvent, t]);
 
   if (isLoadingAppointments) {
     return (
       <section className="space-y-8">
-        <SectionTitle eyebrow="Calendrier" title="Rendez-vous de mes biens" description="Chargement du calendrier proprietaire." />
+        <SectionTitle
+          eyebrow={t("private", "owner.calendar.eyebrow", "Calendrier")}
+          title={t("private", "owner.calendar.title", "Rendez-vous de mes biens")}
+          description={t("private", "owner.calendar.loadingDescription", "Chargement du calendrier proprietaire.")}
+        />
         <Card className="border-white/10 bg-white/5">
-          <p className="text-sm text-stone-300">Chargement des rendez-vous...</p>
+          <p className="text-sm text-stone-300">{t("private", "owner.calendar.loading", "Chargement des rendez-vous...")}</p>
         </Card>
       </section>
     );
@@ -212,9 +219,13 @@ export const OwnerCalendarPage = () => {
   if (hasAppointmentError) {
     return (
       <section className="space-y-8">
-        <SectionTitle eyebrow="Calendrier" title="Rendez-vous de mes biens" description="Le calendrier proprietaire n'a pas pu etre charge." />
+        <SectionTitle
+          eyebrow={t("private", "owner.calendar.eyebrow", "Calendrier")}
+          title={t("private", "owner.calendar.title", "Rendez-vous de mes biens")}
+          description={t("private", "owner.calendar.errorDescription", "Le calendrier proprietaire n'a pas pu etre charge.")}
+        />
         <Card className="border-red-500/20 bg-red-500/5">
-          <p className="text-sm text-red-200">Impossible de charger les rendez-vous de vos biens.</p>
+          <p className="text-sm text-red-200">{t("private", "owner.calendar.error", "Impossible de charger les rendez-vous de vos biens.")}</p>
         </Card>
       </section>
     );
@@ -227,23 +238,23 @@ export const OwnerCalendarPage = () => {
           <div className="grid gap-8 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
             <div className="space-y-5">
               <SectionTitle
-                eyebrow="Calendrier"
-                title="Rendez-vous de mes biens"
-                description="Suivez uniquement les rendez-vous issus des conversations qui concernent vos biens geres."
+                eyebrow={t("private", "owner.calendar.eyebrow", "Calendrier")}
+                title={t("private", "owner.calendar.title", "Rendez-vous de mes biens")}
+                description={t("private", "owner.calendar.description", "Suivez uniquement les rendez-vous issus des conversations qui concernent vos biens geres.")}
               />
               <div className="flex flex-wrap gap-3">
                 <div className="rounded-full border border-white/10 bg-black/20 px-4 py-3 text-xs uppercase tracking-[0.24em] text-stone-300 backdrop-blur">
-                  {events.length} rendez-vous synchronises
+                  {`${events.length} ${t("private", "owner.calendar.synced", "rendez-vous synchronises")}`}
                 </div>
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                { label: "Total", value: summary.total },
-                { label: "Aujourd'hui", value: summary.today },
-                { label: "En attente", value: summary.pending },
-                { label: "Confirmes", value: summary.confirmed }
+                { label: t("private", "owner.calendar.summary.total", "Total"), value: summary.total },
+                { label: t("private", "owner.calendar.summary.today", "Aujourd'hui"), value: summary.today },
+                { label: t("private", "owner.calendar.summary.pending", "En attente"), value: summary.pending },
+                { label: t("private", "owner.calendar.summary.confirmed", "Confirmes"), value: summary.confirmed }
               ].map((item) => (
                 <Card key={item.label} className="border-white/10 bg-black/20">
                   <p className="text-xs uppercase tracking-[0.24em] text-stone-500">{item.label}</p>
@@ -257,8 +268,8 @@ export const OwnerCalendarPage = () => {
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <Card className="overflow-hidden border-white/10 bg-white/[0.04] p-0">
             <div className="border-b border-white/10 px-5 py-5 lg:px-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Vue planning</p>
-              <h3 className="mt-2 text-2xl font-semibold text-white">Calendrier proprietaire</h3>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("private", "owner.calendar.planningEyebrow", "Vue planning")}</p>
+              <h3 className="mt-2 text-2xl font-semibold text-white">{t("private", "owner.calendar.planningTitle", "Calendrier proprietaire")}</h3>
             </div>
             <div className="calendar-shell p-4 md:p-6">
               <Calendar
@@ -276,7 +287,7 @@ export const OwnerCalendarPage = () => {
 
           <div className="space-y-6">
             <Card className="border-white/10 bg-white/[0.04]">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Prochains rendez-vous</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("private", "owner.calendar.upcoming", "Prochains rendez-vous")}</p>
               <div className="mt-5 space-y-3">
                 {upcomingEvents.length ? upcomingEvents.map((event) => (
                   <button
@@ -288,7 +299,7 @@ export const OwnerCalendarPage = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-white">{event.title}</p>
-                        <p className="mt-1 text-sm text-stone-400">{format(event.start, "dd/MM/yyyy HH:mm", { locale: fr })}</p>
+                        <p className="mt-1 text-sm text-stone-400">{format(event.start, "dd/MM/yyyy HH:mm", { locale: calendarLocale })}</p>
                       </div>
                       <Badge className={getStatusTone(event.appointment.status)}>
                         {APPOINTMENT_STATUS[event.appointment.status] || event.appointment.status}
@@ -297,7 +308,7 @@ export const OwnerCalendarPage = () => {
                   </button>
                 )) : (
                   <div className="rounded-[1.5rem] border border-dashed border-white/15 bg-black/10 px-4 py-5 text-sm leading-6 text-stone-400">
-                    Aucun rendez-vous a venir pour vos biens.
+                    {t("private", "owner.calendar.emptyUpcoming", "Aucun rendez-vous a venir pour vos biens.")}
                   </div>
                 )}
               </div>
@@ -306,33 +317,33 @@ export const OwnerCalendarPage = () => {
             <Card className="border-white/10 bg-white/[0.04]">
               {selectedEvent?.appointment ? (
                 <div className="space-y-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Detail du rendez-vous</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("private", "owner.calendar.detail", "Detail du rendez-vous")}</p>
                   <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Bien</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.calendar.property", "Bien")}</p>
                     <p className="mt-2 text-sm font-medium text-white">{selectedEvent.appointment.propertyTitle || "-"}</p>
                   </div>
                   <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Client</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.calendar.client", "Client")}</p>
                     <p className="mt-2 text-sm font-medium text-white">{formatParticipantName(selectedEvent.client)}</p>
                   </div>
                   <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Agent</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.calendar.agent", "Agent")}</p>
                     <p className="mt-2 text-sm font-medium text-white">{formatParticipantName(selectedEvent.agent)}</p>
                   </div>
                   <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Date</p>
-                    <p className="mt-2 text-sm font-medium text-white">{format(selectedEvent.start, "dd/MM/yyyy HH:mm", { locale: fr })}</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.calendar.messages.date", "Date")}</p>
+                    <p className="mt-2 text-sm font-medium text-white">{format(selectedEvent.start, "dd/MM/yyyy HH:mm", { locale: calendarLocale })}</p>
                     <p className="mt-1 text-sm text-stone-400">{selectedEvent.appointment.startTime} - {selectedEvent.appointment.endTime}</p>
                   </div>
                   {selectedEvent.appointment.description ? (
                     <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Description</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.calendar.descriptionLabel", "Description")}</p>
                       <p className="mt-2 text-sm text-stone-300">{selectedEvent.appointment.description}</p>
                     </div>
                   ) : null}
                 </div>
               ) : (
-                <div className="text-sm text-stone-400">Selectionnez un rendez-vous pour afficher son detail.</div>
+                <div className="text-sm text-stone-400">{t("private", "owner.calendar.selectHint", "Selectionnez un rendez-vous pour afficher son detail.")}</div>
               )}
             </Card>
           </div>

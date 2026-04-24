@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
@@ -7,8 +9,7 @@ import { Card } from "../../components/ui/Card.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 
-const formatPrice = (value, currency = "AR") =>
-  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
+const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
 
 const getPropertyCover = (property) => resolveAssetUrl(property.coverImage || property.media?.find((item) => item.type === "image")?.url || "");
 
@@ -28,6 +29,7 @@ const getStatusClassName = (property) => {
 };
 
 export const FavoritesPage = () => {
+  const { t } = useUserPreferences();
   const { favoritePropertiesQuery, favoriteMutation } = usePropertyWorkspace();
   const items = favoritePropertiesQuery.data?.items || [];
 
@@ -37,21 +39,21 @@ export const FavoritesPage = () => {
     const averageBudget = items.length ? Math.round(items.reduce((sum, item) => sum + (item.price || 0), 0) / items.length) : 0;
 
     return [
-      { label: "Biens suivis", value: items.length },
-      { label: "Reservations observees", value: reserved },
-      { label: "Visites 3D", value: with3D },
-      { label: "Budget moyen", value: formatPrice(averageBudget) }
+      { label: t("private", "favorites.metrics.tracked", "Biens suivis"), value: items.length },
+      { label: t("private", "favorites.metrics.reserved", "Reservations observees"), value: reserved },
+      { label: t("private", "favorites.metrics.3d", "Visites 3D"), value: with3D },
+      { label: t("private", "favorites.metrics.averageBudget", "Budget moyen"), value: formatPrice(averageBudget) }
     ];
-  }, [items]);
+  }, [items, t]);
 
   return (
     <section className="space-y-8">
       <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.2),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.18),transparent_30%),linear-gradient(180deg,rgba(28,25,23,0.96),rgba(12,10,9,0.98))] p-6 shadow-[0_32px_90px_rgba(15,23,42,0.3)] lg:p-8">
         <div className="grid gap-8 xl:grid-cols-[1.3fr_0.9fr] xl:items-end">
           <SectionTitle
-            eyebrow="Favoris"
-            title="Vos biens suivis avec une lecture plus premium"
-            description="Comparez rapidement les annonces que vous gardez en vue avec photo, caracteristiques clefs et interlocuteur principal."
+            eyebrow={t("private", "favorites.eyebrow", "Favoris")}
+            title={t("private", "favorites.title", "Vos biens suivis avec une lecture plus premium")}
+            description={t("private", "favorites.description", "Comparez rapidement les annonces que vous gardez en vue avec photo, caracteristiques clefs et interlocuteur principal.")}
           />
 
           <div className="grid gap-3 sm:grid-cols-2">

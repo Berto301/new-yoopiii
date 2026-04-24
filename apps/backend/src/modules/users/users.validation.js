@@ -41,6 +41,17 @@ export const updateMyProfileSchema = z.object({
   query: z.object({}).default({})
 });
 
+export const updateMyPreferencesSchema = z.object({
+  body: z.object({
+    language: z.enum(["en", "fr"]),
+    theme: z.enum(["light", "dark"]),
+    currency: z.string().trim().min(3).max(8).transform((value) => value.toUpperCase()),
+    contractDefaultCommission: z.coerce.number().min(0).max(100)
+  }),
+  params: z.object({}).default({}),
+  query: z.object({}).default({})
+});
+
 export const userIdParamsSchema = z.object({
   body: z.object({}).default({}),
   params: z.object({

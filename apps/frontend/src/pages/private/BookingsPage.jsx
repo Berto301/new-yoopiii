@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
@@ -7,12 +9,11 @@ import { formatBookingDateTime } from "../../features/bookings/booking.utils.js"
 import { useBookingsWorkspace } from "../../features/bookings/hooks/useBookingsWorkspace.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 
-const formatPrice = (value, currency = "AR") =>
-  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
+const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
 
-const formatSchedule = (booking) => {
+const formatSchedule = (booking, t) => {
   if (!booking.requestedDate) {
-    return booking.timeSlot || "Planification en attente";
+    return booking.timeSlot || t("private", "bookings.schedulePending", "Planification en attente");
   }
 
   return formatBookingDateTime(booking.requestedDate, booking.timeSlot);
@@ -44,7 +45,7 @@ const getStatusBadgeClassName = (status) => {
 
 const getParticipant = (booking, role) => (role === "user" ? booking.agent : booking.customer);
 
-const getParticipantLabel = (role) => (role === "user" ? "Agent en charge" : "Client concerne");
+const getParticipantLabel = (role, t) => (role === "user" ? t("private", "bookings.participantLabels.user", "Agent en charge") : t("private", "bookings.participantLabels.other", "Client concerne"));
 
 const getParticipantType = (role) => (role === "user" ? "agent" : "user");
 
@@ -52,6 +53,7 @@ const getParticipantName = (participant) =>
   [participant?.firstName, participant?.lastName].filter(Boolean).join(" ") || participant?.email || "Non renseigne";
 
 export const BookingsPage = () => {
+  const { t } = useUserPreferences();
   const { user, bookingsQuery } = useBookingsWorkspace();
   const items = bookingsQuery.data || [];
 
@@ -61,18 +63,18 @@ export const BookingsPage = () => {
     const completed = items.filter((booking) => booking.status === "completed").length;
 
     return [
-      { label: "Reservations", value: items.length },
-      { label: "Confirmees", value: confirmed },
-      { label: "En attente", value: pending },
-      { label: "Finalisees", value: completed }
+      { label: t("private", "bookings.metrics.total", "Reservations"), value: items.length },
+      { label: t("private", "bookings.metrics.confirmed", "Confirmees"), value: confirmed },
+      { label: t("private", "bookings.metrics.pending", "En attente"), value: pending },
+      { label: t("private", "bookings.metrics.completed", "Finalisees"), value: completed }
     ];
-  }, [items]);
+  }, [items, t]);
 
   if (bookingsQuery.isLoading) {
     return (
       <section className="space-y-8">
-        <SectionTitle eyebrow="Reservations" title="Vos visites et demandes en cours" description="Chargement des reservations." />
-        <Card><p className="text-sm text-stone-300">Chargement des reservations...</p></Card>
+        <SectionTitle eyebrow={t("private", "bookings.eyebrow", "Reservations")} title={t("private", "bookings.title", "Vos visites et demandes dans une vue plus executive")} description={t("private", "bookings.loadingDescription", "Chargement des reservations.")} />
+        <Card><p className="text-sm text-stone-300">{t("private", "bookings.loading", "Chargement des reservations...")}</p></Card>
       </section>
     );
   }
@@ -80,8 +82,8 @@ export const BookingsPage = () => {
   if (bookingsQuery.isError) {
     return (
       <section className="space-y-8">
-        <SectionTitle eyebrow="Reservations" title="Vos visites et demandes en cours" description="Les reservations n'ont pas pu etre chargees." />
-        <Card><p className="text-sm text-red-300">Impossible de charger les reservations.</p></Card>
+        <SectionTitle eyebrow={t("private", "bookings.eyebrow", "Reservations")} title={t("private", "bookings.title", "Vos visites et demandes dans une vue plus executive")} description={t("private", "bookings.errorDescription", "Les reservations n'ont pas pu etre chargees.")} />
+        <Card><p className="text-sm text-red-300">{t("private", "bookings.error", "Impossible de charger les reservations.")}</p></Card>
       </section>
     );
   }
@@ -91,9 +93,9 @@ export const BookingsPage = () => {
       <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.22),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(249,115,22,0.18),transparent_30%),linear-gradient(180deg,rgba(17,24,39,0.95),rgba(12,10,9,0.98))] p-6 shadow-[0_32px_90px_rgba(15,23,42,0.32)] lg:p-8">
         <div className="grid gap-8 xl:grid-cols-[1.2fr_0.9fr] xl:items-end">
           <SectionTitle
-            eyebrow="Reservations"
-            title="Vos visites et demandes dans une vue plus executive"
-            description="Retrouvez chaque dossier avec le visuel du bien, ses caracteristiques principales, son statut et la personne liee au rendez-vous."
+            eyebrow={t("private", "bookings.eyebrow", "Reservations")}
+            title={t("private", "bookings.title", "Vos visites et demandes dans une vue plus executive")}
+            description={t("private", "bookings.description", "Retrouvez chaque dossier avec le visuel du bien, ses caracteristiques principales, son statut et la personne liee au rendez-vous.")}
           />
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -114,7 +116,7 @@ export const BookingsPage = () => {
           const specs = getPropertySpecs(property);
           const participant = getParticipant(booking, user?.role);
           const participantName = getParticipantName(participant);
-          const participantLabel = getParticipantLabel(user?.role);
+          const participantLabel = getParticipantLabel(user?.role, t);
 
           return (
             <Card
@@ -183,8 +185,8 @@ export const BookingsPage = () => {
                     <div className="space-y-4">
                       <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-5">
                         <p className="text-xs uppercase tracking-[0.2em] text-stone-400">Planning</p>
-                        <p className="mt-3 text-lg font-semibold text-white">{formatSchedule(booking)}</p>
-                        <p className="mt-2 text-sm text-stone-300">Source: {booking.source || "reservation"}</p>
+                        <p className="mt-3 text-lg font-semibold text-white">{formatSchedule(booking, t)}</p>
+                        <p className="mt-2 text-sm text-stone-300">{t("private", "bookings.source", "Source")}: {booking.source || "reservation"}</p>
                         {booking.message ? <p className="mt-3 text-sm leading-6 text-stone-400">{booking.message}</p> : null}
                       </div>
 
@@ -201,7 +203,7 @@ export const BookingsPage = () => {
                           />
                           <div>
                             <p className="text-lg font-semibold text-white">{participantName}</p>
-                            <p className="mt-1 text-sm text-stone-400">{participant?.email || "Contact interne"}</p>
+                            <p className="mt-1 text-sm text-stone-400">{participant?.email || t("private", "bookings.internalContact", "Contact interne")}</p>
                           </div>
                         </div>
                       </div>

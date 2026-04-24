@@ -87,6 +87,8 @@ const SectionCard = ({ eyebrow, title, children, aside = null }) => (
 const mapOption = (options, value, fallback = null) => options.find((item) => item.value === value) || fallback;
 
 const buildDefaultValues = ({ contract, propertyId, ownerUserId, ownerOptions, agencyOptions, agentOptions, currentUser }) => {
+  const userPreferences = currentUser?.preferences || {};
+  const defaultCommission = Number(userPreferences.contractDefaultCommission ?? 0);
   const contractType = contract?.contractType === "agent" ? "agent" : "agency";
   const resolvedPropertyId = contract?.propertyId || contract?.coveredProperties?.[0]?.id || propertyId || "";
   const resolvedAgencyId = contract?.agency?.id || (contract?.manager?.role === "agency" ? contract?.manager?.id || "" : "");
@@ -111,10 +113,10 @@ const buildDefaultValues = ({ contract, propertyId, ownerUserId, ownerOptions, a
     agencyId: resolvedAgencyId,
     agentId: resolvedAgentId,
     agencyName: resolvedAgencyName,
-    agencyCommission: String(contract?.agency?.commission ?? ""),
+    agencyCommission: String(contract?.agency?.commission ?? (defaultCommission || "")),
     agencyFees: String(contract?.agency?.fees ?? ""),
     agentName: resolvedAgentName,
-    agentCommission: String(contract?.agent?.commission ?? ""),
+    agentCommission: String(contract?.agent?.commission ?? (defaultCommission || "")),
     tenants: (contract?.tenants || []).length
       ? contract.tenants.map((tenant) => ({
           tenantId: tenant.tenantId || "",
@@ -131,7 +133,7 @@ const buildDefaultValues = ({ contract, propertyId, ownerUserId, ownerOptions, a
     rentAmount: String(contract?.financial?.rentAmount ?? ""),
     charges: String(contract?.financial?.charges ?? ""),
     deposit: String(contract?.financial?.deposit ?? ""),
-    currency: contract?.financial?.currency || "XOF",
+    currency: contract?.financial?.currency || userPreferences.currency || "USD",
     paymentFrequency: mapOption(paymentFrequencyOptions, contract?.financial?.paymentFrequency, paymentFrequencyOptions[0]),
     paymentMethod: mapOption(paymentMethodOptions, contract?.financial?.paymentMethod, paymentMethodOptions[0]),
     ownerShare: String(contract?.distribution?.ownerShare ?? ""),
@@ -380,6 +382,10 @@ export const ModalManageContract = ({
       setValue("agentName", "", { shouldDirty: true, shouldValidate: false });
       setValue("agentCommission", "", { shouldDirty: true, shouldValidate: false });
 
+      if (!contract?.id && currentUser?.preferences?.contractDefaultCommission) {
+        setValue("agencyCommission", String(currentUser.preferences.contractDefaultCommission), { shouldDirty: false, shouldValidate: false });
+      }
+
       if (!watch("agencyId") && resolvedAgencyOptions.length === 1) {
         syncSelectedParty("agencyId", resolvedAgencyOptions[0]);
       }
@@ -391,11 +397,15 @@ export const ModalManageContract = ({
       setValue("agencyCommission", "", { shouldDirty: true, shouldValidate: false });
       setValue("agencyFees", "", { shouldDirty: true, shouldValidate: false });
 
+      if (!contract?.id && currentUser?.preferences?.contractDefaultCommission) {
+        setValue("agentCommission", String(currentUser.preferences.contractDefaultCommission), { shouldDirty: false, shouldValidate: false });
+      }
+
       if (!watch("agentId") && resolvedAgentOptions.length === 1) {
         syncSelectedParty("agentId", resolvedAgentOptions[0]);
       }
     }
-  }, [contractTypeValue, open, resolvedAgencyOptions, resolvedAgentOptions, setValue, watch]);
+  }, [contract?.id, contractTypeValue, currentUser?.preferences?.contractDefaultCommission, open, resolvedAgencyOptions, resolvedAgentOptions, setValue, watch]);
 
   useEffect(() => {
     if (!open || !isSaleProperty) {

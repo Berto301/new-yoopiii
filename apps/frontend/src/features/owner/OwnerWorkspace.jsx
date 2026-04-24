@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
@@ -77,38 +78,50 @@ const DataTable = ({ columns, rows }) => (
   </div>
 );
 
+const replaceTemplate = (template, values = {}) =>
+  Object.entries(values).reduce(
+    (currentValue, [key, value]) => currentValue.replaceAll(`{${key}}`, String(value)),
+    template
+  );
+
 export const OwnerDashboardOverview = () => {
   const { dashboardQuery } = useOwnerWorkspace();
+  const { t } = useUserPreferences();
 
   if (dashboardQuery.isLoading) {
-    return <DashboardLoadingState label="Chargement du dashboard proprietaire..." />;
+    return <DashboardLoadingState label={t("private", "owner.dashboard.loading", "Chargement du dashboard proprietaire...")} />;
   }
 
   if (dashboardQuery.isError) {
-    return <DashboardEmptyState title="Dashboard indisponible" description="Les indicateurs proprietaire n'ont pas pu etre charges pour le moment." />;
+    return (
+      <DashboardEmptyState
+        title={t("private", "owner.dashboard.unavailableTitle", "Dashboard indisponible")}
+        description={t("private", "owner.dashboard.unavailableDescription", "Les indicateurs proprietaire n'ont pas pu etre charges pour le moment.")}
+      />
+    );
   }
 
   const summary = dashboardQuery.data?.summary || {};
   const stats = [
     {
-      label: "Revenus mensuels",
+      label: t("private", "owner.dashboard.stats.monthlyRevenue", "Revenus mensuels"),
       value: `${Number(summary.monthlyRevenue || 0).toLocaleString("fr-FR")} Ar`,
-      helpText: "Encaissements attendus et deja percus sur le mois en cours."
+      helpText: t("private", "owner.dashboard.helpText.monthlyRevenue", "Encaissements attendus et deja percus sur le mois en cours.")
     },
     {
-      label: "Taux d'occupation",
+      label: t("private", "owner.dashboard.stats.occupancyRate", "Taux d'occupation"),
       value: `${summary.occupancyRate || 0}%`,
-      helpText: "Part de votre portefeuille actuellement occupe par des locataires."
+      helpText: t("private", "owner.dashboard.helpText.occupancyRate", "Part de votre portefeuille actuellement occupe par des locataires.")
     },
     {
-      label: "Loyers en retard",
+      label: t("private", "owner.dashboard.stats.lateRent", "Loyers en retard"),
       value: `${summary.lateRentCount || 0}`,
-      helpText: "Paiements a relancer avec une priorite sur les 72 prochaines heures."
+      helpText: t("private", "owner.dashboard.helpText.lateRent", "Paiements a relancer avec une priorite sur les 72 prochaines heures.")
     },
     {
-      label: "Contrats en cours",
+      label: t("private", "owner.dashboard.stats.activeContracts", "Contrats en cours"),
       value: `${summary.activeContractsCount || 0}`,
-      helpText: "Baux actifs avec suivi des renouvellements et des echeances."
+      helpText: t("private", "owner.dashboard.helpText.activeContracts", "Baux actifs avec suivi des renouvellements et des echeances.")
     }
   ];
   const revenueByProperty = dashboardQuery.data?.revenueByProperty || [];
@@ -119,13 +132,13 @@ export const OwnerDashboardOverview = () => {
   return (
     <div className="space-y-6">
       <DashboardHero
-        eyebrow="Patrimoine locatif"
-        title="Un cockpit moderne pour piloter vos biens, vos loyers et vos contrats"
-        description="Suivez les revenus mensuels, les loyers en retard, les contrats sensibles et la maintenance recente depuis un espace proprietaire pense pour la gestion quotidienne."
+        eyebrow={t("private", "owner.dashboard.heroEyebrow", "Patrimoine locatif")}
+        title={t("private", "owner.dashboard.heroTitle", "Un cockpit moderne pour piloter vos biens, vos loyers et vos contrats")}
+        description={t("private", "owner.dashboard.heroDescription", "Suivez les revenus mensuels, les loyers en retard, les contrats sensibles et la maintenance recente depuis un espace proprietaire pense pour la gestion quotidienne.")}
         metrics={[
-          { label: "Biens", value: summary.propertiesCount || 0 },
-          { label: "Locataires", value: summary.tenantsCount || 0 },
-          { label: "Tickets", value: summary.maintenanceCount || 0 }
+          { label: t("private", "owner.dashboard.heroMetrics.properties", "Biens"), value: summary.propertiesCount || 0 },
+          { label: t("private", "owner.dashboard.heroMetrics.tenants", "Locataires"), value: summary.tenantsCount || 0 },
+          { label: t("private", "owner.dashboard.heroMetrics.tickets", "Tickets"), value: summary.maintenanceCount || 0 }
         ]}
       />
 
@@ -133,10 +146,10 @@ export const OwnerDashboardOverview = () => {
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
         <DashboardPanel
-          title="Rendement par bien"
-          description="Visualisez les biens les plus performants et ceux qui demandent une action commerciale ou technique."
-          badge={`${revenueByProperty.length} biens suivis`}
-          action={<Button as={Link} to="/owner/properties" variant="secondary">Ouvrir mes biens</Button>}
+          title={t("private", "owner.dashboard.panels.yieldTitle", "Rendement par bien")}
+          description={t("private", "owner.dashboard.panels.yieldDescription", "Visualisez les biens les plus performants et ceux qui demandent une action commerciale ou technique.")}
+          badge={replaceTemplate(t("private", "owner.dashboard.panels.yieldBadge", "{count} biens suivis"), { count: revenueByProperty.length })}
+          action={<Button as={Link} to="/owner/properties" variant="secondary">{t("private", "owner.dashboard.panels.openProperties", "Ouvrir mes biens")}</Button>}
         >
           <div className="grid gap-3 md:grid-cols-2">
             {revenueByProperty.map((item) => (
@@ -144,13 +157,13 @@ export const OwnerDashboardOverview = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-base font-semibold text-white">{item.name}</p>
-                    <p className="mt-1 text-sm text-stone-400">Revenu mensuel: {item.revenue}</p>
+                    <p className="mt-1 text-sm text-stone-400">{`${t("private", "owner.dashboard.panels.monthlyRevenueLabel", "Revenu mensuel")}: ${item.revenue}`}</p>
                   </div>
                   <StatusPill value={item.status} />
                 </div>
                 <div className="mt-5 flex items-end justify-between">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.22em] text-stone-500">Rendement</p>
+                    <p className="text-xs uppercase tracking-[0.22em] text-stone-500">{t("private", "owner.dashboard.panels.yieldLabel", "Rendement")}</p>
                     <p className="mt-2 text-2xl font-semibold text-amber-100">{item.yield}</p>
                   </div>
                   <div className="h-16 w-24 rounded-2xl bg-[linear-gradient(180deg,rgba(251,191,36,0.2),rgba(15,23,42,0.1))]" />
@@ -161,9 +174,9 @@ export const OwnerDashboardOverview = () => {
         </DashboardPanel>
 
         <DashboardPanel
-          title="Notifications automatiques"
-          description="Alertes prioritaires generees a partir des loyers, baux et besoins de maintenance."
-          badge={`${alerts.length} alertes`}
+          title={t("private", "owner.dashboard.panels.alertsTitle", "Notifications automatiques")}
+          description={t("private", "owner.dashboard.panels.alertsDescription", "Alertes prioritaires generees a partir des loyers, baux et besoins de maintenance.")}
+          badge={replaceTemplate(t("private", "owner.dashboard.panels.alertsBadge", "{count} alertes"), { count: alerts.length })}
         >
           <div className="space-y-3">
             {alerts.map((item) => (
@@ -178,9 +191,9 @@ export const OwnerDashboardOverview = () => {
 
       <div className="grid gap-4 xl:grid-cols-2">
         <DashboardPanel
-          title="Prochaines echeances"
-          description="Baux, paiements et interventions qui exigent une action dans les prochains jours."
-          action={<Button as={Link} to="/owner/contracts" variant="secondary">Voir les contrats</Button>}
+          title={t("private", "owner.dashboard.panels.deadlinesTitle", "Prochaines echeances")}
+          description={t("private", "owner.dashboard.panels.deadlinesDescription", "Baux, paiements et interventions qui exigent une action dans les prochains jours.")}
+          action={<Button as={Link} to="/owner/contracts" variant="secondary">{t("private", "owner.dashboard.panels.viewContracts", "Voir les contrats")}</Button>}
         >
           <div className="space-y-3">
             {upcomingDeadlines.map((item) => (
@@ -198,9 +211,9 @@ export const OwnerDashboardOverview = () => {
         </DashboardPanel>
 
         <DashboardPanel
-          title="Maintenance recente"
-          description="Interventions terminees, en cours ou planifiees sur l'ensemble du portefeuille."
-          action={<Button as={Link} to="/owner/maintenance" variant="secondary">Gerer la maintenance</Button>}
+          title={t("private", "owner.dashboard.panels.maintenanceTitle", "Maintenance recente")}
+          description={t("private", "owner.dashboard.panels.maintenanceDescription", "Interventions terminees, en cours ou planifiees sur l'ensemble du portefeuille.")}
+          action={<Button as={Link} to="/owner/maintenance" variant="secondary">{t("private", "owner.dashboard.panels.manageMaintenance", "Gerer la maintenance")}</Button>}
         >
           <div className="space-y-3">
             {recentMaintenance.map((item) => (
@@ -224,31 +237,32 @@ export const OwnerDashboardOverview = () => {
 
 export const OwnerContractsModule = () => {
   const { contractsQuery } = useOwnerWorkspace();
+  const { t } = useUserPreferences();
 
   if (contractsQuery.isLoading) {
-    return <DashboardLoadingState label="Chargement des contrats..." />;
+    return <DashboardLoadingState label={t("private", "contracts.loading", "Chargement des contrats...")} />;
   }
 
   if (contractsQuery.isError) {
-    return <DashboardEmptyState title="Contrats indisponibles" description="Les contrats proprietaire n'ont pas pu etre recuperes." />;
+    return <DashboardEmptyState title={t("private", "contracts.stats.total", "Contrats")} description={t("private", "contracts.error", "Impossible de charger les contrats.")} />;
   }
 
   const contracts = contractsQuery.data || [];
 
   return (
     <DashboardPanel
-      title="Gestion de contrats"
-      description="Creation, stockage et supervision des baux ainsi que des contrats de gestion avec agence ou agent independant."
-      badge={`${contracts.length} contrats`}
-      action={<Button type="button" variant="secondary">Nouveau contrat</Button>}
+      title={t("private", "contracts.title", "Cadrez juridiquement la gestion de vos biens")}
+      description={t("private", "contracts.description", "Retrouvez vos contrats, les proprietaires lies, les biens couverts, les statuts et les informations de gestion dans une interface plus moderne et reutilisable.")}
+      badge={replaceTemplate("{count} contrats", { count: contracts.length })}
+      action={<Button type="button" variant="secondary">{t("private", "contracts.new", "Nouveau contrat")}</Button>}
     >
       <DataTable
         columns={[
-          { key: "title", label: "Contrat" },
-          { key: "partner", label: "Partenaire" },
+          { key: "title", label: t("private", "contracts.stats.total", "Contrats") },
+          { key: "partner", label: t("private", "contracts.labels.manager", "Gestionnaire") },
           { key: "partnerType", label: "Type" },
-          { key: "startDate", label: "Debut" },
-          { key: "endDate", label: "Fin" },
+          { key: "startDate", label: t("private", "contracts.labels.start", "Debut") },
+          { key: "endDate", label: t("private", "contracts.labels.end", "Fin") },
           { key: "renewalDate", label: "Renouvellement" },
           { key: "status", label: "Statut", render: (row) => <StatusPill value={row.status} /> }
         ]}
@@ -260,13 +274,19 @@ export const OwnerContractsModule = () => {
 
 export const OwnerRentsModule = () => {
   const { rentsQuery } = useOwnerWorkspace();
+  const { t } = useUserPreferences();
 
   if (rentsQuery.isLoading) {
-    return <DashboardLoadingState label="Chargement des loyers..." />;
+    return <DashboardLoadingState label={t("private", "owner.rents.loading", "Chargement des loyers...")} />;
   }
 
   if (rentsQuery.isError) {
-    return <DashboardEmptyState title="Loyers indisponibles" description="Le suivi des loyers n'a pas pu etre charge." />;
+    return (
+      <DashboardEmptyState
+        title={t("private", "owner.rents.unavailableTitle", "Loyers indisponibles")}
+        description={t("private", "owner.rents.unavailableDescription", "Le suivi des loyers n'a pas pu etre charge.")}
+      />
+    );
   }
 
   const rents = rentsQuery.data || [];
@@ -274,18 +294,18 @@ export const OwnerRentsModule = () => {
   return (
     <div className="space-y-4">
       <DashboardPanel
-        title="Gestion de loyers"
-        description="Suivi des paiements, quittances et alertes de retard sur l'ensemble de vos biens locatifs."
-        badge={`${rents.filter((item) => item.status === "En retard").length} retards`}
-        action={<Button type="button" variant="secondary">Generer les quittances</Button>}
+        title={t("private", "owner.rents.title", "Gestion de loyers")}
+        description={t("private", "owner.rents.description", "Suivi des paiements, quittances et alertes de retard sur l'ensemble de vos biens locatifs.")}
+        badge={replaceTemplate(t("private", "owner.rents.badge", "{count} retards"), { count: rents.filter((item) => item.status === "En retard").length })}
+        action={<Button type="button" variant="secondary">{t("private", "owner.rents.generateReceipts", "Generer les quittances")}</Button>}
       >
         <DataTable
           columns={[
-            { key: "tenant", label: "Locataire" },
-            { key: "property", label: "Bien" },
-            { key: "dueDate", label: "Echeance" },
-            { key: "amount", label: "Montant" },
-            { key: "status", label: "Paiement", render: (row) => <StatusPill value={row.status} /> }
+            { key: "tenant", label: t("private", "owner.rents.columns.tenant", "Locataire") },
+            { key: "property", label: t("private", "owner.rents.columns.property", "Bien") },
+            { key: "dueDate", label: t("private", "owner.rents.columns.dueDate", "Echeance") },
+            { key: "amount", label: t("private", "owner.rents.columns.amount", "Montant") },
+            { key: "status", label: t("private", "owner.rents.columns.status", "Paiement"), render: (row) => <StatusPill value={row.status} /> }
           ]}
           rows={rents}
         />
@@ -298,6 +318,7 @@ export const OwnerTenantsModule = () => {
   const { tenantsQuery, managedPropertiesQuery, createTenantMutation, updateTenantMutation, deleteTenantMutation } = useOwnerWorkspace();
   const { bookingsQuery } = useBookingsWorkspace();
   const { showError, showSuccess } = useNotification();
+  const { t } = useUserPreferences();
   const [modalState, setModalState] = useState({ open: false, mode: "create", tenant: null });
   const [deleteModalState, setDeleteModalState] = useState({ open: false, tenant: null });
   const [searchValue, setSearchValue] = useState("");
@@ -311,10 +332,12 @@ export const OwnerTenantsModule = () => {
         .map((property) => ({
           value: property.id,
           label: property.title,
-          contractLabel: property.managementContractId ? `Contrat ${property.managementContractId}` : "Aucun contrat associe",
+          contractLabel: property.managementContractId
+            ? replaceTemplate(t("private", "owner.tenants.propertyContract", "Contrat {id}"), { id: property.managementContractId })
+            : t("private", "owner.tenants.noPropertyContract", "Aucun contrat associe"),
           managementContractId: property.managementContractId || null
         })),
-    [managedPropertiesQuery.data]
+    [managedPropertiesQuery.data, t]
   );
 
   const userOptions = useMemo(() => {
@@ -351,8 +374,8 @@ export const OwnerTenantsModule = () => {
   }, [bookingsQuery.data, tenants]);
 
   const propertyFilterOptions = useMemo(
-    () => [{ value: "all", label: "Tous les biens" }, ...propertyOptions],
-    [propertyOptions]
+    () => [{ value: "all", label: t("private", "owner.tenants.allProperties", "Tous les biens") }, ...propertyOptions],
+    [propertyOptions, t]
   );
 
   const filteredTenants = useMemo(() => {
@@ -370,11 +393,16 @@ export const OwnerTenantsModule = () => {
   }, [propertyFilterValue, searchValue, tenants]);
 
   if (tenantsQuery.isLoading) {
-    return <DashboardLoadingState label="Chargement des locataires..." />;
+    return <DashboardLoadingState label={t("private", "owner.tenants.loading", "Chargement des locataires...")} />;
   }
 
   if (tenantsQuery.isError) {
-    return <DashboardEmptyState title="Locataires indisponibles" description="Les fiches locataires n'ont pas pu etre chargees." />;
+    return (
+      <DashboardEmptyState
+        title={t("private", "owner.tenants.unavailableTitle", "Locataires indisponibles")}
+        description={t("private", "owner.tenants.unavailableDescription", "Les fiches locataires n'ont pas pu etre chargees.")}
+      />
+    );
   }
 
   const handleSubmitTenant = async (payload) => {
@@ -384,15 +412,15 @@ export const OwnerTenantsModule = () => {
           tenantId: modalState.tenant.id,
           payload
         });
-        showSuccess("Locataire mis a jour.");
+        showSuccess(t("private", "owner.tenants.updateSuccess", "Locataire mis a jour."));
       } else {
         await createTenantMutation.mutateAsync(payload);
-        showSuccess("Locataire cree.");
+        showSuccess(t("private", "owner.tenants.createSuccess", "Locataire cree."));
       }
 
       setModalState({ open: false, mode: "create", tenant: null });
     } catch (error) {
-      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du locataire a echoue." });
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "owner.tenants.saveError", "La gestion du locataire a echoue.") });
     }
   };
 
@@ -404,9 +432,9 @@ export const OwnerTenantsModule = () => {
     try {
       await deleteTenantMutation.mutateAsync(deleteModalState.tenant.id);
       setDeleteModalState({ open: false, tenant: null });
-      showSuccess("Locataire supprime et bien libere.");
+      showSuccess(t("private", "owner.tenants.deleteSuccess", "Locataire supprime et bien libere."));
     } catch (error) {
-      notifyApiErrors({ error, showError, fallbackMessage: "La suppression du locataire a echoue." });
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "owner.tenants.deleteError", "La suppression du locataire a echoue.") });
     }
   };
 
@@ -424,10 +452,10 @@ export const OwnerTenantsModule = () => {
     doc.setFontSize(12);
     doc.text("Yoopii", 18, 18);
     doc.setFontSize(24);
-    doc.text("Fiche locataire", 18, 32);
+    doc.text(t("private", "owner.tenants.pdfTitle", "Fiche locataire"), 18, 32);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text("Export proprietaire", 18, 40);
+    doc.text(t("private", "owner.tenants.pdfExport", "Export proprietaire"), 18, 40);
 
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(14, 66, 182, 58, 10, 10, "F");
@@ -437,9 +465,9 @@ export const OwnerTenantsModule = () => {
     doc.setTextColor(100, 116, 139);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
-    doc.text("Nom complet", 24, 82);
-    doc.text("Bien associe", 24, 100);
-    doc.text("Contrat", 24, 118);
+    doc.text(t("private", "owner.tenants.labels.fullName", "Nom complet"), 24, 82);
+    doc.text(t("private", "owner.tenants.labels.property", "Bien associe"), 24, 100);
+    doc.text(t("private", "owner.tenants.labels.contract", "Contrat"), 24, 118);
 
     doc.setTextColor(15, 23, 42);
     doc.setFontSize(17);
@@ -452,7 +480,7 @@ export const OwnerTenantsModule = () => {
     doc.setTextColor(71, 85, 105);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.text("Coordonnees", 18, 145);
+    doc.text(t("private", "owner.tenants.labels.contact", "Coordonnees"), 18, 145);
     doc.roundedRect(14, 151, 182, 58, 10, 10, "S");
     doc.setFont("helvetica", "normal");
     doc.text([
@@ -465,7 +493,13 @@ export const OwnerTenantsModule = () => {
 
     doc.setTextColor(148, 163, 184);
     doc.setFontSize(9);
-    doc.text(`Genere le ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date())}`, 18, 286);
+    doc.text(
+      replaceTemplate(t("private", "owner.tenants.pdfGeneratedAt", "Genere le {date}"), {
+        date: new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date())
+      }),
+      18,
+      286
+    );
 
     const fileName = `fiche-locataire-${String(tenant.fullName || "profil")
       .normalize("NFD")
@@ -480,24 +514,24 @@ export const OwnerTenantsModule = () => {
   return (
     <>
       <DashboardPanel
-        title="Gestion des locataires"
-        description="Centralisez les fiches locataires avec un visuel plus propre, des filtres rapides et des actions de gestion completes."
-        badge={`${filteredTenants.length} / ${tenants.length} locataires`}
+        title={t("private", "owner.tenants.title", "Gestion des locataires")}
+        description={t("private", "owner.tenants.description", "Centralisez les fiches locataires avec un visuel plus propre, des filtres rapides et des actions de gestion completes.")}
+        badge={replaceTemplate(t("private", "owner.tenants.badge", "{filtered} / {total} locataires"), { filtered: filteredTenants.length, total: tenants.length })}
         action={
           <Button type="button" variant="secondary" disabled={!propertyOptions.length} onClick={() => setModalState({ open: true, mode: "create", tenant: null })}>
-            Nouvelle fiche
+            {t("private", "owner.tenants.newFile", "Nouvelle fiche")}
           </Button>
         }
       >
         <div className="mb-5 grid gap-4 rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5 lg:grid-cols-[1fr_280px]">
           <Input
-            label="Recherche par nom ou CIN"
+            label={t("private", "owner.tenants.searchLabel", "Recherche par nom ou CIN")}
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Ex: Sarah, Mickael, CIN-001..."
+            placeholder={t("private", "owner.tenants.searchPlaceholder", "Ex: Sarah, Mickael, CIN-001...")}
           />
           <div className="space-y-2">
-            <span className="text-sm font-medium text-stone-200">Filtrer par bien</span>
+            <span className="text-sm font-medium text-stone-200">{t("private", "owner.tenants.filterLabel", "Filtrer par bien")}</span>
             <select
               value={propertyFilterValue}
               onChange={(event) => setPropertyFilterValue(event.target.value)}
@@ -518,7 +552,7 @@ export const OwnerTenantsModule = () => {
               <div className="border-b border-white/10 px-5 py-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-2">
-                    <Badge className="border-white/10 bg-black/20 text-stone-200">{tenant.property || "Bien non renseigne"}</Badge>
+                    <Badge className="border-white/10 bg-black/20 text-stone-200">{tenant.property || t("private", "owner.tenants.propertyMissing", "Bien non renseigne")}</Badge>
                     <div>
                       <p className="text-lg font-semibold text-white">{tenant.fullName}</p>
                       <p className="mt-1 text-sm text-stone-400">{tenant.email || tenant.contact}</p>
@@ -531,40 +565,40 @@ export const OwnerTenantsModule = () => {
               <div className="space-y-4 px-5 py-5">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Telephone</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.tenants.labels.phone", "Telephone")}</p>
                     <p className="mt-2 text-sm text-white">{tenant.phone || "-"}</p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">CIN</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.tenants.labels.cin", "CIN")}</p>
                     <p className="mt-2 text-sm text-white">{tenant.cin || tenant.identity || "-"}</p>
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Adresse</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.tenants.labels.address", "Adresse")}</p>
                   <p className="mt-2 text-sm text-stone-300">{tenant.adresse || "-"}</p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Contrat</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.tenants.labels.contract", "Contrat")}</p>
                     <p className="mt-2 text-sm text-white">{tenant.contract}</p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Source</p>
-                    <p className="mt-2 text-sm text-white">{tenant.source === "booking_closed_won" ? "Depuis rendez-vous" : "Manuel"}</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "owner.tenants.labels.source", "Source")}</p>
+                    <p className="mt-2 text-sm text-white">{tenant.source === "booking_closed_won" ? t("private", "owner.tenants.bookingSource", "Depuis rendez-vous") : t("private", "owner.tenants.manualSource", "Manuel")}</p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
                   <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => setModalState({ open: true, mode: "edit", tenant })}>
-                    Modifier
+                    {t("private", "owner.tenants.edit", "Modifier")}
                   </Button>
                   <Button type="button" variant="ghost" className="px-3 py-2 text-xs" onClick={() => handleDownloadTenantSheet(tenant)}>
-                    Telecharger la fiche
+                    {t("private", "owner.tenants.downloadSheet", "Telecharger la fiche")}
                   </Button>
                   <Button type="button" variant="ghost" className="px-3 py-2 text-xs text-red-200" onClick={() => setDeleteModalState({ open: true, tenant })}>
-                    Supprimer
+                    {t("private", "owner.tenants.delete", "Supprimer")}
                   </Button>
                 </div>
               </div>
@@ -574,13 +608,13 @@ export const OwnerTenantsModule = () => {
 
         {!filteredTenants.length ? (
           <DashboardEmptyState
-            title="Aucun locataire trouve"
-            description="Ajustez les filtres par bien, nom ou CIN pour retrouver rapidement une fiche."
+            title={t("private", "owner.tenants.emptyTitle", "Aucun locataire trouve")}
+            description={t("private", "owner.tenants.emptyDescription", "Ajustez les filtres par bien, nom ou CIN pour retrouver rapidement une fiche.")}
           />
         ) : null}
         {!propertyOptions.length && !managedPropertiesQuery.isLoading ? (
           <p className="mt-4 text-sm text-stone-400">
-            Aucun bien en location n'est disponible pour rattacher un locataire.
+            {t("private", "owner.tenants.noPropertyAvailable", "Aucun bien en location n'est disponible pour rattacher un locataire.")}
           </p>
         ) : null}
       </DashboardPanel>
@@ -597,8 +631,10 @@ export const OwnerTenantsModule = () => {
       />
       <ModalDelete
         open={deleteModalState.open}
-        title="Supprimer le locataire"
-        content={`Voulez-vous vraiment supprimer la fiche de ${deleteModalState.tenant?.fullName || "ce locataire"} ? Le bien associe sera libere et redeviendra disponible.`}
+        title={t("private", "owner.tenants.deleteTitle", "Supprimer le locataire")}
+        content={replaceTemplate(t("private", "owner.tenants.deleteContent", "Voulez-vous vraiment supprimer la fiche de {name} ? Le bien associe sera libere et redeviendra disponible."), {
+          name: deleteModalState.tenant?.fullName || "ce locataire"
+        })}
         onClose={() => setDeleteModalState({ open: false, tenant: null })}
         onConfirm={handleDeleteTenant}
         isDeleting={deleteTenantMutation.isPending}
@@ -609,23 +645,24 @@ export const OwnerTenantsModule = () => {
 
 export const OwnerPropertiesModule = () => {
   const { propertiesQuery } = useOwnerWorkspace();
+  const { t } = useUserPreferences();
 
   if (propertiesQuery.isLoading) {
-    return <DashboardLoadingState label="Chargement des biens..." />;
+    return <DashboardLoadingState label={t("private", "properties.loading", "Chargement des proprietes...")} />;
   }
 
   if (propertiesQuery.isError) {
-    return <DashboardEmptyState title="Biens indisponibles" description="Le portefeuille immobilier n'a pas pu etre charge." />;
+    return <DashboardEmptyState title={t("private", "properties.ownerEyebrow", "Mes biens")} description={t("private", "properties.error", "Une erreur est survenue lors du chargement des proprietes.")} />;
   }
 
   const properties = propertiesQuery.data || [];
 
   return (
     <DashboardPanel
-      title="Mes biens"
-      description="Suivi du portefeuille proprietaire avec surface, localisation, photos, statut et historique d'occupation."
-      badge={`${properties.length} biens`}
-      action={<Button type="button" variant="secondary">Ajouter un bien</Button>}
+      title={t("private", "properties.ownerEyebrow", "Mes biens")}
+      description={t("private", "properties.ownerDescription", "Retrouvez tous vos biens, rattachez-les a un contrat quand c'est utile et gardez une vue claire sur votre portefeuille.")}
+      badge={replaceTemplate("{count} biens", { count: properties.length })}
+      action={<Button type="button" variant="secondary">{t("private", "properties.addProperty", "Ajout de Bien")}</Button>}
     >
       <div className="grid gap-4 xl:grid-cols-2">
         {properties.map((property) => (
@@ -640,9 +677,9 @@ export const OwnerPropertiesModule = () => {
                 <StatusPill value={property.status} />
               </div>
               <div className="grid gap-3 text-sm text-stone-300 sm:grid-cols-3">
-                <p><span className="text-stone-500">Surface:</span> {property.surface}</p>
-                <p><span className="text-stone-500">Photos:</span> {property.photos}</p>
-                <p><span className="text-stone-500">Historique:</span> {property.history}</p>
+                <p><span className="text-stone-500">{`${t("private", "properties.card.surface", "Surface")}:`}</span> {property.surface}</p>
+                <p><span className="text-stone-500">{`${t("private", "properties.card.photos", "Photos")}:`}</span> {property.photos}</p>
+                <p><span className="text-stone-500">{`${t("private", "properties.card.history", "Historique")}:`}</span> {property.history}</p>
               </div>
             </div>
           </Card>
@@ -661,6 +698,7 @@ export const OwnerMaintenanceModule = () => {
     deleteMaintenanceTicketMutation
   } = useOwnerWorkspace();
   const { showError, showSuccess } = useNotification();
+  const { t } = useUserPreferences();
   const [modalState, setModalState] = useState({ open: false, mode: "create", ticket: null });
   const [deleteModalState, setDeleteModalState] = useState({ open: false, ticket: null });
   const propertyOptions = useMemo(
@@ -674,11 +712,16 @@ export const OwnerMaintenanceModule = () => {
   );
 
   if (maintenanceQuery.isLoading) {
-    return <DashboardLoadingState label="Chargement de la maintenance..." />;
+    return <DashboardLoadingState label={t("private", "owner.maintenance.loading", "Chargement de la maintenance...")} />;
   }
 
   if (maintenanceQuery.isError) {
-    return <DashboardEmptyState title="Maintenance indisponible" description="Les tickets de maintenance n'ont pas pu etre charges." />;
+    return (
+      <DashboardEmptyState
+        title={t("private", "owner.maintenance.unavailableTitle", "Maintenance indisponible")}
+        description={t("private", "owner.maintenance.unavailableDescription", "Les tickets de maintenance n'ont pas pu etre charges.")}
+      />
+    );
   }
 
   const maintenance = maintenanceQuery.data || [];
@@ -690,15 +733,15 @@ export const OwnerMaintenanceModule = () => {
           ticketId: modalState.ticket.id,
           payload
         });
-        showSuccess("Ticket de maintenance mis a jour.");
+        showSuccess(t("private", "owner.maintenance.updateSuccess", "Ticket de maintenance mis a jour."));
       } else {
         await createMaintenanceTicketMutation.mutateAsync(payload);
-        showSuccess("Ticket de maintenance cree.");
+        showSuccess(t("private", "owner.maintenance.createSuccess", "Ticket de maintenance cree."));
       }
 
       setModalState({ open: false, mode: "create", ticket: null });
     } catch (error) {
-      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du ticket a echoue." });
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "owner.maintenance.saveError", "La gestion du ticket a echoue.") });
     }
   };
 
@@ -708,18 +751,18 @@ export const OwnerMaintenanceModule = () => {
     try {
       await deleteMaintenanceTicketMutation.mutateAsync(deleteModalState.ticket.id);
       setDeleteModalState({ open: false, ticket: null });
-      showSuccess("Ticket de maintenance supprime.");
+      showSuccess(t("private", "owner.maintenance.deleteSuccess", "Ticket de maintenance supprime."));
     } catch (error) {
-      notifyApiErrors({ error, showError, fallbackMessage: "La suppression du ticket a echoue." });
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "owner.maintenance.deleteError", "La suppression du ticket a echoue.") });
     }
   };
 
   return (
     <>
       <DashboardPanel
-        title="Gestion de maintenance"
-        description="Tickets, interventions planifiees et historique des reparations pour chaque bien."
-        badge={`${maintenance.length} tickets`}
+        title={t("private", "owner.maintenance.title", "Gestion de maintenance")}
+        description={t("private", "owner.maintenance.description", "Tickets, interventions planifiees et historique des reparations pour chaque bien.")}
+        badge={replaceTemplate(t("private", "owner.maintenance.badge", "{count} tickets"), { count: maintenance.length })}
         action={
           <Button
             type="button"
@@ -727,29 +770,29 @@ export const OwnerMaintenanceModule = () => {
             disabled={managedPropertiesQuery.isLoading || !propertyOptions.length}
             onClick={() => setModalState({ open: true, mode: "create", ticket: null })}
           >
-            Nouveau ticket
+            {t("private", "owner.maintenance.newTicket", "Nouveau ticket")}
           </Button>
         }
       >
         {maintenance.length ? (
           <DataTable
             columns={[
-              { key: "title", label: "Ticket" },
-              { key: "property", label: "Bien" },
-              { key: "priority", label: "Priorite" },
-              { key: "assignee", label: "Intervenant" },
-              { key: "lastUpdate", label: "Derniere mise a jour" },
-              { key: "status", label: "Statut", render: (row) => <StatusPill value={row.status} /> },
+              { key: "title", label: t("private", "owner.maintenance.columns.title", "Ticket") },
+              { key: "property", label: t("private", "owner.maintenance.columns.property", "Bien") },
+              { key: "priority", label: t("private", "owner.maintenance.columns.priority", "Priorite") },
+              { key: "assignee", label: t("private", "owner.maintenance.columns.assignee", "Intervenant") },
+              { key: "lastUpdate", label: t("private", "owner.maintenance.columns.lastUpdate", "Derniere mise a jour") },
+              { key: "status", label: t("private", "owner.maintenance.columns.status", "Statut"), render: (row) => <StatusPill value={row.status} /> },
               {
                 key: "actions",
-                label: "Actions",
+                label: t("private", "owner.maintenance.columns.actions", "Actions"),
                 render: (row) => (
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="secondary" className="px-3 py-2 text-xs" onClick={() => setModalState({ open: true, mode: "edit", ticket: row })}>
-                      Modifier
+                      {t("private", "owner.maintenance.edit", "Modifier")}
                     </Button>
                     <Button type="button" variant="ghost" className="px-3 py-2 text-xs text-red-200" onClick={() => setDeleteModalState({ open: true, ticket: row })}>
-                      Supprimer
+                      {t("private", "owner.maintenance.delete", "Supprimer")}
                     </Button>
                   </div>
                 )
@@ -759,13 +802,13 @@ export const OwnerMaintenanceModule = () => {
           />
         ) : (
           <DashboardEmptyState
-            title="Aucun ticket de maintenance"
-            description="Les demandes techniques et leur suivi apparaitront ici des qu'elles seront enregistrees."
+            title={t("private", "owner.maintenance.emptyTitle", "Aucun ticket de maintenance")}
+            description={t("private", "owner.maintenance.emptyDescription", "Les demandes techniques et leur suivi apparaitront ici des qu'elles seront enregistrees.")}
           />
         )}
         {!propertyOptions.length && !managedPropertiesQuery.isLoading ? (
           <p className="mt-4 text-sm text-stone-400">
-            Aucun bien gere n'est disponible pour ouvrir un ticket de maintenance.
+            {t("private", "owner.maintenance.noPropertyAvailable", "Aucun bien gere n'est disponible pour ouvrir un ticket de maintenance.")}
           </p>
         ) : null}
       </DashboardPanel>

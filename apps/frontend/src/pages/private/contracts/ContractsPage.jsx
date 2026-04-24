@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
@@ -10,13 +11,14 @@ import { useContractsWorkspace } from "../../../features/contracts/useContractsW
 import { ModalManageContract } from "./ModalManageContract.jsx";
 import { ModalDeleteContract } from "./ModalDeleteContract.jsx";
 
-const statCards = [
-  { key: "total", label: "Contrats", description: "Cadres contractuels suivis dans votre portefeuille." },
-  { key: "active", label: "Actifs", description: "Contrats actuellement valides pour gerer un bien." },
-  { key: "documents", label: "Documents", description: "Pieces juridiques et administratives associees." }
-];
+const replaceTemplate = (template, values = {}) =>
+  Object.entries(values).reduce(
+    (currentValue, [key, value]) => currentValue.replaceAll(`{${key}}`, String(value)),
+    template
+  );
 
 export const ContractsPage = () => {
+  const { t } = useUserPreferences();
   const {
     user,
     contractsQuery,
@@ -34,6 +36,11 @@ export const ContractsPage = () => {
   const [deleteModalState, setDeleteModalState] = useState({ open: false, contract: null });
   const isOwnerActor = user?.role === "proprietaire";
   const isManagerActor = ["agency", "agency_agent", "independent_agent"].includes(user?.role || "");
+  const statCards = [
+    { key: "total", label: t("private", "contracts.stats.total", "Contrats"), description: t("private", "contracts.stats.totalDescription", "Cadres contractuels suivis dans votre portefeuille.") },
+    { key: "active", label: t("private", "contracts.stats.active", "Actifs"), description: t("private", "contracts.stats.activeDescription", "Contrats actuellement valides pour gerer un bien.") },
+    { key: "documents", label: t("private", "contracts.stats.documents", "Documents"), description: t("private", "contracts.stats.documentsDescription", "Pieces juridiques et administratives associees.") }
+  ];
 
   useEffect(() => {
     if (!selectedContractId && contractsQuery.data?.length) {
@@ -88,9 +95,9 @@ export const ContractsPage = () => {
 
       setSelectedContractId(saved.id);
       setModalState({ open: false, mode: "create", contract: null });
-      showSuccess(modalState.mode === "edit" ? "Contrat mis a jour." : "Contrat cree avec succes.");
+      showSuccess(modalState.mode === "edit" ? t("private", "properties.contractUpdateSuccess", "Contrat mis a jour.") : t("private", "properties.contractCreateSuccess", "Contrat cree avec succes."));
     } catch (error) {
-      notifyApiErrors({ error, showError, fallbackMessage: "La gestion du contrat a echoue." });
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.contractSaveError", "La gestion du contrat a echoue.") });
     }
   };
 
@@ -149,7 +156,7 @@ export const ContractsPage = () => {
   const modalFooterContent = !isOwnerActor && modalState.contract ? (
     <div className="flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:justify-end">
       <Button type="button" variant="secondary" className="px-5 py-3" onClick={() => setModalState({ open: false, mode: "create", contract: null })}>
-        Fermer
+        {t("private", "contracts.close", "Fermer")}
       </Button>
       <Button
         type="button"
@@ -158,7 +165,7 @@ export const ContractsPage = () => {
         disabled={updateContractMutation.isPending || modalState.contract.status === "terminated"}
         onClick={() => handleRefuseContract(modalState.contract)}
       >
-        Refuser
+        {t("private", "contracts.refuse", "Refuser")}
       </Button>
       <Button
         type="button"
@@ -166,7 +173,7 @@ export const ContractsPage = () => {
         disabled={updateContractMutation.isPending || modalState.contract.status === "terminated"}
         onClick={() => handleContractStatusChange(modalState.contract, "accepted", "Contrat accepte.")}
       >
-        Accepter
+        {t("private", "contracts.accept", "Accepter")}
       </Button>
     </div>
   ) : null;
@@ -178,16 +185,16 @@ export const ContractsPage = () => {
           <div className="grid gap-8 p-6 lg:grid-cols-[1.1fr_0.9fr] lg:p-8">
             <div className="space-y-5">
               <SectionTitle
-                eyebrow="Mes contrats"
-                title="Cadrez juridiquement la gestion de vos biens"
-                description="Retrouvez vos contrats, les proprietaires lies, les biens couverts, les statuts et les informations de gestion dans une interface plus moderne et reutilisable."
+                eyebrow={t("private", "contracts.eyebrow", "Mes contrats")}
+                title={t("private", "contracts.title", "Cadrez juridiquement la gestion de vos biens")}
+                description={t("private", "contracts.description", "Retrouvez vos contrats, les proprietaires lies, les biens couverts, les statuts et les informations de gestion dans une interface plus moderne et reutilisable.")}
               />
               <div className="flex flex-wrap gap-3">
                 {isOwnerActor ? (
-                  <Button type="button" onClick={() => setModalState({ open: true, mode: "create", contract: null })}>Nouveau contrat</Button>
+                  <Button type="button" onClick={() => setModalState({ open: true, mode: "create", contract: null })}>{t("private", "contracts.new", "Nouveau contrat")}</Button>
                 ) : (
                   <Badge className="border-amber-400/30 bg-amber-500/10 text-amber-100">
-                    Creation reservee au proprietaire
+                    {t("private", "contracts.creationReserved", "Creation reservee au proprietaire")}
                   </Badge>
                 )}
               </div>
@@ -207,11 +214,11 @@ export const ContractsPage = () => {
 
         {contractsQuery.isLoading ? (
           <Card className="border-white/10 bg-white/5">
-            <p className="text-sm text-stone-300">Chargement des contrats...</p>
+            <p className="text-sm text-stone-300">{t("private", "contracts.loading", "Chargement des contrats...")}</p>
           </Card>
         ) : contractsQuery.isError ? (
           <Card className="border-red-500/20 bg-red-500/5">
-            <p className="text-sm text-red-200">Impossible de charger les contrats.</p>
+            <p className="text-sm text-red-200">{t("private", "contracts.error", "Impossible de charger les contrats.")}</p>
           </Card>
         ) : (
           <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
@@ -235,10 +242,10 @@ export const ContractsPage = () => {
                     </Badge>
                   </div>
                   <div className="mt-4 grid gap-2 text-sm text-stone-300">
-                    <p><span className="text-stone-500">Proprietaire:</span> {contract.owner?.fullName || "-"}</p>
-                    <p><span className="text-stone-500">Gestionnaire:</span> {contract.manager?.name || "-"}</p>
-                    <p><span className="text-stone-500">Locataire principal:</span> {contract.mainTenant?.fullName || "Sans locataire"}</p>
-                    <p><span className="text-stone-500">Dates:</span> {contract.startDateLabel} - {contract.endDateLabel}</p>
+                    <p><span className="text-stone-500">{`${t("private", "contracts.labels.owner", "Proprietaire")}:`}</span> {contract.owner?.fullName || "-"}</p>
+                    <p><span className="text-stone-500">{`${t("private", "contracts.labels.manager", "Gestionnaire")}:`}</span> {contract.manager?.name || "-"}</p>
+                    <p><span className="text-stone-500">{`${t("private", "contracts.labels.mainTenant", "Locataire principal")}:`}</span> {contract.mainTenant?.fullName || "Sans locataire"}</p>
+                    <p><span className="text-stone-500">{`${t("private", "contracts.labels.dates", "Dates")}:`}</span> {contract.startDateLabel} - {contract.endDateLabel}</p>
                   </div>
                 </button>
               ))}
@@ -249,26 +256,26 @@ export const ContractsPage = () => {
                 <div className="space-y-6">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.24em] text-amber-100/80">Detail contrat</p>
+                      <p className="text-xs uppercase tracking-[0.24em] text-amber-100/80">{t("private", "contracts.detail", "Detail contrat")}</p>
                       <h3 className="mt-2 text-2xl font-semibold text-white">{selectedContract.reference}</h3>
                       <p className="mt-2 text-sm capitalize text-stone-400">{selectedContract.contractType}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {isOwnerActor ? (
                         <>
-                          <Button type="button" variant="secondary" onClick={() => setModalState({ open: true, mode: "edit", contract: selectedContract })}>Modifier</Button>
-                          <Button type="button" variant="ghost" className="text-red-200" onClick={() => setDeleteModalState({ open: true, contract: selectedContract })}>Supprimer</Button>
+                          <Button type="button" variant="secondary" onClick={() => setModalState({ open: true, mode: "edit", contract: selectedContract })}>{t("private", "contracts.edit", "Modifier")}</Button>
+                          <Button type="button" variant="ghost" className="text-red-200" onClick={() => setDeleteModalState({ open: true, contract: selectedContract })}>{t("private", "contracts.delete", "Supprimer")}</Button>
                         </>
                       ) : (
                         <>
-                          <Button type="button" variant="secondary" onClick={() => setModalState({ open: true, mode: "edit", contract: selectedContract })}>Examiner</Button>
+                          <Button type="button" variant="secondary" onClick={() => setModalState({ open: true, mode: "edit", contract: selectedContract })}>{t("private", "contracts.review", "Examiner")}</Button>
                           <Button
                             type="button"
                             className="px-4 py-2"
                             disabled={updateContractMutation.isPending || selectedContract.status === "terminated"}
                             onClick={() => handleContractStatusChange(selectedContract, "accepted", "Contrat accepte.")}
                           >
-                            Accepter
+                            {t("private", "contracts.accept", "Accepter")}
                           </Button>
                           <Button
                             type="button"
@@ -277,7 +284,7 @@ export const ContractsPage = () => {
                             disabled={updateContractMutation.isPending || selectedContract.status === "terminated"}
                             onClick={() => handleRefuseContract(selectedContract)}
                           >
-                            Refuser
+                            {t("private", "contracts.refuse", "Refuser")}
                           </Button>
                         </>
                       )}
@@ -286,21 +293,21 @@ export const ContractsPage = () => {
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Proprietaire</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "contracts.labels.owner", "Proprietaire")}</p>
                       <p className="mt-2 text-sm font-medium text-white">{selectedContract.owner?.fullName || "-"}</p>
                       <p className="mt-1 text-sm text-stone-400">{selectedContract.owner?.email || selectedContract.owner?.phone || ""}</p>
                     </div>
                     <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Gestionnaire</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "contracts.labels.manager", "Gestionnaire")}</p>
                       <p className="mt-2 text-sm font-medium text-white">{selectedContract.manager?.name || "-"}</p>
                       <p className="mt-1 text-sm text-stone-400">{selectedContract.manager?.label || ""}</p>
                     </div>
                     <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Locataire principal</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "contracts.labels.mainTenant", "Locataire principal")}</p>
                       <p className="mt-2 text-sm font-medium text-white">{selectedContract.mainTenant?.fullName || "Sans locataire"}</p>
                     </div>
                     <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Loyer</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "contracts.labels.rent", "Loyer")}</p>
                       <p className="mt-2 text-sm font-medium text-white">
                         {selectedContract.financial?.rentAmount
                           ? `${Number(selectedContract.financial.rentAmount).toLocaleString("fr-FR")} ${selectedContract.financial.currency || ""}`.trim()
@@ -308,18 +315,18 @@ export const ContractsPage = () => {
                       </p>
                     </div>
                     <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Debut</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "contracts.labels.start", "Debut")}</p>
                       <p className="mt-2 text-sm font-medium text-white">{selectedContract.startDateLabel}</p>
                     </div>
                     <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Fin</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "contracts.labels.end", "Fin")}</p>
                       <p className="mt-2 text-sm font-medium text-white">{selectedContract.endDateLabel}</p>
                     </div>
                   </div>
 
                   <div className="grid gap-5 lg:grid-cols-2">
                     <div className="space-y-3">
-                      <p className="text-xs uppercase tracking-[0.22em] text-stone-500">Biens couverts</p>
+                      <p className="text-xs uppercase tracking-[0.22em] text-stone-500">{t("private", "contracts.labels.coveredProperties", "Biens couverts")}</p>
                       {(selectedContract.coveredProperties || []).length ? (
                         selectedContract.coveredProperties.map((property) => (
                           <div key={property.id} className="rounded-[1.4rem] border border-white/10 bg-stone-950/60 px-4 py-4">
@@ -329,13 +336,13 @@ export const ContractsPage = () => {
                         ))
                       ) : (
                         <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-stone-950/40 px-4 py-6 text-sm text-stone-400">
-                          Aucun bien encore rattache.
+                          {t("private", "contracts.emptyProperties", "Aucun bien encore rattache.")}
                         </div>
                       )}
                     </div>
 
                     <div className="space-y-3">
-                      <p className="text-xs uppercase tracking-[0.22em] text-stone-500">Documents associes</p>
+                      <p className="text-xs uppercase tracking-[0.22em] text-stone-500">{t("private", "contracts.labels.documents", "Documents associes")}</p>
                       {(selectedContract.documents || []).length ? (
                         selectedContract.documents.map((document) => (
                           <a key={document.id} href={document.publicPath} target="_blank" rel="noreferrer" className="block rounded-[1.4rem] border border-white/10 bg-stone-950/60 px-4 py-4 transition hover:border-white/20">
@@ -345,14 +352,14 @@ export const ContractsPage = () => {
                         ))
                       ) : (
                         <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-stone-950/40 px-4 py-6 text-sm text-stone-400">
-                          Aucune piece jointe pour ce contrat.
+                          {t("private", "contracts.emptyDocuments", "Aucune piece jointe pour ce contrat.")}
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-sm text-stone-400">Selectionnez un contrat pour afficher son detail.</div>
+                <div className="text-sm text-stone-400">{t("private", "contracts.selectHint", "Selectionnez un contrat pour afficher son detail.")}</div>
               )}
             </Card>
           </div>

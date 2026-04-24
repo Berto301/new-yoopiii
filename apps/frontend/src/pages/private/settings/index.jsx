@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { PERMISSION_IDS } from "../../../helpers/constants.js";
 import { hasPermission } from "../../../helpers/_functions.js";
@@ -14,13 +15,6 @@ import { SectionProfile } from "./SectionProfile.jsx";
 import { SectionRoles } from "./SectionRoles.jsx";
 import { SettingsTabButton } from "./SettingsTabButton.jsx";
 
-const tabItems = [
-  { id: "profile", label: "Profil", permission: PERMISSION_IDS.UI_TAB_SETTINGS_PROFILE },
-  { id: "roles", label: "Roles", permission: PERMISSION_IDS.UI_TAB_SETTINGS_ROLES },
-  { id: "members", label: "Agents", permission: PERMISSION_IDS.UI_TAB_SETTINGS_MEMBERS },
-  { id: "agency", label: "Agence", permission: PERMISSION_IDS.UI_TAB_SETTINGS_AGENCY }
-];
-
 const extractErrorMessage = (error, fallback) => error?.response?.data?.message || fallback;
 const normalizeText = (value) => (typeof value === "string" ? value.trim() : value);
 
@@ -33,6 +27,7 @@ export const SettingsPage = () => {
     rolesQuery,
     membersQuery,
     updateProfileMutation,
+    updatePreferencesMutation,
     uploadAvatarMutation,
     changePasswordMutation,
     updateAgencyMutation,
@@ -47,6 +42,7 @@ export const SettingsPage = () => {
     deleteAgencyMutation
   } = useSettingsWorkspace();
   const { showSuccess, showError } = useNotification();
+  const { t } = useUserPreferences();
   const [activeTab, setActiveTab] = useState("profile");
   const [isDeleteAgencyModalOpen, setIsDeleteAgencyModalOpen] = useState(false);
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
@@ -69,6 +65,15 @@ export const SettingsPage = () => {
     defaultValues: {
       currentPassword: "",
       newPassword: ""
+    }
+  });
+
+  const preferencesForm = useForm({
+    defaultValues: {
+      language: "fr",
+      theme: true,
+      currency: "USD",
+      contractDefaultCommission: 0
     }
   });
 
@@ -96,8 +101,15 @@ export const SettingsPage = () => {
         sexe: profileQuery.data.sexe || "",
         avatar: profileQuery.data.avatar || ""
       });
+
+      preferencesForm.reset({
+        language: profileQuery.data.preferences?.language || "fr",
+        theme: (profileQuery.data.preferences?.theme || "dark") === "dark",
+        currency: profileQuery.data.preferences?.currency || "USD",
+        contractDefaultCommission: Number(profileQuery.data.preferences?.contractDefaultCommission ?? 0)
+      });
     }
-  }, [profileForm, profileQuery.data]);
+  }, [preferencesForm, profileForm, profileQuery.data]);
 
   const isAgencyWorkspace = user?.role === "agency" || user?.role === "agency_agent";
 
@@ -122,6 +134,13 @@ export const SettingsPage = () => {
       agencyForm.reset(agencyProfile);
     }
   }, [agencyForm, agencyProfile]);
+
+  const tabItems = useMemo(() => ([
+    { id: "profile", label: t("settings", "tabs.profile", "Profil"), permission: PERMISSION_IDS.UI_TAB_SETTINGS_PROFILE },
+    { id: "roles", label: t("settings", "tabs.roles", "Roles"), permission: PERMISSION_IDS.UI_TAB_SETTINGS_ROLES },
+    { id: "members", label: t("settings", "tabs.members", "Agents"), permission: PERMISSION_IDS.UI_TAB_SETTINGS_MEMBERS },
+    { id: "agency", label: t("settings", "tabs.agency", "Agence"), permission: PERMISSION_IDS.UI_TAB_SETTINGS_AGENCY }
+  ]), [t]);
 
   const allowedTabs = useMemo(() => {
     if (!isAgencyWorkspace) {
@@ -164,12 +183,12 @@ export const SettingsPage = () => {
 
   const currentRoleLabel = useMemo(() => {
     if (user?.role === "agency") {
-      return "owner";
+      return t("settings", "labels.ownerRole", "Proprietaire");
     }
 
     const matchingRole = (rolesQuery.data || []).find((role) => role._id === user?.permissionId || role.key === currentRoleKey);
     return matchingRole?.name || currentRoleKey || user?.role || "";
-  }, [currentRoleKey, rolesQuery.data, user?.permissionId, user?.role]);
+  }, [currentRoleKey, rolesQuery.data, t, user?.permissionId, user?.role]);
 
   const currentPermissionDetails = useMemo(() => user?.permissions || profileQuery.data?.permissions || [], [profileQuery.data?.permissions, user?.permissions]);
 
@@ -182,9 +201,9 @@ export const SettingsPage = () => {
   const handleProfileSubmit = async (values) => {
     try {
       await updateProfileMutation.mutateAsync(values);
-      showSuccess("Profil mis a jour avec succes.");
+      showSuccess("profile.updated", { translate: true, page: "messages", fallback: "Profil mis a jour avec succes." });
     } catch (error) {
-      showError(extractErrorMessage(error, "La mise a jour du profil a echoue."));
+      showError(extractErrorMessage(error, t("messages", "errors.profileUpdate", "La mise a jour du profil a echoue.")));
     }
   };
 
@@ -192,9 +211,9 @@ export const SettingsPage = () => {
     try {
       const updatedUser = await uploadAvatarMutation.mutateAsync(file);
       profileForm.setValue("avatar", updatedUser.avatar || "", { shouldDirty: false, shouldValidate: false });
-      showSuccess("Photo de profil mise a jour avec succes.");
+      showSuccess("profile.avatarUpdated", { translate: true, page: "messages", fallback: "Photo de profil mise a jour avec succes." });
     } catch (error) {
-      showError(extractErrorMessage(error, "Le televersement de la photo a echoue."));
+      showError(extractErrorMessage(error, t("messages", "errors.avatarUpload", "Le televersement de la photo a echoue.")));
       throw error;
     }
   };
@@ -203,9 +222,28 @@ export const SettingsPage = () => {
     try {
       await changePasswordMutation.mutateAsync(values);
       passwordForm.reset({ currentPassword: "", newPassword: "" });
-      showSuccess("Mot de passe modifie avec succes.");
+      showSuccess("profile.passwordUpdated", { translate: true, page: "messages", fallback: "Mot de passe modifie avec succes." });
     } catch (error) {
-      showError(extractErrorMessage(error, "Le changement de mot de passe a echoue."));
+      showError(extractErrorMessage(error, t("messages", "errors.passwordUpdate", "Le changement de mot de passe a echoue.")));
+    }
+  };
+
+  const handlePreferencesSubmit = async (values) => {
+    try {
+      await updatePreferencesMutation.mutateAsync({
+        language: values.language,
+        theme: values.theme ? "dark" : "light",
+        currency: values.currency,
+        contractDefaultCommission: Number(values.contractDefaultCommission || 0)
+      });
+
+      showSuccess("preferences.saved", {
+        translate: true,
+        page: "messages",
+        fallback: "Parametres enregistres avec succes."
+      });
+    } catch (error) {
+      showError(extractErrorMessage(error, t("messages", "errors.preferencesUpdate", "La mise a jour des parametres a echoue.")));
     }
   };
 
@@ -220,9 +258,9 @@ export const SettingsPage = () => {
       };
 
       await updateAgencyMutation.mutateAsync({ payload });
-      showSuccess("Agence mise a jour avec succes.");
+      showSuccess("agency.updated", { translate: true, page: "messages", fallback: "Agence mise a jour avec succes." });
     } catch (error) {
-      showError(extractErrorMessage(error, "La mise a jour de l'agence a echoue."));
+      showError(extractErrorMessage(error, t("messages", "errors.agencyUpdate", "La mise a jour de l'agence a echoue.")));
     }
   };
 
@@ -233,9 +271,13 @@ export const SettingsPage = () => {
       const nextValue = assetKind === "cover" ? updatedAgency.coverImage || "" : updatedAgency.logo || "";
 
       agencyForm.setValue(targetField, nextValue, { shouldDirty: false, shouldValidate: false });
-      showSuccess(assetKind === "cover" ? "Couverture mise a jour avec succes." : "Logo mis a jour avec succes.");
+      showSuccess(assetKind === "cover" ? "agency.coverUpdated" : "agency.logoUpdated", {
+        translate: true,
+        page: "messages",
+        fallback: assetKind === "cover" ? "Couverture mise a jour avec succes." : "Logo mis a jour avec succes."
+      });
     } catch (error) {
-      showError(extractErrorMessage(error, "Le televersement de l'image a echoue."));
+      showError(extractErrorMessage(error, t("messages", "errors.agencyAssetUpload", "Le televersement de l'image a echoue.")));
       throw error;
     }
   };
@@ -290,18 +332,18 @@ export const SettingsPage = () => {
           memberId: editingMember._id,
           payload
         });
-        showSuccess("Agent mis a jour avec succes.");
+        showSuccess("members.updated", { translate: true, page: "messages", fallback: "Agent mis a jour avec succes." });
       } else {
         await createMemberMutation.mutateAsync({
           userId: values.userId,
           ...payload
         });
-        showSuccess("Agent ajoute avec succes.");
+        showSuccess("members.created", { translate: true, page: "messages", fallback: "Agent ajoute avec succes." });
       }
 
       closeMemberModal();
     } catch (error) {
-      showError(extractErrorMessage(error, "La gestion de l'agent a echoue."));
+      showError(extractErrorMessage(error, t("messages", "errors.memberUpdate", "La gestion de l'agent a echoue.")));
     }
   };
 
@@ -315,9 +357,9 @@ export const SettingsPage = () => {
 
     try {
       await deleteMemberMutation.mutateAsync(member._id);
-      showSuccess("Agent supprime avec succes.");
+      showSuccess("members.deleted", { translate: true, page: "messages", fallback: "Agent supprime avec succes." });
     } catch (error) {
-      showError(extractErrorMessage(error, "La suppression de l'agent a echoue."));
+      showError(extractErrorMessage(error, t("messages", "errors.memberDelete", "La suppression de l'agent a echoue.")));
     }
   };
 
@@ -327,10 +369,13 @@ export const SettingsPage = () => {
         profileForm={profileForm}
         profile={profileQuery.data}
         passwordForm={passwordForm}
+        preferencesForm={preferencesForm}
         updateProfileMutation={updateProfileMutation}
+        updatePreferencesMutation={updatePreferencesMutation}
         uploadAvatarMutation={uploadAvatarMutation}
         changePasswordMutation={changePasswordMutation}
         onProfileSubmit={handleProfileSubmit}
+        onPreferencesSubmit={handlePreferencesSubmit}
         onAvatarUpload={handleAvatarUpload}
         onPasswordSubmit={handlePasswordSubmit}
         roleOptions={rolesQuery.data || []}
@@ -374,7 +419,11 @@ export const SettingsPage = () => {
   if (!isAgencyWorkspace) {
     return (
       <section className="space-y-8">
-        <SectionTitle eyebrow="Parametres" title="Gestion de profile" description="Mettez a jour votre profile connecte et votre mot de passe." />
+        <SectionTitle
+          eyebrow={t("settings", "page.eyebrow", "Parametres")}
+          title={t("settings", "page.title", "Gestion de profil")}
+          description={t("settings", "page.description", "Mettez a jour votre profil connecte et votre mot de passe.")}
+        />
         {sections.profile}
       </section>
     );
@@ -383,9 +432,13 @@ export const SettingsPage = () => {
   return (
     <>
       <section className="space-y-8">
-        <SectionTitle eyebrow="Parametres" title="Administration agence" description="Profil connecte, mot de passe, roles, agents et informations agence centralises dans un seul espace." />
+        <SectionTitle
+          eyebrow={t("settings", "page.eyebrow", "Parametres")}
+          title={t("settings", "page.agencyTitle", "Administration agence")}
+          description={t("settings", "page.agencyDescription", "Profil connecte, mot de passe, roles, agents et informations agence centralises dans un seul espace.")}
+        />
 
-        <nav className="flex flex-wrap gap-3" aria-label="Navigation des parametres">
+        <nav className="flex flex-wrap gap-3" aria-label={t("settings", "page.eyebrow", "Parametres")}>
           {allowedTabs.map((tab) => (
             <SettingsTabButton
               key={tab.id}

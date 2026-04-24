@@ -1,0 +1,30 @@
+{
+  "profile": {
+    "updated": "Profil mis a jour avec succes.",
+    "avatarUpdated": "Photo de profil mise a jour avec succes.",
+    "passwordUpdated": "Mot de passe modifie avec succes."
+  },
+  "agency": {
+    "updated": "Agence mise a jour avec succes.",
+    "coverUpdated": "Couverture mise a jour avec succes.",
+    "logoUpdated": "Logo mis a jour avec succes."
+  },
+  "members": {
+    "updated": "Agent mis a jour avec succes.",
+    "created": "Agent ajoute avec succes.",
+    "deleted": "Agent supprime avec succes."
+  },
+  "preferences": {
+    "saved": "Parametres enregistres avec succes."
+  },
+  "errors": {
+    "profileUpdate": "La mise a jour du profil a echoue.",
+    "avatarUpload": "Le televersement de la photo a echoue.",
+    "passwordUpdate": "Le changement de mot de passe a echoue.",
+    "preferencesUpdate": "La mise a jour des parametres a echoue.",
+    "agencyUpdate": "La mise a jour de l'agence a echoue.",
+    "agencyAssetUpload": "Le televersement de l'image a echoue.",
+    "memberUpdate": "La gestion de l'agent a echoue.",
+    "memberDelete": "La suppression de l'agent a echoue."
+  }
+}

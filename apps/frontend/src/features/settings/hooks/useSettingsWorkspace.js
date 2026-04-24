@@ -13,6 +13,7 @@ import {
   getAgencyMembers,
   getAgencyRoles,
   getMyProfile,
+  updateMyPreferences,
   updateAgencyMember,
   updateAgencyProfile,
   updateAgencyRole,
@@ -64,6 +65,11 @@ export const useSettingsWorkspace = () => {
 
   const updateProfileMutation = useMutation({
     mutationFn: updateMyProfile,
+    onSuccess: syncProfileState
+  });
+
+  const updatePreferencesMutation = useMutation({
+    mutationFn: updateMyPreferences,
     onSuccess: syncProfileState
   });
 
@@ -155,6 +161,7 @@ export const useSettingsWorkspace = () => {
     rolesQuery,
     membersQuery,
     updateProfileMutation,
+    updatePreferencesMutation,
     uploadAvatarMutation,
     changePasswordMutation,
     updateAgencyMutation,

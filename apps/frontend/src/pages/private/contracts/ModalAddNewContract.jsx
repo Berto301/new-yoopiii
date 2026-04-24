@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useSelector } from "react-redux";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { selectCurrentUser } from "../../../app/store/session.store.js";
 import { ModalLayout } from "../../../components/layout/modals/ModalLayout.jsx";
 import { BaseListBox } from "../../../components/form/BaseListBox.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -67,7 +69,7 @@ const contractSchema = z.object({
   documentIds: z.array(z.string()).default([])
 });
 
-const mapContractToValues = (contract, ownerOptions, propertyOptions = [], agentOptions = []) => ({
+const mapContractToValues = (contract, ownerOptions, propertyOptions = [], agentOptions = [], userPreferences = {}) => ({
   reference: contract?.reference || "",
   contractType: contractTypeOptions.find((item) => item.value === contract?.contractType) || contractTypeOptions[0],
   status: statusOptions.find((item) => item.value === contract?.status) || statusOptions[0],
@@ -81,7 +83,7 @@ const mapContractToValues = (contract, ownerOptions, propertyOptions = [], agent
   mandateType: mandateTypeOptions.find((item) => item.value === contract?.mandateType) || null,
   propertyReference: contract?.propertyReference || "",
   mission: contract?.mission || "",
-  commission: contract?.commission || "",
+  commission: contract?.commission || (userPreferences.contractDefaultCommission ? String(userPreferences.contractDefaultCommission) : ""),
   paymentConditions: contract?.paymentConditions || "",
   noticePeriod: contract?.noticePeriod || "",
   terminationConditions: contract?.terminationConditions || "",
@@ -141,12 +143,13 @@ export const ModalAddNewContract = ({
   isSaving = false,
   isUploadingDocument = false
 }) => {
+  const currentUser = useSelector(selectCurrentUser);
   const fileInputRef = useRef(null);
   const [selectedDocumentKind, setSelectedDocumentKind] = useState(documentKindOptions[0]);
   const [documents, setDocuments] = useState(contract?.documents || []);
   const defaultValues = useMemo(
-    () => mapContractToValues(contract, ownerOptions, propertyOptions, agentOptions),
-    [agentOptions, contract, ownerOptions, propertyOptions]
+    () => mapContractToValues(contract, ownerOptions, propertyOptions, agentOptions, currentUser?.preferences || {}),
+    [agentOptions, contract, currentUser?.preferences, ownerOptions, propertyOptions]
   );
 
   const {

@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
 import { Button } from "../../components/ui/Button.jsx";
@@ -48,6 +49,7 @@ const SummaryCard = ({ label, value, description, toneClassName }) => (
 );
 
 export const NotificationsPage = () => {
+  const { t } = useUserPreferences();
   const navigate = useNavigate();
   const { notificationsQuery, markReadMutation } = useNotifications();
   const notifications = notificationsQuery.data || [];
@@ -62,7 +64,7 @@ export const NotificationsPage = () => {
   const getContactLabel = (notification) => {
     const contact = notification.contactTarget;
     const fullName = [contact?.firstName, contact?.lastName].filter(Boolean).join(" ").trim();
-    return fullName || contact?.email || "cette personne";
+    return fullName || contact?.email || t("private", "notifications.contactFallback", "cette personne");
   };
 
   const handleContact = async (notification) => {
@@ -84,12 +86,12 @@ export const NotificationsPage = () => {
     return (
       <section className="space-y-8">
         <SectionTitle
-          eyebrow="Notifications"
-          title="Centre de notifications"
-          description="Messages systeme, confirmations de visite, nouvelles annonces et activite commerciale."
+          eyebrow={t("private", "notifications.eyebrow", "Notifications")}
+          title={t("private", "notifications.title", "Centre de notifications")}
+          description={t("private", "notifications.loadingDescription", "Messages systeme, confirmations de visite, nouvelles annonces et activite commerciale.")}
         />
         <Card className="border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))]">
-          <p className="text-sm text-stone-300">Chargement des notifications...</p>
+          <p className="text-sm text-stone-300">{t("private", "notifications.loading", "Chargement des notifications...")}</p>
         </Card>
       </section>
     );
@@ -99,12 +101,12 @@ export const NotificationsPage = () => {
     return (
       <section className="space-y-8">
         <SectionTitle
-          eyebrow="Notifications"
-          title="Centre de notifications"
-          description="Messages systeme, confirmations de visite, nouvelles annonces et activite commerciale."
+          eyebrow={t("private", "notifications.eyebrow", "Notifications")}
+          title={t("private", "notifications.title", "Centre de notifications")}
+          description={t("private", "notifications.loadingDescription", "Messages systeme, confirmations de visite, nouvelles annonces et activite commerciale.")}
         />
         <Card className="border-red-500/20 bg-red-500/5">
-          <p className="text-sm text-red-200">Impossible de charger les notifications.</p>
+          <p className="text-sm text-red-200">{t("private", "notifications.error", "Impossible de charger les notifications.")}</p>
         </Card>
       </section>
     );
@@ -116,36 +118,36 @@ export const NotificationsPage = () => {
         <div className="grid gap-8 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
           <div className="space-y-5">
             <SectionTitle
-              eyebrow="Notifications"
-              title="Centre de notifications"
-              description="Suivez les interactions importantes, reperez les alertes non lues et basculez rapidement vers la bonne conversation ou le bon contexte commercial."
+              eyebrow={t("private", "notifications.eyebrow", "Notifications")}
+              title={t("private", "notifications.title", "Centre de notifications")}
+              description={t("private", "notifications.description", "Suivez les interactions importantes, reperez les alertes non lues et basculez rapidement vers la bonne conversation ou le bon contexte commercial.")}
             />
             <div className="flex flex-wrap gap-3">
               <div className="rounded-full border border-white/10 bg-black/20 px-4 py-3 text-xs uppercase tracking-[0.24em] text-stone-300 backdrop-blur">
-                {summary.total} notifications centralisees
+                {summary.total} {t("private", "notifications.centralized", "notifications centralisees")}
               </div>
               <div className="rounded-full border border-white/10 bg-black/20 px-4 py-3 text-xs uppercase tracking-[0.24em] text-stone-300 backdrop-blur">
-                {summary.unread} non lues a traiter
+                {summary.unread} {t("private", "notifications.unreadPending", "non lues a traiter")}
               </div>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <SummaryCard label="Total" value={summary.total} toneClassName="text-white" description="Volume global des activites remontees dans votre espace." />
-            <SummaryCard label="Non lues" value={summary.unread} toneClassName="text-amber-200" description="Notifications qui meritent encore une action ou une revue." />
-            <SummaryCard label="Aujourd'hui" value={summary.today} toneClassName="text-sky-100" description="Activite recue au cours de la journee en cours." />
-            <SummaryCard label="Contacts directs" value={summary.contacts} toneClassName="text-emerald-200" description="Notifications permettant de lancer directement une conversation." />
+            <SummaryCard label={t("private", "notifications.summary.total", "Total")} value={summary.total} toneClassName="text-white" description={t("private", "notifications.summary.totalDescription", "Volume global des activites remontees dans votre espace.")} />
+            <SummaryCard label={t("private", "notifications.summary.unread", "Non lues")} value={summary.unread} toneClassName="text-amber-200" description={t("private", "notifications.summary.unreadDescription", "Notifications qui meritent encore une action ou une revue.")} />
+            <SummaryCard label={t("private", "notifications.summary.today", "Aujourd'hui")} value={summary.today} toneClassName="text-sky-100" description={t("private", "notifications.summary.todayDescription", "Activite recue au cours de la journee en cours.")} />
+            <SummaryCard label={t("private", "notifications.summary.contacts", "Contacts directs")} value={summary.contacts} toneClassName="text-emerald-200" description={t("private", "notifications.summary.contactsDescription", "Notifications permettant de lancer directement une conversation.")} />
           </div>
         </div>
       </Card>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Flux recents</p>
-          <h3 className="mt-2 text-2xl font-semibold text-white">Alertes, activite et suivi commercial</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("private", "notifications.recentEyebrow", "Flux recents")}</p>
+          <h3 className="mt-2 text-2xl font-semibold text-white">{t("private", "notifications.recentTitle", "Alertes, activite et suivi commercial")}</h3>
         </div>
         <p className="max-w-2xl text-sm leading-6 text-stone-400">
-          Chaque carte met en avant le contexte, la date, le statut de lecture et les actions disponibles pour traiter la notification sans friction.
+          {t("private", "notifications.recentDescription", "Chaque carte met en avant le contexte, la date, le statut de lecture et les actions disponibles pour traiter la notification sans friction.")}
         </p>
       </div>
 
@@ -172,7 +174,7 @@ export const NotificationsPage = () => {
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge className={tone.badge}>{notification.isRead ? "Lue" : "Non lue"}</Badge>
+                            <Badge className={tone.badge}>{notification.isRead ? t("private", "notifications.status.read", "Lue") : t("private", "notifications.status.unread", "Non lue")}</Badge>
                             <Badge className="border-white/10 bg-white/5 text-stone-200">{notification.type}</Badge>
                           </div>
                           <h3 className="text-xl font-semibold text-white">{notification.title}</h3>
@@ -186,16 +188,16 @@ export const NotificationsPage = () => {
 
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div className="rounded-[1.35rem] border border-white/10 bg-black/20 px-4 py-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Contact</p>
+                          <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "notifications.labels.contact", "Contact")}</p>
                           <p className="mt-2 text-sm font-medium text-white">{contactName}</p>
                         </div>
                         <div className="rounded-[1.35rem] border border-white/10 bg-black/20 px-4 py-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Canal</p>
+                          <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "notifications.labels.channel", "Canal")}</p>
                           <p className="mt-2 text-sm font-medium text-white">{notification.channel || "in_app"}</p>
                         </div>
                         <div className="rounded-[1.35rem] border border-white/10 bg-black/20 px-4 py-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Statut</p>
-                          <p className="mt-2 text-sm font-medium text-white">{notification.isRead ? "Traitee visuellement" : "Action recommandee"}</p>
+                          <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("private", "notifications.labels.status", "Statut")}</p>
+                          <p className="mt-2 text-sm font-medium text-white">{notification.isRead ? t("private", "notifications.status.handled", "Traitee visuellement") : t("private", "notifications.status.actionRequired", "Action recommandee")}</p>
                         </div>
                       </div>
                     </div>
@@ -205,8 +207,8 @@ export const NotificationsPage = () => {
                 <div className="border-t border-white/10 bg-black/15 p-5 lg:border-l lg:border-t-0 lg:p-6">
                   <div className="flex h-full flex-col justify-between gap-4">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Actions</p>
-                      <p className="mt-2 text-sm leading-6 text-stone-400">Passez directement a la conversation ou marquez cette notification comme traitee.</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("private", "notifications.labels.actions", "Actions")}</p>
+                      <p className="mt-2 text-sm leading-6 text-stone-400">{t("private", "notifications.actionsDescription", "Passez directement a la conversation ou marquez cette notification comme traitee.")}</p>
                     </div>
                     <div className="flex flex-col gap-2">
                       {notification.contactTarget ? (
@@ -215,7 +217,7 @@ export const NotificationsPage = () => {
                           className="w-full px-4 py-3"
                           onClick={() => handleContact(notification)}
                         >
-                          {`Contacter ${contactName}`}
+                          {t("private", "notifications.contact", "Contacter {name}").replace("{name}", contactName)}
                         </Button>
                       ) : null}
                       <Button
@@ -224,7 +226,7 @@ export const NotificationsPage = () => {
                         disabled={markReadMutation.isPending || notification.isRead}
                         onClick={() => markReadMutation.mutate(notification._id)}
                       >
-                        {notification.isRead ? "Deja lue" : "Marquer comme lue"}
+                        {notification.isRead ? t("private", "notifications.alreadyRead", "Deja lue") : t("private", "notifications.markRead", "Marquer comme lue")}
                       </Button>
                     </div>
                   </div>
@@ -236,8 +238,8 @@ export const NotificationsPage = () => {
 
         {!notifications.length ? (
           <Card className="border-dashed border-white/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] text-center">
-            <p className="text-sm font-medium text-white">Aucune notification pour le moment.</p>
-            <p className="mt-2 text-sm leading-6 text-stone-400">Les activites importantes, suivis commerciaux et alertes systeme apparaitront ici des qu'elles seront disponibles.</p>
+            <p className="text-sm font-medium text-white">{t("private", "notifications.emptyTitle", "Aucune notification pour le moment.")}</p>
+            <p className="mt-2 text-sm leading-6 text-stone-400">{t("private", "notifications.emptyDescription", "Les activites importantes, suivis commerciaux et alertes systeme apparaitront ici des qu'elles seront disponibles.")}</p>
           </Card>
         ) : null}
       </div>

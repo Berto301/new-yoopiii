@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
+import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
@@ -35,8 +37,7 @@ const TYPE_OPTIONS = [
 ];
 const ALL_OPTION = { label: "Tous", value: "all" };
 
-const formatPrice = (value, currency = "AR") =>
-  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
+const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
 
 const getStatusBadgeClassName = (property) => {
   if (property.status === "reserved") {
@@ -136,7 +137,8 @@ const PublicationCard = ({
   reservationMutation,
   onDiscuss,
   onOpenOwnerConversation,
-  onOpenDetail
+  onOpenDetail,
+  t
 }) => {
   const mediaPreview = property.media?.slice(0, 3) || [];
   const isReservedByOtherUser = property.status === "reserved" && !property.isReservedByCurrentUser;
@@ -230,7 +232,7 @@ const PublicationCard = ({
                 </div>
                 {ownerDisplay.allowDirectOwnerChat ? (
                   <Button type="button" variant="secondary" onClick={() => onOpenOwnerConversation(property)}>
-                    Discuter avec le proprietaire
+                    {t("private", "publications.actions.contactOwner", "Discuter avec le proprietaire")}
                   </Button>
                 ) : null}
               </div>
@@ -271,11 +273,11 @@ const PublicationCard = ({
 
           <div className="flex flex-wrap gap-3 border-t border-white/10 pt-5">
             <Button type="button" variant="secondary" onClick={() => onDiscuss(property)}>
-              Discuter
+              {t("private", "publications.actions.discuss", "Discuter")}
             </Button>
 
             <Button type="button" variant="ghost" onClick={() => onOpenDetail(property)}>
-              Voir detail
+              {t("private", "publications.actions.viewDetail", "Voir detail")}
             </Button>
 
             <Button
@@ -284,7 +286,11 @@ const PublicationCard = ({
               disabled={favoriteMutation.isPending || !canFavoriteProperties}
               onClick={() => favoriteMutation.mutate({ propertyId: property.id, isFavorite: property.isFavorite })}
             >
-              {!canFavoriteProperties ? "Favori indisponible" : property.isFavorite ? "Retirer des favoris" : "Mettre en favori"}
+              {!canFavoriteProperties
+                ? t("private", "publications.actions.favoriteUnavailable", "Favori indisponible")
+                : property.isFavorite
+                  ? t("private", "publications.actions.removeFavorite", "Retirer des favoris")
+                  : t("private", "publications.actions.addFavorite", "Mettre en favori")}
             </Button>
 
             {!canManageReservation ? (
@@ -294,7 +300,11 @@ const PublicationCard = ({
                 disabled={isReserveActionDisabled}
                 onClick={() => reservationMutation.mutate({ propertyId: property.id, action: "reserve" })}
               >
-                {property.isReservedByCurrentUser ? "Reserve par vous" : isReservedByOtherUser ? "Deja reserve" : "Reserver"}
+                {property.isReservedByCurrentUser
+                  ? t("private", "publications.actions.reservedByYou", "Reserve par vous")
+                  : isReservedByOtherUser
+                    ? t("private", "publications.actions.alreadyReserved", "Deja reserve")
+                    : t("private", "publications.actions.reserve", "Reserver")}
               </Button>
             ) : property.status === "reserved" ? (
               <Button
@@ -304,11 +314,11 @@ const PublicationCard = ({
                 disabled={reservationMutation.isPending}
                 onClick={() => reservationMutation.mutate({ propertyId: property.id, action: "release" })}
               >
-                Annuler la reservation
+                {t("private", "publications.actions.cancelReservation", "Annuler la reservation")}
               </Button>
             ) : (
               <span className="inline-flex items-center rounded-full border border-white/10 px-4 py-2 text-sm text-stone-400">
-                Disponible
+                {t("private", "publications.actions.available", "Disponible")}
               </span>
             )}
           </div>
@@ -319,6 +329,7 @@ const PublicationCard = ({
 };
 
 export const PublicationsPage = () => {
+  const { t } = useUserPreferences();
   const navigate = useNavigate();
   const { user, propertyPublicationsQuery, favoriteMutation, reservationMutation } = usePropertyWorkspace();
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY || "";
@@ -341,6 +352,23 @@ export const PublicationsPage = () => {
   });
   const [debouncedFilters, setDebouncedFilters] = useState(rawFilters);
   const items = propertyPublicationsQuery.data?.items || [];
+  const distanceOptions = useMemo(() => [
+    { label: t("private", "publications.filters.allDistances", "Toutes distances"), value: "all" },
+    { label: "1 km", value: "1" },
+    { label: "2 km", value: "2" },
+    { label: "5 km", value: "5" }
+  ], [t]);
+  const purposeOptions = useMemo(() => [
+    { label: t("private", "publications.filters.allPurposes", "Tous objectifs"), value: "all" },
+    { label: "Location", value: "rent" },
+    { label: "Vente", value: "sale" }
+  ], [t]);
+  const typeOptions = useMemo(() => [
+    { label: t("private", "publications.filters.allTypes", "Tous types"), value: "all" },
+    { label: "Maison", value: "house" },
+    { label: "Terrain", value: "land" },
+    { label: "Appartement", value: "apartment" }
+  ], [t]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -502,12 +530,12 @@ export const PublicationsPage = () => {
     return (
       <section className="space-y-8">
         <SectionTitle
-          eyebrow="Publications"
-          title="Publication des biens"
-          description="Le flux de publications n'a pas pu etre charge."
+          eyebrow={t("private", "publications.eyebrow", "Publications")}
+          title={t("private", "publications.title", "Publication des biens")}
+          description={t("private", "publications.errorDescription", "Le flux de publications n'a pas pu etre charge.")}
         />
         <Card>
-          <p className="text-sm text-red-300">Une erreur est survenue lors du chargement des publications.</p>
+          <p className="text-sm text-red-300">{t("private", "publications.error", "Une erreur est survenue lors du chargement des publications.")}</p>
         </Card>
       </section>
     );
@@ -516,66 +544,66 @@ export const PublicationsPage = () => {
   return (
     <section className="space-y-8">
       <SectionTitle
-        eyebrow="Publications"
-        title="Publication des biens"
-        description="Explorez des biens publies comme un catalogue moderne: filtres rapides, carte interactive et actions immediates."
+        eyebrow={t("private", "publications.eyebrow", "Publications")}
+        title={t("private", "publications.title", "Publication des biens")}
+        description={t("private", "publications.description", "Explorez des biens publies comme un catalogue moderne: filtres rapides, carte interactive et actions immediates.")}
       />
 
       <Card className="overflow-hidden border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.14),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-0">
         <div className="border-b border-white/10 px-5 py-5 sm:px-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-100/80">Recherche intelligente</p>
-              <h2 className="text-2xl font-semibold text-white">Liste ou carte, avec les memes biens et les memes filtres</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-100/80">{t("private", "publications.searchEyebrow", "Recherche intelligente")}</p>
+              <h2 className="text-2xl font-semibold text-white">{t("private", "publications.searchTitle", "Liste ou carte, avec les memes biens et les memes filtres")}</h2>
               <p className="max-w-3xl text-sm leading-6 text-stone-300">
-                Le bien reste une publication simple. L&apos;agent et l&apos;agence deviennent des filtres d&apos;analyse, pas l&apos;axe principal d&apos;affichage.
+                {t("private", "publications.searchDescription", "Le bien reste une publication simple. L'agent et l'agence deviennent des filtres d'analyse, pas l'axe principal d'affichage.")}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <SettingsTabButton active={activeTab === "list"} label="Liste" onClick={() => setActiveTab("list")} />
-              <SettingsTabButton active={activeTab === "map"} label="Map" onClick={() => setActiveTab("map")} />
+              <SettingsTabButton active={activeTab === "list"} label={t("private", "publications.tabs.list", "Liste")} onClick={() => setActiveTab("list")} />
+              <SettingsTabButton active={activeTab === "map"} label={t("private", "publications.tabs.map", "Carte")} onClick={() => setActiveTab("map")} />
             </div>
           </div>
         </div>
 
         <div className="grid gap-4 border-b border-white/10 px-5 py-5 sm:grid-cols-2 xl:grid-cols-5 sm:px-6">
           <BaseListBox
-            label="Distance"
-            options={DISTANCE_OPTIONS}
-            value={DISTANCE_OPTIONS.find((option) => option.value === rawFilters.distanceKm) || DISTANCE_OPTIONS[0]}
+            label={t("private", "publications.filters.distance", "Distance")}
+            options={distanceOptions}
+            value={distanceOptions.find((option) => option.value === rawFilters.distanceKm) || distanceOptions[0]}
             onChange={(option) => handleFilterChange("distanceKm", option)}
           />
           <BaseListBox
-            label="Agent"
+            label={t("private", "publications.filters.agent", "Agent")}
             options={agentOptions}
             value={agentOptions.find((option) => option.value === rawFilters.agentId) || agentOptions[0]}
             onChange={(option) => handleFilterChange("agentId", option)}
           />
           <BaseListBox
-            label="Agence"
+            label={t("private", "publications.filters.agency", "Agence")}
             options={agencyOptions}
             value={agencyOptions.find((option) => option.value === rawFilters.agencyId) || agencyOptions[0]}
             onChange={(option) => handleFilterChange("agencyId", option)}
           />
           <BaseListBox
-            label="Objectif"
-            options={PURPOSE_OPTIONS}
-            value={PURPOSE_OPTIONS.find((option) => option.value === rawFilters.purpose) || PURPOSE_OPTIONS[0]}
+            label={t("private", "publications.filters.purpose", "Objectif")}
+            options={purposeOptions}
+            value={purposeOptions.find((option) => option.value === rawFilters.purpose) || purposeOptions[0]}
             onChange={(option) => handleFilterChange("purpose", option)}
           />
           <BaseListBox
-            label="Type de bien"
-            options={TYPE_OPTIONS}
-            value={TYPE_OPTIONS.find((option) => option.value === rawFilters.type) || TYPE_OPTIONS[0]}
+            label={t("private", "publications.filters.type", "Type de bien")}
+            options={typeOptions}
+            value={typeOptions.find((option) => option.value === rawFilters.type) || typeOptions[0]}
             onChange={(option) => handleFilterChange("type", option)}
           />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-6">
           <div className="flex flex-wrap gap-2">
-            <Badge className="border-white/10 bg-white/5 text-stone-200">{filteredItems.length} biens trouves</Badge>
+            <Badge className="border-white/10 bg-white/5 text-stone-200">{filteredItems.length} {t("private", "publications.results.found", "biens trouves")}</Badge>
             <Badge className="border-white/10 bg-white/5 text-stone-200">
-              Reference distance: {referenceCenter.lat.toFixed(4)}, {referenceCenter.lng.toFixed(4)}
+              {t("private", "publications.results.reference", "Reference distance")}: {referenceCenter.lat.toFixed(4)}, {referenceCenter.lng.toFixed(4)}
             </Badge>
           </div>
           <Button
@@ -591,7 +619,7 @@ export const PublicationsPage = () => {
               });
             }}
           >
-            Reinitialiser les filtres
+            {t("private", "publications.filters.reset", "Reinitialiser les filtres")}
           </Button>
         </div>
 
@@ -601,15 +629,15 @@ export const PublicationsPage = () => {
               <div className="overflow-hidden rounded-[1.8rem] border border-white/10 bg-stone-950/70">
                 {!googleMapsApiKey ? (
                   <div className="flex h-[540px] items-center justify-center px-6 text-center text-sm text-amber-100/80">
-                    Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte.
+                    {t("private", "publications.map.missingKey", "Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte.")}
                   </div>
                 ) : loadError ? (
                   <div className="flex h-[540px] items-center justify-center px-6 text-center text-sm text-red-200">
-                    Impossible de charger Google Maps pour le moment.
+                    {t("private", "publications.map.error", "Impossible de charger Google Maps pour le moment.")}
                   </div>
                 ) : !isMapsLoaded ? (
                   <div className="flex h-[540px] items-center justify-center px-6 text-center text-sm text-stone-300">
-                    Chargement de la carte Google...
+                    {t("private", "publications.map.loading", "Chargement de la carte Google...")}
                   </div>
                 ) : (
                   <GoogleMap
@@ -652,7 +680,7 @@ export const PublicationsPage = () => {
                         ) : (
                           <div className="flex h-48 items-end bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.22),transparent_32%),linear-gradient(135deg,rgba(41,37,36,1),rgba(28,25,23,0.92),rgba(12,10,9,1))] p-6">
                             <div>
-                              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Map Preview</p>
+                              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("private", "publications.map.preview", "Map Preview")}</p>
                               <p className="mt-2 text-lg font-semibold text-white">{selectedProperty.title}</p>
                             </div>
                           </div>
@@ -670,20 +698,20 @@ export const PublicationsPage = () => {
                         <p className="text-sm leading-6 text-stone-300">{selectedProperty.description}</p>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <p className="text-xs uppercase tracking-[0.2em] text-stone-400">Agent</p>
-                            <p className="mt-2 text-sm text-white">{selectedProperty.agentName || "Non attribue"}</p>
+                            <p className="text-xs uppercase tracking-[0.2em] text-stone-400">{t("private", "publications.labels.agent", "Agent")}</p>
+                            <p className="mt-2 text-sm text-white">{selectedProperty.agentName || t("private", "publications.labels.notAssigned", "Non attribue")}</p>
                           </div>
                           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <p className="text-xs uppercase tracking-[0.2em] text-stone-400">Agence</p>
-                            <p className="mt-2 text-sm text-white">{selectedProperty.agencyName || "Aucune agence"}</p>
+                            <p className="text-xs uppercase tracking-[0.2em] text-stone-400">{t("private", "publications.labels.agency", "Agence")}</p>
+                            <p className="mt-2 text-sm text-white">{selectedProperty.agencyName || t("private", "publications.labels.noAgency", "Aucune agence")}</p>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-3">
                           <Button type="button" onClick={() => handleOpenDetail(selectedProperty)}>
-                            Voir detail
+                            {t("private", "publications.actions.viewDetail", "Voir detail")}
                           </Button>
                           <Button type="button" variant="secondary" onClick={() => handleOpenConversation(selectedProperty)}>
-                            Discuter
+                            {t("private", "publications.actions.discuss", "Discuter")}
                           </Button>
                         </div>
                       </div>
@@ -691,7 +719,7 @@ export const PublicationsPage = () => {
                   </Card>
                 ) : (
                   <Card>
-                    <p className="text-sm text-stone-300">Aucun bien geolocalise ne correspond aux filtres actuels.</p>
+                    <p className="text-sm text-stone-300">{t("private", "publications.map.empty", "Aucun bien geolocalise ne correspond aux filtres actuels.")}</p>
                   </Card>
                 )}
               </div>
@@ -708,19 +736,20 @@ export const PublicationsPage = () => {
                   onDiscuss={handleOpenConversation}
                   onOpenOwnerConversation={handleOpenOwnerConversation}
                   onOpenDetail={handleOpenDetail}
+                  t={t}
                 />
               ))}
 
               {!filteredItems.length ? (
                 <Card>
-                  <p className="text-sm text-stone-300">Aucun bien ne correspond aux filtres selectionnes.</p>
+                  <p className="text-sm text-stone-300">{t("private", "publications.empty", "Aucun bien ne correspond aux filtres selectionnes.")}</p>
                 </Card>
               ) : null}
 
               {visibleCount < filteredItems.length ? (
                 <div className="flex justify-center">
                   <Button type="button" variant="secondary" onClick={() => setVisibleCount((current) => current + INITIAL_VISIBLE_ITEMS)}>
-                    Afficher plus
+                    {t("private", "publications.actions.showMore", "Afficher plus")}
                   </Button>
                 </div>
               ) : null}

@@ -14,6 +14,44 @@ body {
     linear-gradient(180deg, #0c0f0d 0%, #141816 100%);
 }
 
+body[data-theme="light"] {
+  background:
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.14), transparent 34%),
+    linear-gradient(180deg, #f4f1ea 0%, #ece7df 100%);
+  color: #1c1917;
+}
+
+body[data-theme="light"] [class*="bg-stone-950"],
+body[data-theme="light"] [class*="bg-stone-900"],
+body[data-theme="light"] [class*="bg-black/"],
+body[data-theme="light"] [class*="bg-white/5"],
+body[data-theme="light"] [class*="bg-white/[0.04]"] {
+  background-color: rgba(255, 255, 255, 0.82) !important;
+}
+
+body[data-theme="light"] [class*="text-white"],
+body[data-theme="light"] [class*="text-stone-100"],
+body[data-theme="light"] [class*="text-stone-200"] {
+  color: #1c1917 !important;
+}
+
+body[data-theme="light"] [class*="text-stone-300"],
+body[data-theme="light"] [class*="text-stone-400"],
+body[data-theme="light"] [class*="text-stone-500"] {
+  color: #57534e !important;
+}
+
+body[data-theme="light"] [class*="border-white/10"],
+body[data-theme="light"] [class*="border-white/15"],
+body[data-theme="light"] [class*="border-white/20"] {
+  border-color: rgba(28, 25, 23, 0.12) !important;
+}
+
+body[data-theme="light"] .calendar-shell .rbc-calendar,
+body[data-theme="light"] .calendar-shell .rbc-agenda-view table.rbc-agenda-table {
+  color: #1c1917;
+}
+
 a {
   color: inherit;
   text-decoration: none;

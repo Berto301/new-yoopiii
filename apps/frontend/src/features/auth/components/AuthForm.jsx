@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { loginSchema, registerSchema } from "../validators/auth.schemas.js";
 import { useAuthMutations } from "../hooks/useAuthMutations.js";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -10,17 +11,10 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { useNotification } from "../../../hooks/useNotification.js";
 
-const submitLabelByMode = {
-  login: "Se connecter",
-  user: "Creer mon compte",
-  proprietaire: "Creer mon espace proprietaire",
-  agency: "Creer mon agence",
-  independent_agent: "Creer mon profil agent"
-};
-
 const normalizeValue = (value) => (typeof value === "string" ? value.trim() : value);
 
 export const AuthForm = ({ mode = "login", title, subtitle }) => {
+  const { t } = useUserPreferences();
   const navigate = useNavigate();
   const location = useLocation();
   const { showSuccess, showError } = useNotification();
@@ -75,7 +69,7 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
             };
 
       const result = await mutation.mutateAsync(payload);
-      showSuccess(mode === "login" ? "Connexion reussie." : "Compte cree avec succes.");
+      showSuccess(mode === "login" ? t("auth", "messages.loginSuccess", "Connexion reussie.") : t("auth", "messages.registerSuccess", "Compte cree avec succes."));
       const fallbackPath = resolveRedirectPath(result.user);
       const intendedPath = location.state?.from?.pathname;
       navigate(intendedPath || fallbackPath, { replace: true });
@@ -83,7 +77,7 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
       showError(
         extractApiErrorMessage(
           error,
-          mode === "login" ? "La connexion a echoue." : "La creation du compte a echoue."
+          mode === "login" ? t("auth", "messages.loginError", "La connexion a echoue.") : t("auth", "messages.registerError", "La creation du compte a echoue.")
         )
       );
     }
@@ -92,7 +86,7 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
   const mutationError = mutation.isError
     ? extractApiErrorMessage(
         mutation.error,
-        mode === "login" ? "La connexion a echoue." : "La creation du compte a echoue."
+        mode === "login" ? t("auth", "messages.loginError", "La connexion a echoue.") : t("auth", "messages.registerError", "La creation du compte a echoue.")
       )
     : null;
 
@@ -110,14 +104,14 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
               name="firstName"
               control={control}
               render={({ field }) => (
-                <Input label="Prenom" placeholder="Aminata" error={errors.firstName?.message} {...field} />
+                <Input label={t("auth", "fields.firstName", "Prenom")} placeholder={t("auth", "placeholders.firstName", "Aminata")} error={errors.firstName?.message} {...field} />
               )}
             />
             <Controller
               name="lastName"
               control={control}
               render={({ field }) => (
-                <Input label="Nom" placeholder="Kone" error={errors.lastName?.message} {...field} />
+                <Input label={t("auth", "fields.lastName", "Nom")} placeholder={t("auth", "placeholders.lastName", "Kone")} error={errors.lastName?.message} {...field} />
               )}
             />
           </div>
@@ -129,8 +123,8 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
             control={control}
             render={({ field }) => (
               <Input
-                label="Nom de l'agence"
-                placeholder="Yopii Immo"
+                label={t("auth", "fields.companyName", "Nom de l'agence")}
+                placeholder={t("auth", "placeholders.companyName", "Yopii Immo")}
                 error={errors.companyName?.message}
                 {...field}
               />
@@ -143,9 +137,9 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
           control={control}
           render={({ field }) => (
             <Input
-              label="Email"
+              label={t("auth", "fields.email", "Email")}
               type="email"
-              placeholder="contact@yopii.app"
+              placeholder={t("auth", "placeholders.email", "contact@yopii.app")}
               error={errors.email?.message}
               {...field}
             />
@@ -158,8 +152,8 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
             control={control}
             render={({ field }) => (
               <Input
-                label="Telephone"
-                placeholder="+225 07 00 00 00 00"
+                label={t("auth", "fields.phone", "Telephone")}
+                placeholder={t("auth", "placeholders.phone", "+225 07 00 00 00 00")}
                 error={errors.phone?.message}
                 {...field}
               />
@@ -172,8 +166,8 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
           control={control}
           render={({ field }) => (
             <PasswordInput
-              label="Mot de passe"
-              placeholder="********"
+              label={t("auth", "fields.password", "Mot de passe")}
+              placeholder={t("auth", "placeholders.password", "********")}
               error={errors.password?.message}
               {...field}
             />
@@ -183,16 +177,16 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
         {mutationError ? <p className="text-sm text-red-300">{mutationError}</p> : null}
 
         <Button type="submit" className="w-full" disabled={isSubmitting || mutation.isPending}>
-          {isSubmitting || mutation.isPending ? "Chargement..." : submitLabelByMode[mode]}
+          {isSubmitting || mutation.isPending ? t("auth", "status.loading", "Chargement...") : t("auth", `submit.${mode}`, "Se connecter")}
         </Button>
       </form>
 
       <div className="mt-6 flex flex-wrap gap-4 text-sm text-stone-400">
-        <Link to="/login" className="hover:text-white">Connexion</Link>
-        <Link to="/register/user" className="hover:text-white">Compte utilisateur</Link>
-        <Link to="/register/owner" className="hover:text-white">Compte proprietaire</Link>
-        <Link to="/register/agency" className="hover:text-white">Compte agence</Link>
-        <Link to="/register/agent" className="hover:text-white">Agent independant</Link>
+        <Link to="/login" className="hover:text-white">{t("auth", "links.login", "Connexion")}</Link>
+        <Link to="/register/user" className="hover:text-white">{t("auth", "links.user", "Compte utilisateur")}</Link>
+        <Link to="/register/owner" className="hover:text-white">{t("auth", "links.owner", "Compte proprietaire")}</Link>
+        <Link to="/register/agency" className="hover:text-white">{t("auth", "links.agency", "Compte agence")}</Link>
+        <Link to="/register/agent" className="hover:text-white">{t("auth", "links.agent", "Agent independant")}</Link>
       </div>
     </Card>
   );

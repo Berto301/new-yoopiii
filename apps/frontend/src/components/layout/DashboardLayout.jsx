@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { PERMISSION_IDS } from "../../helpers/constants.js";
 import { hasPermission } from "../../helpers/_functions.js";
 import { performLogout } from "../../features/auth/utils/logout.js";
@@ -7,7 +8,7 @@ import { logoutSuccess, selectCurrentUser } from "../../app/store/session.store.
 import { Avatar } from "../profile/Avatar.jsx";
 import { Button } from "../ui/Button.jsx";
 
-const buildSidebarItems = (user) => {
+const buildSidebarItems = (user, t) => {
   const role = user?.role;
   const permissions = user?.permissions || [];
   const isManagementRole = ["agency", "agency_agent", "independent_agent"].includes(role);
@@ -15,40 +16,40 @@ const buildSidebarItems = (user) => {
   if (role === "proprietaire") {
     return [
       { to: "/dashboard/owner", label: "Dashboard", permission: null },
-      { to: "/owner/contracts", label: "Gestion de contrats", permission: null },
-      { to: "/owner/calendar", label: "Calendrier", permission: null },
-      { to: "/messages", label: "Messages", permission: null },
-      { to: "/notifications", label: "Notifications", permission: null },
-      { to: "/owner/rents", label: "Gestion de loyers", permission: null },
-      { to: "/owner/tenants", label: "Gestion des locataires", permission: null },
-      { to: "/owner/properties", label: "Mes biens", permission: null },
-      { to: "/owner/maintenance", label: "Gestion de maintenance", permission: null },
-      { to: "/settings", label: "Parametres", permission: null }
+      { to: "/owner/contracts", label: t("layout", "dashboard.owner.contracts", "Gestion de contrats"), permission: null },
+      { to: "/owner/calendar", label: t("layout", "dashboard.owner.calendar", "Calendrier"), permission: null },
+      { to: "/messages", label: t("layout", "dashboard.owner.messages", "Messages"), permission: null },
+      { to: "/notifications", label: t("layout", "dashboard.owner.notifications", "Notifications"), permission: null },
+      { to: "/owner/rents", label: t("layout", "dashboard.owner.rents", "Gestion de loyers"), permission: null },
+      { to: "/owner/tenants", label: t("layout", "dashboard.owner.tenants", "Gestion des locataires"), permission: null },
+      { to: "/owner/properties", label: t("layout", "dashboard.owner.properties", "Mes biens"), permission: null },
+      { to: "/owner/maintenance", label: t("layout", "dashboard.owner.maintenance", "Gestion de maintenance"), permission: null },
+      { to: "/settings", label: t("layout", "dashboard.owner.settings", "Parametres"), permission: null }
     ];
   }
 
   const baseItems = [
-    { to: "/dashboard/user", label: "Vue globale", permission: PERMISSION_IDS.UI_ROUTE_DASHBOARD_USER },
-    { to: "/dashboard/publications", label: "Publication des biens", permission: PERMISSION_IDS.UI_ROUTE_PUBLICATIONS },
+    { to: "/dashboard/user", label: t("layout", "dashboard.shared.overview", "Vue globale"), permission: PERMISSION_IDS.UI_ROUTE_DASHBOARD_USER },
+    { to: "/dashboard/publications", label: t("layout", "dashboard.shared.publications", "Publication des biens"), permission: PERMISSION_IDS.UI_ROUTE_PUBLICATIONS },
     ...(!isManagementRole
       ? [
-          { to: "/favorites", label: "Favoris", permission: PERMISSION_IDS.UI_ROUTE_FAVORITES },
-          { to: "/bookings", label: "Reservations", permission: PERMISSION_IDS.UI_ROUTE_BOOKINGS },
-          { to: "/agencies-agents", label: "Agence et Agents", permission: null }
+          { to: "/favorites", label: t("layout", "dashboard.shared.favorites", "Favoris"), permission: PERMISSION_IDS.UI_ROUTE_FAVORITES },
+          { to: "/bookings", label: t("layout", "dashboard.shared.bookings", "Reservations"), permission: PERMISSION_IDS.UI_ROUTE_BOOKINGS },
+          { to: "/agencies-agents", label: t("layout", "dashboard.shared.agenciesAgents", "Agence et Agents"), permission: null }
         ]
       : []),
-    { to: "/calendar", label: "Calendrier", permission: null },
-    { to: "/messages", label: "Messages", permission: PERMISSION_IDS.UI_ROUTE_MESSAGES },
-    { to: "/notifications", label: "Notifications", permission: PERMISSION_IDS.UI_ROUTE_NOTIFICATIONS },
-    { to: "/settings", label: "Parametres", permission: PERMISSION_IDS.UI_ROUTE_SETTINGS }
+    { to: "/calendar", label: t("layout", "dashboard.shared.calendar", "Calendrier"), permission: null },
+    { to: "/messages", label: t("layout", "dashboard.shared.messages", "Messages"), permission: PERMISSION_IDS.UI_ROUTE_MESSAGES },
+    { to: "/notifications", label: t("layout", "dashboard.shared.notifications", "Notifications"), permission: PERMISSION_IDS.UI_ROUTE_NOTIFICATIONS },
+    { to: "/settings", label: t("layout", "dashboard.shared.settings", "Parametres"), permission: PERMISSION_IDS.UI_ROUTE_SETTINGS }
   ];
 
   if (isManagementRole) {
-    baseItems.splice(1, 0, { to: "/dashboard/properties", label: "Gestion biens", permission: PERMISSION_IDS.UI_ROUTE_PROPERTIES });
+    baseItems.splice(1, 0, { to: "/dashboard/properties", label: t("layout", "dashboard.shared.propertyManagement", "Gestion biens"), permission: PERMISSION_IDS.UI_ROUTE_PROPERTIES });
   }
 
   if (role === "agency" || role === "independent_agent") {
-    baseItems.splice(2, 0, { to: "/contracts", label: "Mes contrats", permission: null });
+    baseItems.splice(2, 0, { to: "/contracts", label: t("layout", "dashboard.shared.contracts", "Mes contrats"), permission: null });
   }
 
   if (role === "agency_agent") {
@@ -59,11 +60,12 @@ const buildSidebarItems = (user) => {
 };
 
 export const DashboardLayout = () => {
+  const { t } = useUserPreferences();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
-  const sidebarItems = buildSidebarItems(user);
-  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || user?.email || "Utilisateur";
+  const sidebarItems = buildSidebarItems(user, t);
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || user?.email || t("layout", "dashboard.userFallback", "Utilisateur");
 
   const handleLogout = () => {
     performLogout(dispatch, logoutSuccess);
@@ -75,7 +77,7 @@ export const DashboardLayout = () => {
       <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[280px_1fr]">
         <aside className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-5">
           <div className="rounded-[2rem] border border-white/10 bg-black/20 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-stone-400">Connecte</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-stone-400">{t("layout", "dashboard.connected", "Connecte")}</p>
             <div className="mt-4 flex items-center gap-3">
               <Avatar
                 src={user?.avatar}
@@ -87,7 +89,7 @@ export const DashboardLayout = () => {
               />
               <div className="min-w-0">
                 <h2 className="truncate text-base font-semibold text-white">{fullName}</h2>
-                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-brand-100">{user?.role === "proprietaire" ? "proprietaire" : user?.role?.replaceAll("_", " ")}</p>
+                <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-brand-100">{user?.role === "proprietaire" ? t("layout", "dashboard.ownerRole", "proprietaire") : user?.role?.replaceAll("_", " ")}</p>
               </div>
             </div>
           </div>
@@ -108,7 +110,7 @@ export const DashboardLayout = () => {
           </nav>
           <div className="mt-8">
             <Button type="button" variant="secondary" className="w-full" onClick={handleLogout}>
-              Se deconnecter
+              {t("layout", "dashboard.logout", "Se deconnecter")}
             </Button>
           </div>
         </aside>

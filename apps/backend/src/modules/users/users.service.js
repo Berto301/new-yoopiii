@@ -102,6 +102,26 @@ export const updateMyProfile = async ({ userId, payload }) => {
   return sanitizeUser(user.toObject());
 };
 
+export const updateMyPreferences = async ({ userId, payload }) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new AppError("User not found", StatusCodes.NOT_FOUND);
+  }
+
+  user.preferences = {
+    ...(user.preferences || {}),
+    language: payload.language,
+    theme: payload.theme,
+    currency: payload.currency,
+    contractDefaultCommission: payload.contractDefaultCommission
+  };
+
+  await user.save();
+
+  return sanitizeUser(user.toObject());
+};
+
 export const uploadMyProfileAvatar = async ({ userId, file }) => {
   if (!file) {
     throw new AppError("Profile image file is required", StatusCodes.BAD_REQUEST);

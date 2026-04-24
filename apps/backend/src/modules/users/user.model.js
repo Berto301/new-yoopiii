@@ -40,7 +40,28 @@ const userSchema = new mongoose.Schema(
     },
     preferences: {
       radiusInKm: { type: Number, default: 10 },
-      notificationsEnabled: { type: Boolean, default: true }
+      notificationsEnabled: { type: Boolean, default: true },
+      language: {
+        type: String,
+        enum: ["en", "fr"],
+        default: "fr"
+      },
+      theme: {
+        type: String,
+        enum: ["dark", "light"],
+        default: "dark"
+      },
+      currency: {
+        type: String,
+        trim: true,
+        uppercase: true,
+        default: "USD"
+      },
+      contractDefaultCommission: {
+        type: Number,
+        min: 0,
+        default: 0
+      }
     },
     lastLoginAt: { type: Date, default: null }
   },

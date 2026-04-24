@@ -1,5 +1,6 @@
 import { Provider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { UserPreferencesProvider } from "../preferences/UserPreferencesProvider.jsx";
 import { store } from "../store/session.store.js";
 import { SocketSessionBridge } from "./components/SocketSessionBridge.jsx";
 
@@ -16,8 +17,10 @@ const queryClient = new QueryClient({
 export const AppProviders = ({ children }) => (
   <Provider store={store}>
     <QueryClientProvider client={queryClient}>
-      <SocketSessionBridge />
-      {children}
+      <UserPreferencesProvider>
+        <SocketSessionBridge />
+        {children}
+      </UserPreferencesProvider>
     </QueryClientProvider>
   </Provider>
 );

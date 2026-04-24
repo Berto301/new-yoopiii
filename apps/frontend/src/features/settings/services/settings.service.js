@@ -20,6 +20,11 @@ export const updateMyProfile = async (payload) => {
   return response.data.data;
 };
 
+export const updateMyPreferences = async (payload) => {
+  const response = await apiClient.patch("/users/me/preferences", payload);
+  return response.data.data;
+};
+
 export const uploadMyAvatar = async (file) => {
   const formData = new FormData();
   formData.append("file", file);

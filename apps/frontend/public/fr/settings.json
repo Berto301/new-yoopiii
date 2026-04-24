@@ -1,0 +1,93 @@
+{
+  "page": {
+    "eyebrow": "Parametres",
+    "title": "Gestion de profil",
+    "description": "Mettez a jour votre profil connecte et votre mot de passe.",
+    "agencyTitle": "Administration agence",
+    "agencyDescription": "Profil connecte, mot de passe, roles, agents et informations agence centralises dans un seul espace."
+  },
+  "tabs": {
+    "profile": "Profil",
+    "roles": "Roles",
+    "members": "Agents",
+    "agency": "Agence"
+  },
+  "account": {
+    "eyebrow": "Parametres de compte",
+    "title": "Preferences globales",
+    "description": "Choisissez la langue, le theme et la devise utilises dans tout votre espace.",
+    "language": {
+      "label": "Langue"
+    },
+    "theme": {
+      "label": "Theme",
+      "light": "Light Mode",
+      "dark": "Dark Mode"
+    },
+    "currency": {
+      "label": "Devise"
+    }
+  },
+  "profile": {
+    "eyebrow": "Informations personnelles",
+    "title": "Coordonnees du compte",
+    "description": "Modifiez vos informations de contact sans melanger la gestion de la photo de profil.",
+    "firstName": "Prenom",
+    "lastName": "Nom",
+    "email": "Email",
+    "phone": "Telephone",
+    "cin": "CIN",
+    "address": "Adresse",
+    "gender": "Sexe",
+    "genderOptions": {
+      "male": "Homme",
+      "female": "Femme",
+      "other": "Autre"
+    },
+    "role": "Role",
+    "save": "Enregistrer le profil",
+    "placeholder": "Selectionner",
+    "hero": {
+      "eyebrow": "Profil utilisateur",
+      "role": "Role",
+      "permissions": "Permissions",
+      "photoTitle": "Photo de profil",
+      "photoDescription": "Ajoutez une image nette pour personnaliser votre compte. Les fichiers image uniquement sont acceptes.",
+      "takePhoto": "Prendre une photo",
+      "replacePhoto": "Remplacer la photo",
+      "uploadPhoto": "Televerser une photo",
+      "uploading": "Televersement en cours...",
+      "formats": "Formats recommandes: JPG, PNG, WEBP."
+    }
+  },
+  "security": {
+    "eyebrow": "Securite",
+    "title": "Mot de passe",
+    "description": "Choisissez un mot de passe distinct de l'actuel pour renforcer la securite du compte.",
+    "currentPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "save": "Changer le mot de passe"
+  },
+  "contract": {
+    "eyebrow": "Contrat & Financier",
+    "title": "Commission par defaut",
+    "description": "Cette valeur sera proposee automatiquement lors de la creation d'un contrat, tout en restant modifiable dans le formulaire.",
+    "commission": {
+      "label": "Commission (%)"
+    }
+  },
+  "actions": {
+    "saveAccount": "Enregistrer les preferences",
+    "saveFinancial": "Enregistrer contrat & financier"
+  },
+  "permissions": {
+    "title": "Permissions actives",
+    "description": "Routes, modules et sections accessibles pour ce role.",
+    "empty": "Aucune permission specifique."
+  },
+  "labels": {
+    "user": "Utilisateur",
+    "emailMissing": "Email non renseigne",
+    "ownerRole": "Proprietaire"
+  }
+}

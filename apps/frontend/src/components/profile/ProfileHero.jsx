@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { Button } from "../ui/Button.jsx";
 import { Card } from "../ui/Card.jsx";
 import { Avatar } from "./Avatar.jsx";
@@ -13,6 +14,7 @@ export const ProfileHero = ({
   onUpload,
   type = "user"
 }) => {
+  const { t } = useUserPreferences();
   const uploadInputRef = useRef(null);
   const captureInputRef = useRef(null);
   const hasCustomAvatar = Boolean(avatar);
@@ -52,26 +54,26 @@ export const ProfileHero = ({
 
           <div className="space-y-3 text-center sm:text-left">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-100/80">Profil utilisateur</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-100/80">{t("settings", "profile.hero.eyebrow", "Profil utilisateur")}</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">{userName}</h2>
               <p className="mt-1 text-sm text-stone-300">{userEmail}</p>
             </div>
 
             <div className="flex flex-wrap justify-center gap-3 sm:justify-start">
               <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-stone-200">
-                Role: {roleLabel || "Utilisateur"}
+                {t("settings", "profile.hero.role", "Role")}: {roleLabel || t("settings", "labels.user", "Utilisateur")}
               </span>
               <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-stone-200">
-                Permissions: {permissionCount}
+                {t("settings", "profile.hero.permissions", "Permissions")}: {permissionCount}
               </span>
             </div>
           </div>
         </div>
 
         <div className="space-y-3 rounded-[2rem] border border-white/10 bg-black/20 p-4 backdrop-blur">
-          <p className="text-sm font-medium text-white">Photo de profil</p>
+          <p className="text-sm font-medium text-white">{t("settings", "profile.hero.photoTitle", "Photo de profil")}</p>
           <p className="max-w-sm text-sm leading-6 text-stone-300">
-            Ajoutez une image nette pour personnaliser votre compte. Les fichiers image uniquement sont acceptes.
+            {t("settings", "profile.hero.photoDescription", "Ajoutez une image nette pour personnaliser votre compte. Les fichiers image uniquement sont acceptes.")}
           </p>
           <div className="flex flex-wrap gap-3">
             <input
@@ -92,13 +94,19 @@ export const ProfileHero = ({
               disabled={isUploading}
             />
             <Button type="button" variant="secondary" disabled={isUploading} onClick={() => captureInputRef.current?.click()}>
-              Prendre une photo
+              {t("settings", "profile.hero.takePhoto", "Prendre une photo")}
             </Button>
             <Button type="button" disabled={isUploading} onClick={() => uploadInputRef.current?.click()}>
-              {hasCustomAvatar ? "Remplacer la photo" : "Televerser une photo"}
+              {hasCustomAvatar
+                ? t("settings", "profile.hero.replacePhoto", "Remplacer la photo")
+                : t("settings", "profile.hero.uploadPhoto", "Televerser une photo")}
             </Button>
           </div>
-          <p className="text-xs text-stone-400">{isUploading ? "Televersement en cours..." : "Formats recommandes: JPG, PNG, WEBP."}</p>
+          <p className="text-xs text-stone-400">
+            {isUploading
+              ? t("settings", "profile.hero.uploading", "Televersement en cours...")
+              : t("settings", "profile.hero.formats", "Formats recommandes: JPG, PNG, WEBP.")}
+          </p>
         </div>
       </div>
     </Card>

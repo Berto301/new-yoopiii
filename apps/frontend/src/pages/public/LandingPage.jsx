@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
 import { Link, useNavigate } from "react-router-dom";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
+import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
 import { useLandingOverview } from "../../features/landing/hooks/useLandingOverview.js";
 import { ModalViewDetail } from "../../features/properties/components/ModalViewDetail.jsx";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
@@ -20,8 +22,7 @@ const OWNER_STATUS_LABELS = {
   "En travaux": "En travaux"
 };
 
-const formatPrice = (value, currency = "AR") =>
-  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
+const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
 
 const buildInitials = (name) =>
   String(name || "YP")
@@ -60,12 +61,12 @@ const LandingSkeleton = () => (
   </section>
 );
 
-const EditorialHero = ({ summary, currentUser, featuredAgency }) => {
+const EditorialHero = ({ summary, currentUser, featuredAgency, t }) => {
   const highlightMetrics = [
-    { label: "Biens", value: summary.propertiesCount || 0 },
-    { label: "Agences", value: summary.agenciesCount || 0 },
-    { label: "Agents", value: summary.agentsCount || 0 },
-    { label: "Locataires", value: summary.tenantsCount || 0 }
+    { label: t("landing", "hero.metrics.properties", "Biens"), value: summary.propertiesCount || 0 },
+    { label: t("landing", "hero.metrics.agencies", "Agences"), value: summary.agenciesCount || 0 },
+    { label: t("landing", "hero.metrics.agents", "Agents"), value: summary.agentsCount || 0 },
+    { label: t("landing", "hero.metrics.tenants", "Locataires"), value: summary.tenantsCount || 0 }
   ];
 
   return (
@@ -74,23 +75,23 @@ const EditorialHero = ({ summary, currentUser, featuredAgency }) => {
       <div className="relative grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch">
         <div className="space-y-8">
           <div className="space-y-5">
-            <Badge className="border-[#c9a66b]/30 bg-[#c9a66b]/10 text-[#f4dec1]">Real estate intelligence</Badge>
+            <Badge className="border-[#c9a66b]/30 bg-[#c9a66b]/10 text-[#f4dec1]">{t("landing", "hero.badge", "Real estate intelligence")}</Badge>
             <div className="space-y-4">
               <h1 className="max-w-4xl font-serif text-4xl leading-[1.02] text-white sm:text-5xl lg:text-7xl">
-                Une vitrine immobiliere vivante, branchee sur les vraies donnees de Yopii.
+                {t("landing", "hero.title", "Une vitrine immobiliere vivante, branchee sur les vraies donnees de Yopii.")}
               </h1>
               <p className="max-w-2xl text-base leading-8 text-stone-300">
-                La landing met en scene l'ecosysteme Yopii en lecture seule avec une approche plus editoriale, plus premium et plus legere.
+                {t("landing", "hero.description", "La landing met en scene l'ecosysteme Yopii en lecture seule avec une approche plus editoriale, plus premium et plus legere.")}
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <Button as={Link} to={currentUser?.role === "proprietaire" ? "/dashboard/owner" : "/login"} className="bg-[#c9a66b] text-stone-950 hover:bg-[#d9b983]">
-              {currentUser?.role === "proprietaire" ? "Ouvrir mon espace" : "Se connecter"}
+              {currentUser?.role === "proprietaire" ? t("landing", "hero.openSpace", "Ouvrir mon espace") : t("landing", "hero.login", "Se connecter")}
             </Button>
             <Button as={Link} to="/#contact" variant="secondary">
-              Nous contacter
+              {t("landing", "hero.contact", "Nous contacter")}
             </Button>
           </div>
 
@@ -115,16 +116,16 @@ const EditorialHero = ({ summary, currentUser, featuredAgency }) => {
             {featuredAgency ? (
               <div className="absolute inset-x-0 bottom-0 p-6">
                 <div className="rounded-[1.75rem] border border-white/10 bg-black/35 p-5 backdrop-blur-xl">
-                  <Badge className="border-white/10 bg-white/10 text-white">Agence mise en avant</Badge>
+                  <Badge className="border-white/10 bg-white/10 text-white">{t("landing", "hero.featuredAgency", "Agence mise en avant")}</Badge>
                   <h3 className="mt-4 font-serif text-3xl text-white">{featuredAgency.name}</h3>
-                  <p className="mt-2 text-sm text-stone-300">Statut: {featuredAgency.status}</p>
+                  <p className="mt-2 text-sm text-stone-300">{t("landing", "hero.status", "Statut")}: {featuredAgency.status}</p>
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-[1.2rem] border border-white/10 bg-stone-950/45 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Biens</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("landing", "hero.properties", "Biens")}</p>
                       <p className="mt-2 text-2xl font-semibold text-[#f4dec1]">{featuredAgency.managedPropertiesCount || 0}</p>
                     </div>
                     <div className="rounded-[1.2rem] border border-white/10 bg-stone-950/45 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Agents</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-stone-500">{t("landing", "hero.agents", "Agents")}</p>
                       <p className="mt-2 text-2xl font-semibold text-white">{featuredAgency.activeAgentsCount || 0}</p>
                     </div>
                   </div>
@@ -188,7 +189,7 @@ const PropertyStatusBadge = ({ value }) => {
   return <Badge className={className}>{value}</Badge>;
 };
 
-const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, onOpenPublicDetail }) => {
+const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, onOpenPublicDetail, t }) => {
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY || "";
   const { isLoaded: isMapsLoaded, loadError } = useJsApiLoader({
     id: "property-google-maps-script",
@@ -218,9 +219,9 @@ const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, on
   return (
     <section className="space-y-6">
       <SectionHeading
-        eyebrow="Biens publies"
-        title="Trois biens publies, lus comme une selection editoriale."
-        description="La landing affiche maintenant une courte liste de biens reellement publies, accompagnee d'une carte interactive pour situer instantanement chaque opportunite."
+        eyebrow={t("landing", "published.eyebrow", "Biens publies")}
+        title={t("landing", "published.title", "Trois biens publies, lus comme une selection editoriale.")}
+        description={t("landing", "published.description", "La landing affiche maintenant une courte liste de biens reellement publies, accompagnee d'une carte interactive pour situer instantanement chaque opportunite.")}
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
@@ -239,7 +240,7 @@ const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, on
                       <img src={resolveAssetUrl(property.coverImage)} alt={property.title} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full items-end bg-[radial-gradient(circle_at_top_left,rgba(201,166,107,0.24),transparent_32%),linear-gradient(135deg,rgba(41,37,36,1),rgba(12,10,9,1))] p-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Publication</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">{t("landing", "published.publication", "Publication")}</p>
                       </div>
                     )}
                   </div>
@@ -248,7 +249,7 @@ const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, on
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="text-xl font-semibold text-white">{property.title}</p>
-                        <p className="mt-1 text-sm text-stone-400">{property.address || "Adresse non renseignee"}</p>
+                        <p className="mt-1 text-sm text-stone-400">{property.address || t("landing", "published.addressMissing", "Adresse non renseignee")}</p>
                       </div>
                       <PropertyStatusBadge value={property.status} />
                     </div>
@@ -259,13 +260,13 @@ const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, on
                       <Badge className="border-white/10 bg-white/5 text-stone-200">{property.area} m2</Badge>
                     </div>
 
-                    <p className="text-sm leading-7 text-stone-300">{property.description || "Description indisponible."}</p>
+                    <p className="text-sm leading-7 text-stone-300">{property.description || t("landing", "published.descriptionMissing", "Description indisponible.")}</p>
 
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
                       <p className="text-lg font-semibold text-[#f4dec1]">{formatPrice(property.price, property.currency)}</p>
                       <div className="flex flex-wrap gap-2">
                         <Button type="button" variant="secondary" onClick={() => setSelectedPropertyId(property.id)}>
-                          Voir sur la carte
+                          {t("landing", "published.showOnMap", "Voir sur la carte")}
                         </Button>
                         <Button
                           type="button"
@@ -279,7 +280,7 @@ const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, on
                             onOpenPublicDetail(property.slug || property.id);
                           }}
                         >
-                          Voir detail
+                          {t("landing", "published.viewDetail", "Voir detail")}
                         </Button>
                       </div>
                     </div>
@@ -292,23 +293,23 @@ const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, on
 
         <Card className="overflow-hidden rounded-[2rem] border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-0">
           <div className="border-b border-white/10 px-6 py-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Carte interactive</p>
-            <h3 className="mt-2 font-serif text-3xl text-white">Les biens se lisent aussi par emplacement.</h3>
+            <p className="text-xs uppercase tracking-[0.24em] text-stone-500">{t("landing", "published.mapTitle", "Carte interactive")}</p>
+            <h3 className="mt-2 font-serif text-3xl text-white">{t("landing", "published.mapHeading", "Les biens se lisent aussi par emplacement.")}</h3>
           </div>
 
           <div className="space-y-5 p-5">
             <div className="overflow-hidden rounded-[1.7rem] border border-white/10 bg-stone-950/70">
               {!googleMapsApiKey ? (
                 <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-amber-100/80">
-                  Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte.
+                  {t("landing", "published.mapMissingKey", "Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte.")}
                 </div>
               ) : loadError ? (
                 <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-red-200">
-                  Impossible de charger Google Maps pour le moment.
+                  {t("landing", "published.mapError", "Impossible de charger Google Maps pour le moment.")}
                 </div>
               ) : !isMapsLoaded ? (
                 <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-stone-300">
-                  Chargement de la carte Google...
+                  {t("landing", "published.mapLoading", "Chargement de la carte Google...")}
                 </div>
               ) : (
                 <GoogleMap
@@ -340,16 +341,16 @@ const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, on
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xl font-semibold text-white">{selectedProperty.title}</p>
-                    <p className="mt-1 text-sm text-stone-400">{selectedProperty.address || "Adresse non renseignee"}</p>
+                    <p className="mt-1 text-sm text-stone-400">{selectedProperty.address || t("landing", "published.addressMissing", "Adresse non renseignee")}</p>
                   </div>
                   <PropertyStatusBadge value={selectedProperty.status} />
                 </div>
                 <p className="mt-4 text-lg font-semibold text-[#f4dec1]">{formatPrice(selectedProperty.price, selectedProperty.currency)}</p>
-                <p className="mt-3 text-sm leading-7 text-stone-300">{selectedProperty.description || "Description indisponible."}</p>
+                <p className="mt-3 text-sm leading-7 text-stone-300">{selectedProperty.description || t("landing", "published.descriptionMissing", "Description indisponible.")}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Badge className="border-white/10 bg-white/5 text-stone-200">{selectedProperty.type}</Badge>
                   <Badge className="border-white/10 bg-white/5 text-stone-200">{selectedProperty.purpose}</Badge>
-                  <Badge className="border-white/10 bg-white/5 text-stone-200">{selectedProperty.agentName || "Agent non renseigne"}</Badge>
+                  <Badge className="border-white/10 bg-white/5 text-stone-200">{selectedProperty.agentName || t("landing", "published.agentMissing", "Agent non renseigne")}</Badge>
                 </div>
                 <div className="mt-5">
                   <Button
@@ -363,13 +364,13 @@ const PublishedPropertiesShowcase = ({ properties, currentUser, onOpenDetail, on
                       onOpenPublicDetail(selectedProperty.slug || selectedProperty.id);
                     }}
                   >
-                    Voir detail
+                    {t("landing", "published.viewDetail", "Voir detail")}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="rounded-[1.5rem] border border-white/10 bg-stone-950/45 p-5 text-sm text-stone-300">
-                Aucun bien geolocalise n'est disponible pour le moment.
+                {t("landing", "published.empty", "Aucun bien geolocalise n'est disponible pour le moment.")}
               </div>
             )}
           </div>
@@ -447,6 +448,7 @@ const OwnerCollection = ({ data }) => {
 
 export const LandingPage = () => {
   const navigate = useNavigate();
+  const { t } = useUserPreferences();
   const { currentUser, landingQuery, ownerOverviewQuery } = useLandingOverview();
   const landingData = landingQuery.data;
   const [detailModalIdentifier, setDetailModalIdentifier] = useState("");
@@ -500,7 +502,7 @@ export const LandingPage = () => {
 
   return (
     <section className="mx-auto max-w-7xl space-y-14 px-6 py-16">
-      <EditorialHero summary={landingData?.summary || {}} currentUser={currentUser} featuredAgency={featuredAgency} />
+      <EditorialHero summary={landingData?.summary || {}} currentUser={currentUser} featuredAgency={featuredAgency} t={t} />
 
       <section className="space-y-6">
         <SectionHeading
@@ -526,6 +528,7 @@ export const LandingPage = () => {
         currentUser={currentUser}
         onOpenDetail={setDetailModalIdentifier}
         onOpenPublicDetail={(identifier) => navigate(`/properties/${identifier}`)}
+        t={t}
       />
 
       <section className="space-y-6">

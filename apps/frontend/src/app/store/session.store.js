@@ -1,6 +1,6 @@
 import { configureStore, createSlice } from "@reduxjs/toolkit";
 
-const STORAGE_KEY = "yopii-session";
+export const STORAGE_KEY = "yopii-session";
 
 const loadStoredSession = () => {
   if (typeof window === "undefined") {
@@ -24,6 +24,14 @@ const loadStoredSession = () => {
   } catch (_error) {
     return { accessToken: null, user: null, isAuthenticated: false };
   }
+};
+
+export const hasStoredSession = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return Boolean(window.localStorage.getItem(STORAGE_KEY));
 };
 
 const persistSession = (state) => {

@@ -1,0 +1,93 @@
+{
+  "page": {
+    "eyebrow": "Settings",
+    "title": "Profile settings",
+    "description": "Update your signed-in profile and password.",
+    "agencyTitle": "Agency administration",
+    "agencyDescription": "Signed-in profile, password, roles, agents, and agency information in one central place."
+  },
+  "tabs": {
+    "profile": "Profile",
+    "roles": "Roles",
+    "members": "Agents",
+    "agency": "Agency"
+  },
+  "account": {
+    "eyebrow": "Account Settings",
+    "title": "Global preferences",
+    "description": "Choose the language, theme, and currency used across your workspace.",
+    "language": {
+      "label": "Language"
+    },
+    "theme": {
+      "label": "Theme",
+      "light": "Light Mode",
+      "dark": "Dark Mode"
+    },
+    "currency": {
+      "label": "Currency"
+    }
+  },
+  "profile": {
+    "eyebrow": "Personal information",
+    "title": "Account details",
+    "description": "Update your contact information without mixing it with profile photo management.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "phone": "Phone",
+    "cin": "ID number",
+    "address": "Address",
+    "gender": "Gender",
+    "genderOptions": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    },
+    "role": "Role",
+    "save": "Save profile",
+    "placeholder": "Select",
+    "hero": {
+      "eyebrow": "User profile",
+      "role": "Role",
+      "permissions": "Permissions",
+      "photoTitle": "Profile photo",
+      "photoDescription": "Add a clear image to personalize your account. Image files only are accepted.",
+      "takePhoto": "Take a photo",
+      "replacePhoto": "Replace photo",
+      "uploadPhoto": "Upload a photo",
+      "uploading": "Uploading...",
+      "formats": "Recommended formats: JPG, PNG, WEBP."
+    }
+  },
+  "security": {
+    "eyebrow": "Security",
+    "title": "Password",
+    "description": "Choose a password different from the current one to strengthen account security.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "save": "Change password"
+  },
+  "contract": {
+    "eyebrow": "Contract & Financial",
+    "title": "Default commission",
+    "description": "This value is suggested automatically when creating a contract and can still be edited manually.",
+    "commission": {
+      "label": "Commission (%)"
+    }
+  },
+  "actions": {
+    "saveAccount": "Save account settings",
+    "saveFinancial": "Save contract & financial settings"
+  },
+  "permissions": {
+    "title": "Active permissions",
+    "description": "Routes, modules, and sections available for this role.",
+    "empty": "No specific permissions."
+  },
+  "labels": {
+    "user": "User",
+    "emailMissing": "Email not provided",
+    "ownerRole": "Owner"
+  }
+}

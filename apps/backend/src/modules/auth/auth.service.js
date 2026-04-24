@@ -75,10 +75,12 @@ const formatAuthUser = async (user) => {
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
+    avatar: user.avatar || null,
     role: user.role,
     agencyId: user.agencyId || null,
     permissionId: permissionState.permissionId,
-    permissions: permissionState.permissions
+    permissions: permissionState.permissions,
+    preferences: user.preferences || {}
   };
 };
 

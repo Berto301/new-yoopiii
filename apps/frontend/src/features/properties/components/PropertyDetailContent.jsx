@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
+import { formatMoney } from "../../../app/preferences/user-preferences.utils.js";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
 
-const formatPrice = (value, currency = "AR") =>
-  `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value || 0)} ${currency || "AR"}`.trim();
+const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
 
 const getStatusClassName = (status) => {
   if (status === "published") {

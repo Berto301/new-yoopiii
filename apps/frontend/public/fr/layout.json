@@ -1,0 +1,65 @@
+{
+  "publicNav": {
+    "home": "Accueil",
+    "contact": "Contact",
+    "login": "Connexion"
+  },
+  "mainNav": {
+    "home": "Accueil",
+    "properties": "Biens",
+    "dashboard": "Dashboard",
+    "propertyManagement": "Gestion biens",
+    "messages": "Messages"
+  },
+  "dashboard": {
+    "connected": "Connecte",
+    "logout": "Se deconnecter",
+    "userFallback": "Utilisateur",
+    "ownerRole": "proprietaire",
+    "owner": {
+      "dashboard": "Dashboard",
+      "contracts": "Gestion de contrats",
+      "calendar": "Calendrier",
+      "messages": "Messages",
+      "notifications": "Notifications",
+      "rents": "Gestion de loyers",
+      "tenants": "Gestion des locataires",
+      "properties": "Mes biens",
+      "maintenance": "Gestion de maintenance",
+      "settings": "Parametres"
+    },
+    "shared": {
+      "overview": "Vue globale",
+      "publications": "Publication des biens",
+      "favorites": "Favoris",
+      "bookings": "Reservations",
+      "agenciesAgents": "Agence et Agents",
+      "calendar": "Calendrier",
+      "messages": "Messages",
+      "notifications": "Notifications",
+      "settings": "Parametres",
+      "propertyManagement": "Gestion biens",
+      "contracts": "Mes contrats"
+    }
+  },
+  "footer": {
+    "eyebrow": "Contact",
+    "title": "Parlons de votre projet immobilier.",
+    "description": "Une question, une demande de demo ou un besoin d'accompagnement? Ecrivez-nous depuis cette section et le message sera transmis a l'equipe Yopii.",
+    "home": "Accueil",
+    "contact": "Contact",
+    "fullName": "Nom complet",
+    "email": "Email",
+    "subject": "Sujet",
+    "message": "Message",
+    "fullNamePlaceholder": "Votre nom",
+    "emailPlaceholder": "contact@yopii.app",
+    "subjectPlaceholder": "Objet de votre message",
+    "messagePlaceholder": "Expliquez votre besoin...",
+    "submit": "Envoyer",
+    "submitting": "Envoi...",
+    "helper": "Le message est envoye directement vers l'email de contact configure sur le backend.",
+    "copyright": "Copyright {year} Yopii. Tous droits reserves.",
+    "tagline": "Experience immobiliere synchronisee, vitrine publique et gestion temps reel."
+  }
+}

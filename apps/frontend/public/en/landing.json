@@ -1,0 +1,56 @@
+{
+  "hero": {
+    "badge": "Real estate intelligence",
+    "title": "A living real estate showcase connected to Yopii's real data.",
+    "description": "The landing page presents the Yopii ecosystem in read-only mode with a more editorial, premium, and lighter approach.",
+    "openSpace": "Open my space",
+    "login": "Log in",
+    "contact": "Contact us",
+    "metrics": {
+      "properties": "Properties",
+      "agencies": "Agencies",
+      "agents": "Agents",
+      "tenants": "Tenants"
+    },
+    "featuredAgency": "Featured agency",
+    "status": "Status",
+    "properties": "Properties",
+    "agents": "Agents"
+  },
+  "published": {
+    "eyebrow": "Published properties",
+    "title": "Three published properties, presented like an editorial selection.",
+    "description": "The landing page now shows a short list of truly published properties, paired with an interactive map to instantly locate each opportunity.",
+    "publication": "Publication",
+    "addressMissing": "Address not provided",
+    "descriptionMissing": "Description unavailable.",
+    "showOnMap": "Show on map",
+    "viewDetail": "View details",
+    "mapTitle": "Interactive map",
+    "mapHeading": "Properties are also best understood by location.",
+    "mapMissingKey": "Add `VITE_GOOGLE_MAPS_API_KEY` or `GOOGLE_MAPS_API_KEY` to enable the map.",
+    "mapError": "Google Maps could not be loaded right now.",
+    "mapLoading": "Loading Google map...",
+    "agentMissing": "Agent not provided",
+    "empty": "No geolocated property is available right now."
+  },
+  "ownerCollection": {
+    "eyebrow": "Owner collection",
+    "title": "A portfolio reading, not a dashboard.",
+    "description": "For signed-in owners, the landing page keeps a premium reading of their portfolio without an extra property section.",
+    "signature": "Owner signature",
+    "heading": "Living portfolio",
+    "body": "Your properties, tenants, and revenue are presented here like a premium collection with clearer and more valuable hierarchy.",
+    "myProperties": "My properties",
+    "myPropertiesDescription": "Current number of properties tracked in your portfolio.",
+    "rented": "Rented",
+    "rentedDescription": "Properties currently occupied by a tenant.",
+    "available": "Available",
+    "availableDescription": "Properties free or ready for a new occupant.",
+    "revenue": "Revenue",
+    "revenueDescription": "A synthetic reading of your monthly income.",
+    "tenants": "Tenants",
+    "activeFiles": "active files",
+    "propertyMissing": "Property not provided"
+  }
+}
