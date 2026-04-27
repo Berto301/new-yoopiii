@@ -33,6 +33,7 @@ import { AgentScoringPage } from "../../pages/dashboards/AgentScoringPage.jsx";
 import { OwnerDashboardPage } from "../../pages/private/owner/OwnerDashboardPage.jsx";
 import { OwnerContractsPage } from "../../pages/private/owner/OwnerContractsPage.jsx";
 import { OwnerRentsPage } from "../../pages/private/owner/OwnerRentsPage.jsx";
+import { OwnerExpensesPage } from "../../pages/private/owner/OwnerExpensesPage.jsx";
 import { OwnerTenantsPage } from "../../pages/private/owner/OwnerTenantsPage.jsx";
 import { OwnerPropertiesPage } from "../../pages/private/owner/OwnerPropertiesPage.jsx";
 import { OwnerMaintenancePage } from "../../pages/private/owner/OwnerMaintenancePage.jsx";
@@ -82,6 +83,7 @@ export const AppRouter = () => (
           <Route path="/owner/contracts" element={<OwnerContractsPage />} />
           <Route path="/owner/calendar" element={<OwnerCalendarPage />} />
           <Route path="/owner/rents" element={<OwnerRentsPage />} />
+          <Route path="/owner/expenses" element={<OwnerExpensesPage />} />
           <Route path="/owner/tenants" element={<OwnerTenantsPage />} />
           <Route path="/owner/properties" element={<OwnerPropertiesPage />} />
           <Route path="/owner/maintenance" element={<OwnerMaintenancePage />} />

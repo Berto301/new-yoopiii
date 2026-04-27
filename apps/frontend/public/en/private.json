@@ -131,6 +131,11 @@
       "title": "Payment and receipt tracking",
       "description": "View collected rents, detect delays, and prepare receipts from one dedicated space."
     },
+    "expensesPage": {
+      "eyebrow": "Expenses",
+      "title": "Expense management",
+      "description": "Analyze revenue, charges, maintenance, and net balance across your portfolio."
+    },
     "tenantsPage": {
       "eyebrow": "Tenants",
       "title": "Tenant records and related history",
@@ -238,6 +243,133 @@
         "dueDate": "Due date",
         "amount": "Amount",
         "status": "Payment"
+      }
+    },
+    "expenses": {
+      "loading": "Loading expenses...",
+      "unavailableTitle": "Expense management unavailable",
+      "unavailableDescription": "Financial movements could not be loaded.",
+      "title": "Expense management",
+      "description": "Track assets, liabilities, budgets, and movements synchronized with your properties.",
+      "badge": "{count} movements",
+      "emptyTitle": "No financial movement",
+      "emptyDescription": "Add income, a charge, or adjust filters to view financial tracking.",
+      "deleteTitle": "Delete movement",
+      "deleteContent": "Do you really want to delete {label}?",
+      "deleteFallback": "this movement",
+      "actions": {
+        "new": "New movement",
+        "edit": "Edit",
+        "delete": "Delete",
+        "save": "Save",
+        "create": "Create"
+      },
+      "messages": {
+        "createSuccess": "Financial movement added.",
+        "updateSuccess": "Financial movement updated.",
+        "deleteSuccess": "Financial movement deleted.",
+        "saveError": "Financial movement management failed.",
+        "deleteError": "Financial movement deletion failed."
+      },
+      "filters": {
+        "year": "Year",
+        "month": "Month",
+        "property": "Property",
+        "type": "Type",
+        "allMonths": "All months",
+        "allProperties": "All properties",
+        "allTypes": "All",
+        "portfolio": "Portfolio"
+      },
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      },
+      "types": {
+        "actif": "Asset",
+        "passif": "Liability"
+      },
+      "categories": {
+        "rent_income": "Rental income",
+        "sale_price": "Sale price",
+        "property_income": "Other income",
+        "maintenance": "Maintenance",
+        "administrative": "Administrative",
+        "commission": "Commission",
+        "other_charge": "Other charges"
+      },
+      "summary": {
+        "income": "Revenue",
+        "expenses": "Expenses",
+        "balance": "Net balance",
+        "budgetAlerts": "Budget overruns",
+        "incomeHelp": "Assets recorded for the filtered period.",
+        "expensesHelp": "Liabilities, charges, and synchronized maintenance.",
+        "balanceHelp": "Revenue minus expenses for active filters.",
+        "budgetHelp": "Lines above the planned budget."
+      },
+      "columns": {
+        "movement": "Movement",
+        "property": "Property",
+        "category": "Category",
+        "amount": "Amount",
+        "date": "Date",
+        "actions": "Actions"
+      },
+      "labels": {
+        "budgetExceeded": "Budget overrun",
+        "budgetAmount": "Budget {amount}"
+      },
+      "fields": {
+        "label": "Label",
+        "type": "Type",
+        "property": "Property",
+        "category": "Category",
+        "amount": "Amount",
+        "currency": "Currency",
+        "budget": "Budget",
+        "date": "Date",
+        "description": "Description"
+      },
+      "placeholders": {
+        "label": "Ex: April rent, facade painting...",
+        "property": "Select a property",
+        "description": "Internal notes, invoice, context, or reference."
+      },
+      "validation": {
+        "label": "Label is required",
+        "amount": "Amount must be positive",
+        "date": "Date is required"
+      },
+      "modal": {
+        "createTitle": "New movement",
+        "editTitle": "Edit movement",
+        "syncedMaintenance": "Line synchronized with maintenance. Amount and budget remain adjustable."
+      },
+      "chart": {
+        "title": "Breakdown by category",
+        "description": "Quick view of the largest revenue and charges for the period.",
+        "empty": "No category to display for these filters."
+      },
+      "sync": {
+        "eyebrow": "Synchronization",
+        "title": "Active sources",
+        "manual": "Manual",
+        "maintenance": "Maintenance",
+        "alerts": "Budget alerts"
+      },
+      "sources": {
+        "maintenance": "Maintenance"
       }
     },
     "tenants": {

@@ -21,6 +21,7 @@ const buildSidebarItems = (user, t) => {
       { to: "/messages", label: t("layout", "dashboard.owner.messages", "Messages"), permission: null },
       { to: "/notifications", label: t("layout", "dashboard.owner.notifications", "Notifications"), permission: null },
       { to: "/owner/rents", label: t("layout", "dashboard.owner.rents", "Gestion de loyers"), permission: null },
+      { to: "/owner/expenses", label: t("layout", "dashboard.owner.expenses", "Gestion des depenses"), permission: null },
       { to: "/owner/tenants", label: t("layout", "dashboard.owner.tenants", "Gestion des locataires"), permission: null },
       { to: "/owner/properties", label: t("layout", "dashboard.owner.properties", "Mes biens"), permission: null },
       { to: "/owner/maintenance", label: t("layout", "dashboard.owner.maintenance", "Gestion de maintenance"), permission: null },

@@ -64,6 +64,7 @@ export const useOwnerWorkspace = () => {
     queryClient.invalidateQueries({ queryKey: ["owner-maintenance-properties"] });
     queryClient.invalidateQueries({ queryKey: ["owner-properties"] });
     queryClient.invalidateQueries({ queryKey: ["managed-properties"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-expenses"] });
   };
 
   const createMaintenanceTicketMutation = useMutation({

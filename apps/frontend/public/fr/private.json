@@ -300,6 +300,11 @@
       "title": "Suivi des paiements et quittances",
       "description": "Visualisez les loyers encaisses, detectez les retards et preparez les quittances depuis un espace dedie."
     },
+    "expensesPage": {
+      "eyebrow": "Depenses",
+      "title": "Gestion des depenses",
+      "description": "Analysez les revenus, les charges, la maintenance et la balance nette de votre portefeuille."
+    },
     "tenantsPage": {
       "eyebrow": "Locataires",
       "title": "Fiches locataires et historique associe",
@@ -407,6 +412,133 @@
         "dueDate": "Echeance",
         "amount": "Montant",
         "status": "Paiement"
+      }
+    },
+    "expenses": {
+      "loading": "Chargement des depenses...",
+      "unavailableTitle": "Gestion des depenses indisponible",
+      "unavailableDescription": "Les mouvements financiers n'ont pas pu etre charges.",
+      "title": "Gestion des depenses",
+      "description": "Suivez les actifs, les passifs, les budgets et les mouvements synchronises avec vos biens.",
+      "badge": "{count} mouvements",
+      "emptyTitle": "Aucun mouvement financier",
+      "emptyDescription": "Ajoutez un revenu, une charge ou ajustez les filtres pour visualiser le suivi financier.",
+      "deleteTitle": "Supprimer le mouvement",
+      "deleteContent": "Voulez-vous vraiment supprimer {label} ?",
+      "deleteFallback": "ce mouvement",
+      "actions": {
+        "new": "Nouveau mouvement",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "save": "Enregistrer",
+        "create": "Creer"
+      },
+      "messages": {
+        "createSuccess": "Mouvement financier ajoute.",
+        "updateSuccess": "Mouvement financier mis a jour.",
+        "deleteSuccess": "Mouvement financier supprime.",
+        "saveError": "La gestion du mouvement financier a echoue.",
+        "deleteError": "La suppression du mouvement financier a echoue."
+      },
+      "filters": {
+        "year": "Annee",
+        "month": "Mois",
+        "property": "Bien",
+        "type": "Type",
+        "allMonths": "Tous les mois",
+        "allProperties": "Tous les biens",
+        "allTypes": "Tous",
+        "portfolio": "Portefeuille"
+      },
+      "months": {
+        "january": "Janvier",
+        "february": "Fevrier",
+        "march": "Mars",
+        "april": "Avril",
+        "may": "Mai",
+        "june": "Juin",
+        "july": "Juillet",
+        "august": "Aout",
+        "september": "Septembre",
+        "october": "Octobre",
+        "november": "Novembre",
+        "december": "Decembre"
+      },
+      "types": {
+        "actif": "Actif",
+        "passif": "Passif"
+      },
+      "categories": {
+        "rent_income": "Revenus locatifs",
+        "sale_price": "Prix de vente",
+        "property_income": "Autres revenus",
+        "maintenance": "Entretien",
+        "administrative": "Administratif",
+        "commission": "Commission",
+        "other_charge": "Autres charges"
+      },
+      "summary": {
+        "income": "Revenus",
+        "expenses": "Depenses",
+        "balance": "Balance nette",
+        "budgetAlerts": "Budgets depasses",
+        "incomeHelp": "Actifs enregistres sur la periode filtree.",
+        "expensesHelp": "Passifs, charges et maintenance synchronisee.",
+        "balanceHelp": "Revenus moins depenses sur les filtres actifs.",
+        "budgetHelp": "Lignes au-dessus du budget prevu."
+      },
+      "columns": {
+        "movement": "Mouvement",
+        "property": "Bien",
+        "category": "Categorie",
+        "amount": "Montant",
+        "date": "Date",
+        "actions": "Actions"
+      },
+      "labels": {
+        "budgetExceeded": "Budget depasse",
+        "budgetAmount": "Budget {amount}"
+      },
+      "fields": {
+        "label": "Libelle",
+        "type": "Type",
+        "property": "Bien",
+        "category": "Categorie",
+        "amount": "Montant",
+        "currency": "Devise",
+        "budget": "Budget",
+        "date": "Date",
+        "description": "Description"
+      },
+      "placeholders": {
+        "label": "Ex: Loyer avril, peinture facade...",
+        "property": "Selectionner un bien",
+        "description": "Notes internes, facture, contexte ou reference."
+      },
+      "validation": {
+        "label": "Le libelle est requis",
+        "amount": "Le montant doit etre positif",
+        "date": "La date est requise"
+      },
+      "modal": {
+        "createTitle": "Nouveau mouvement",
+        "editTitle": "Modifier le mouvement",
+        "syncedMaintenance": "Ligne synchronisee avec la maintenance. Le montant et le budget restent ajustables."
+      },
+      "chart": {
+        "title": "Repartition par categorie",
+        "description": "Lecture rapide des revenus et charges les plus importants sur la periode.",
+        "empty": "Aucune categorie a afficher pour ces filtres."
+      },
+      "sync": {
+        "eyebrow": "Synchronisation",
+        "title": "Sources actives",
+        "manual": "Manuels",
+        "maintenance": "Maintenance",
+        "alerts": "Alertes budget"
+      },
+      "sources": {
+        "maintenance": "Maintenance"
       }
     },
     "tenants": {
