@@ -2,6 +2,20 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { pointSchema } from "../shared/schemas/location.schema.js";
 
+const socialProviderSchema = new mongoose.Schema(
+  {
+    provider: {
+      type: String,
+      enum: ["google", "facebook"],
+      required: true
+    },
+    providerId: { type: String, required: true, trim: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
+    linkedAt: { type: Date, default: Date.now }
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     firstName: { type: String, required: true, trim: true },
@@ -63,6 +77,43 @@ const userSchema = new mongoose.Schema(
         default: 0
       }
     },
+    socialProviders: { type: [socialProviderSchema], default: [] },
+    twoFactor: {
+      isEnabled: { type: Boolean, default: false },
+      method: {
+        type: String,
+        enum: ["authenticator", "email"],
+        default: "authenticator"
+      },
+      secretHash: { type: String, default: "" },
+      secretEncrypted: {
+        iv: { type: String, default: "" },
+        value: { type: String, default: "" },
+        tag: { type: String, default: "" }
+      },
+      pending: {
+        method: {
+          type: String,
+          enum: ["authenticator", "email", ""],
+          default: ""
+        },
+        secretHash: { type: String, default: "" },
+        secretEncrypted: {
+          iv: { type: String, default: "" },
+          value: { type: String, default: "" },
+          tag: { type: String, default: "" }
+        },
+        otpHash: { type: String, default: "" },
+        expiresAt: { type: Date, default: null }
+      },
+      challenge: {
+        tokenHash: { type: String, default: "" },
+        otpHash: { type: String, default: "" },
+        expiresAt: { type: Date, default: null },
+        failedAttempts: { type: Number, default: 0 },
+        lockedUntil: { type: Date, default: null }
+      }
+    },
     lastLoginAt: { type: Date, default: null }
   },
   {
@@ -71,6 +122,17 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ location: "2dsphere" });
+userSchema.index(
+  { "socialProviders.provider": 1, "socialProviders.providerId": 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: {
+      "socialProviders.provider": { $exists: true },
+      "socialProviders.providerId": { $exists: true }
+    }
+  }
+);
 
 userSchema.methods.comparePassword = function comparePassword(password) {
   return bcrypt.compare(password, this.passwordHash);

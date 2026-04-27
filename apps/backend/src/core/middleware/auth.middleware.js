@@ -87,6 +87,42 @@ export const requireAuth = async (req, _res, next) => {
   }
 };
 
+export const optionalAuth = async (req, _res, next) => {
+  try {
+    const token = extractBearerToken(req.headers.authorization);
+
+    if (!token) {
+      return next();
+    }
+
+    const payload = verifyAccessToken(token);
+    const user = await User.findById(payload.sub)
+      .select("_id firstName lastName email role status agencyId permissionId")
+      .lean();
+
+    if (!user || user.status !== "active") {
+      return next();
+    }
+
+    const permissionState = await resolveRequestPermissionState(user);
+
+    req.user = {
+      id: String(user._id),
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      agencyId: user.agencyId ? String(user.agencyId) : null,
+      permissionId: permissionState.permissionId,
+      permissions: permissionState.permissions
+    };
+
+    return next();
+  } catch (_error) {
+    return next();
+  }
+};
+
 export const authorizeRoles = (...allowedRoles) => (req, _res, next) => {
   if (!req.user || !allowedRoles.includes(req.user.role)) {
     return next(new AppError("Forbidden", StatusCodes.FORBIDDEN));

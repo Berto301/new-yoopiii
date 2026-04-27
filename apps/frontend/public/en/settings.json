@@ -68,6 +68,39 @@
     "newPassword": "New password",
     "save": "Change password"
   },
+  "connection": {
+    "eyebrow": "Connection",
+    "title": "Account connection settings",
+    "description": "Link social accounts and strengthen sign-in with two-factor authentication.",
+    "social": {
+      "connected": "Connected",
+      "disconnectedStatus": "Not connected",
+      "notConnected": "Not connected",
+      "disconnect": "Disconnect",
+      "disconnected": "Account disconnected."
+    },
+    "twoFactor": {
+      "eyebrow": "Two-factor authentication",
+      "title": "Secure sign-in",
+      "enabledDescription": "OTP verification is required after email and password.",
+      "disabledDescription": "Add OTP verification with an authenticator app.",
+      "enabledStatus": "Enabled",
+      "disabledStatus": "Disabled",
+      "configure": "Configure",
+      "setupStarted": "2FA setup started.",
+      "setupError": "Unable to configure 2FA.",
+      "enabled": "Two-factor authentication enabled.",
+      "disabled": "Two-factor authentication disabled.",
+      "disableError": "Unable to disable 2FA.",
+      "invalidCode": "Invalid OTP code.",
+      "qrAlt": "2FA QR code",
+      "scanHint": "Scan the QR code with your authenticator app, then enter the OTP code.",
+      "code": "OTP code",
+      "disableCode": "OTP code",
+      "verify": "Verify and enable",
+      "disable": "Disable"
+    }
+  },
   "contract": {
     "eyebrow": "Contract & Financial",
     "title": "Default commission",

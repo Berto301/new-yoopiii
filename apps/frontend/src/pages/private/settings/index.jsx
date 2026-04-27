@@ -30,6 +30,11 @@ export const SettingsPage = () => {
     updatePreferencesMutation,
     uploadAvatarMutation,
     changePasswordMutation,
+    linkProviderMutation,
+    unlinkProviderMutation,
+    enableTwoFactorMutation,
+    verifyTwoFactorMutation,
+    disableTwoFactorMutation,
     updateAgencyMutation,
     uploadAgencyAssetMutation,
     createRoleMutation,
@@ -374,6 +379,11 @@ export const SettingsPage = () => {
         updatePreferencesMutation={updatePreferencesMutation}
         uploadAvatarMutation={uploadAvatarMutation}
         changePasswordMutation={changePasswordMutation}
+        linkProviderMutation={linkProviderMutation}
+        unlinkProviderMutation={unlinkProviderMutation}
+        enableTwoFactorMutation={enableTwoFactorMutation}
+        verifyTwoFactorMutation={verifyTwoFactorMutation}
+        disableTwoFactorMutation={disableTwoFactorMutation}
         onProfileSubmit={handleProfileSubmit}
         onPreferencesSubmit={handlePreferencesSubmit}
         onAvatarUpload={handleAvatarUpload}

@@ -47,6 +47,16 @@ const sanitizeUser = async (user) => ({
   permissionId: user.permissionId ? String(user.permissionId) : null,
   permissions: await resolveUserPermissions(user),
   preferences: user.preferences,
+  socialProviders: (user.socialProviders || []).map((provider) => ({
+    provider: provider.provider,
+    providerId: provider.providerId,
+    email: provider.email,
+    linkedAt: provider.linkedAt
+  })),
+  twoFactor: {
+    isEnabled: Boolean(user.twoFactor?.isEnabled),
+    method: user.twoFactor?.method || "authenticator"
+  },
   location: user.location || null
 });
 
@@ -109,12 +119,16 @@ export const updateMyPreferences = async ({ userId, payload }) => {
     throw new AppError("User not found", StatusCodes.NOT_FOUND);
   }
 
+  const canManageCommission = ["agency", "agency_agent", "independent_agent"].includes(user.role);
+
   user.preferences = {
     ...(user.preferences || {}),
     language: payload.language,
     theme: payload.theme,
     currency: payload.currency,
-    contractDefaultCommission: payload.contractDefaultCommission
+    contractDefaultCommission: canManageCommission
+      ? payload.contractDefaultCommission
+      : Number(user.preferences?.contractDefaultCommission || 0)
   };
 
   await user.save();

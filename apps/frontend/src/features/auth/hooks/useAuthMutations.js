@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../../app/store/session.store.js";
-import { loginRequest, registerRequest } from "../services/auth.service.js";
+import { loginRequest, registerRequest, socialLoginRequest, verifyTwoFactorRequest } from "../services/auth.service.js";
 
 const resolveRedirectPath = (user) => {
   if (user.role === "independent_agent") {
@@ -28,7 +28,9 @@ export const useAuthMutations = () => {
   const loginMutation = useMutation({
     mutationFn: loginRequest,
     onSuccess: (data) => {
-      dispatch(loginSuccess(data));
+      if (data?.accessToken) {
+        dispatch(loginSuccess(data));
+      }
     }
   });
 
@@ -39,9 +41,29 @@ export const useAuthMutations = () => {
     }
   });
 
+  const socialLoginMutation = useMutation({
+    mutationFn: socialLoginRequest,
+    onSuccess: (data) => {
+      if (data?.accessToken) {
+        dispatch(loginSuccess(data));
+      }
+    }
+  });
+
+  const verifyTwoFactorMutation = useMutation({
+    mutationFn: verifyTwoFactorRequest,
+    onSuccess: (data) => {
+      if (data?.accessToken) {
+        dispatch(loginSuccess(data));
+      }
+    }
+  });
+
   return {
     loginMutation,
     registerMutation,
+    socialLoginMutation,
+    verifyTwoFactorMutation,
     resolveRedirectPath,
     extractApiErrorMessage
   };

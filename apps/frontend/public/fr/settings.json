@@ -68,6 +68,39 @@
     "newPassword": "Nouveau mot de passe",
     "save": "Changer le mot de passe"
   },
+  "connection": {
+    "eyebrow": "Connexion",
+    "title": "Parametre de connexion aux comptes",
+    "description": "Liez vos comptes sociaux et renforcez la connexion avec une double authentification.",
+    "social": {
+      "connected": "Connecte",
+      "disconnectedStatus": "Non connecte",
+      "notConnected": "Non connecte",
+      "disconnect": "Deconnecter",
+      "disconnected": "Compte deconnecte."
+    },
+    "twoFactor": {
+      "eyebrow": "Double authentification",
+      "title": "Securiser la connexion",
+      "enabledDescription": "La verification OTP est demandee apres email et mot de passe.",
+      "disabledDescription": "Ajoutez une verification OTP via application d'authentification.",
+      "enabledStatus": "Active",
+      "disabledStatus": "Desactive",
+      "configure": "Configurer",
+      "setupStarted": "Configuration 2FA initialisee.",
+      "setupError": "Impossible de configurer la 2FA.",
+      "enabled": "Double authentification activee.",
+      "disabled": "Double authentification desactivee.",
+      "disableError": "Impossible de desactiver la 2FA.",
+      "invalidCode": "Code OTP invalide.",
+      "qrAlt": "QR code 2FA",
+      "scanHint": "Scannez le QR code avec votre application d'authentification puis saisissez le code OTP.",
+      "code": "Code OTP",
+      "disableCode": "Code OTP",
+      "verify": "Verifier et activer",
+      "disable": "Desactiver"
+    }
+  },
   "contract": {
     "eyebrow": "Contrat & Financier",
     "title": "Commission par defaut",

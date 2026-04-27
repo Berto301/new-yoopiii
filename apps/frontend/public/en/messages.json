@@ -17,6 +17,19 @@
   "preferences": {
     "saved": "Settings saved successfully."
   },
+  "auth": {
+    "google": {
+      "connect": "Connect with Google",
+      "login": "Login with Google"
+    },
+    "facebook": {
+      "connect": "Connect with Facebook",
+      "login": "Login with Facebook"
+    },
+    "already_used": "This account is already in use",
+    "success": "Account connected successfully",
+    "error": "Connection error"
+  },
   "errors": {
     "profileUpdate": "Unable to update the profile.",
     "avatarUpload": "Unable to upload the profile photo.",

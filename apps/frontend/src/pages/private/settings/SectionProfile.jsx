@@ -10,6 +10,7 @@ import { PasswordInput } from "../../../components/ui/PasswordInput.jsx";
 import { Switch } from "../../../components/ui/Switch.jsx";
 import { Profile } from "../../../features/settings/components/Profile.jsx";
 import { PERMISSION_TREE } from "../../../helpers/constants.js";
+import { SectionConnectionSettings } from "./SectionConnectionSettings.jsx";
 
 const buildPermissionSections = (permissionCodes = []) =>
   PERMISSION_TREE.map((group) => ({
@@ -63,6 +64,11 @@ export const SectionProfile = ({
   updatePreferencesMutation,
   uploadAvatarMutation,
   changePasswordMutation,
+  linkProviderMutation,
+  unlinkProviderMutation,
+  enableTwoFactorMutation,
+  verifyTwoFactorMutation,
+  disableTwoFactorMutation,
   onProfileSubmit,
   onPreferencesSubmit,
   onAvatarUpload,
@@ -87,6 +93,7 @@ export const SectionProfile = ({
   const passwordErrors = passwordForm.formState.errors;
   const preferencesErrors = preferencesForm.formState.errors;
   const currentAvatar = profileForm.watch("avatar") || profile?.avatar || "";
+  const canManageCommission = ["agency", "agency_agent", "independent_agent"].includes(profile?.role);
   const userName = [profileForm.watch("firstName") || profile?.firstName, profileForm.watch("lastName") || profile?.lastName]
     .filter(Boolean)
     .join(" ")
@@ -238,36 +245,38 @@ export const SectionProfile = ({
             </form>
           </Card>
 
-          <Card className="space-y-6">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-400">{t("settings", "contract.eyebrow", "Contrat & Financier")}</p>
-              <h3 className="text-xl font-semibold text-white">{t("settings", "contract.title", "Commission par defaut")}</h3>
-              <p className="text-sm text-stone-300">{t("settings", "contract.description", "Cette valeur sera proposee automatiquement lors de la creation d'un contrat, tout en restant modifiable dans le formulaire.")}</p>
-            </div>
-
-            <form className="grid gap-4" onSubmit={preferencesForm.handleSubmit(onPreferencesSubmit)}>
-              <Controller
-                name="contractDefaultCommission"
-                control={preferencesForm.control}
-                render={({ field }) => (
-                  <Input
-                    label={t("settings", "contract.commission.label", "Commission (%)")}
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    error={preferencesErrors.contractDefaultCommission?.message}
-                    {...field}
-                  />
-                )}
-              />
-              <div className="flex justify-end">
-                <Button type="submit" disabled={updatePreferencesMutation.isPending}>
-                  {t("settings", "actions.saveFinancial", "Enregistrer contrat & financier")}
-                </Button>
+          {canManageCommission ? (
+            <Card className="space-y-6">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-400">{t("settings", "contract.eyebrow", "Contrat & Financier")}</p>
+                <h3 className="text-xl font-semibold text-white">{t("settings", "contract.title", "Commission par defaut")}</h3>
+                <p className="text-sm text-stone-300">{t("settings", "contract.description", "Cette valeur sera proposee automatiquement lors de la creation d'un contrat, tout en restant modifiable dans le formulaire.")}</p>
               </div>
-            </form>
-          </Card>
+
+              <form className="grid gap-4" onSubmit={preferencesForm.handleSubmit(onPreferencesSubmit)}>
+                <Controller
+                  name="contractDefaultCommission"
+                  control={preferencesForm.control}
+                  render={({ field }) => (
+                    <Input
+                      label={t("settings", "contract.commission.label", "Commission (%)")}
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      error={preferencesErrors.contractDefaultCommission?.message}
+                      {...field}
+                    />
+                  )}
+                />
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={updatePreferencesMutation.isPending}>
+                    {t("settings", "actions.saveFinancial", "Enregistrer contrat & financier")}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          ) : null}
         </div>
 
         <div className="space-y-6">
@@ -298,6 +307,15 @@ export const SectionProfile = ({
           </Card>
         </div>
       </div>
+
+      <SectionConnectionSettings
+        profile={profile}
+        linkProviderMutation={linkProviderMutation}
+        unlinkProviderMutation={unlinkProviderMutation}
+        enableTwoFactorMutation={enableTwoFactorMutation}
+        verifyTwoFactorMutation={verifyTwoFactorMutation}
+        disableTwoFactorMutation={disableTwoFactorMutation}
+      />
     </div>
   );
 };

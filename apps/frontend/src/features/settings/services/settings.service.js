@@ -43,6 +43,31 @@ export const changeMyPassword = async (payload) => {
   return response.data.data;
 };
 
+export const linkSocialProvider = async (payload) => {
+  const response = await apiClient.post("/auth/link-provider", payload);
+  return response.data.data;
+};
+
+export const unlinkSocialProvider = async (provider) => {
+  const response = await apiClient.delete(`/auth/link-provider/${provider}`);
+  return response.data.data;
+};
+
+export const enableTwoFactor = async (payload = {}) => {
+  const response = await apiClient.post("/auth/2fa/enable", payload);
+  return response.data.data;
+};
+
+export const verifyTwoFactor = async (payload) => {
+  const response = await apiClient.post("/auth/2fa/verify", payload);
+  return response.data.data;
+};
+
+export const disableTwoFactor = async (payload = {}) => {
+  const response = await apiClient.post("/auth/2fa/disable", payload);
+  return response.data.data;
+};
+
 export const getAgencyDetail = async (agencyId) => {
   const response = await apiClient.get(`/agencies/${agencyId}`);
   return response.data.data;

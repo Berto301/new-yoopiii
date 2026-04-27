@@ -5,21 +5,26 @@ import {
   changeMyPassword,
   createAgencyMember,
   createAgencyRole,
+  disableTwoFactor,
   deleteAgencyMember,
   deleteAgency,
   deleteAgencyRole,
   duplicateAgencyRole,
+  enableTwoFactor,
   getAgencyDetail,
   getAgencyMembers,
   getAgencyRoles,
   getMyProfile,
+  linkSocialProvider,
+  unlinkSocialProvider,
   updateMyPreferences,
   updateAgencyMember,
   updateAgencyProfile,
   updateAgencyRole,
   updateMyProfile,
   uploadAgencyAsset,
-  uploadMyAvatar
+  uploadMyAvatar,
+  verifyTwoFactor
 } from "../services/settings.service.js";
 
 export const useSettingsWorkspace = () => {
@@ -79,6 +84,40 @@ export const useSettingsWorkspace = () => {
   });
 
   const changePasswordMutation = useMutation({ mutationFn: changeMyPassword });
+
+  const linkProviderMutation = useMutation({
+    mutationFn: linkSocialProvider,
+    onSuccess: ({ user: updatedUser }) => {
+      syncProfileState(updatedUser);
+    }
+  });
+
+  const unlinkProviderMutation = useMutation({
+    mutationFn: unlinkSocialProvider,
+    onSuccess: ({ user: updatedUser }) => {
+      syncProfileState(updatedUser);
+    }
+  });
+
+  const enableTwoFactorMutation = useMutation({ mutationFn: enableTwoFactor });
+
+  const verifyTwoFactorMutation = useMutation({
+    mutationFn: verifyTwoFactor,
+    onSuccess: ({ user: updatedUser }) => {
+      if (updatedUser) {
+        syncProfileState(updatedUser);
+      }
+    }
+  });
+
+  const disableTwoFactorMutation = useMutation({
+    mutationFn: disableTwoFactor,
+    onSuccess: ({ user: updatedUser }) => {
+      if (updatedUser) {
+        syncProfileState(updatedUser);
+      }
+    }
+  });
 
   const updateAgencyMutation = useMutation({
     mutationFn: ({ payload }) => updateAgencyProfile({ agencyId, payload }),
@@ -164,6 +203,11 @@ export const useSettingsWorkspace = () => {
     updatePreferencesMutation,
     uploadAvatarMutation,
     changePasswordMutation,
+    linkProviderMutation,
+    unlinkProviderMutation,
+    enableTwoFactorMutation,
+    verifyTwoFactorMutation,
+    disableTwoFactorMutation,
     updateAgencyMutation,
     uploadAgencyAssetMutation,
     createRoleMutation,

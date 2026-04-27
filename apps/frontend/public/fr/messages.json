@@ -17,6 +17,19 @@
   "preferences": {
     "saved": "Parametres enregistres avec succes."
   },
+  "auth": {
+    "google": {
+      "connect": "Connecter avec Google",
+      "login": "Login avec Google"
+    },
+    "facebook": {
+      "connect": "Connecter avec Facebook",
+      "login": "Login avec Facebook"
+    },
+    "already_used": "Ce compte est déjà utilisé",
+    "success": "Compte connecté avec succès",
+    "error": "Erreur de connexion"
+  },
   "errors": {
     "profileUpdate": "La mise a jour du profil a echoue.",
     "avatarUpload": "Le televersement de la photo a echoue.",
