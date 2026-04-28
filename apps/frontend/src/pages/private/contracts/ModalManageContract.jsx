@@ -86,6 +86,36 @@ const SectionCard = ({ eyebrow, title, children, aside = null }) => (
 
 const mapOption = (options, value, fallback = null) => options.find((item) => item.value === value) || fallback;
 
+const getDocumentKey = (document) => document?.id || document?.publicPath || document?.originalName || "";
+
+const mergeDocuments = (...documentLists) => {
+  const seenKeys = new Set();
+
+  return documentLists
+    .flat()
+    .filter((document) => {
+      const key = getDocumentKey(document);
+
+      if (!key || seenKeys.has(key)) {
+        return false;
+      }
+
+      seenKeys.add(key);
+      return true;
+    });
+};
+
+const normalizeDocumentIds = (value) => {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
 const buildDefaultValues = ({ contract, propertyId, ownerUserId, ownerOptions, agencyOptions, agentOptions, currentUser }) => {
   const userPreferences = currentUser?.preferences || {};
   const defaultCommission = Number(userPreferences.contractDefaultCommission ?? 0);
@@ -217,7 +247,7 @@ const normalizePayload = (values) => ({
       .map((item) => item.trim())
       .filter(Boolean)
   },
-  documentIds: values.documentIds || [],
+  documentIds: normalizeDocumentIds(values.documentIds),
   actions: {
     canPublishProperty: Boolean(values.canPublishProperty),
     canReserveProperty: Boolean(values.canReserveProperty),
@@ -256,6 +286,7 @@ export const ModalManageContract = ({
 }) => {
   const currentUser = useSelector(selectCurrentUser);
   const fileInputRef = useRef(null);
+  const documentScopeRef = useRef(null);
   const defaultValues = useMemo(
     () => buildDefaultValues({ contract, propertyId, ownerUserId, ownerOptions, agencyOptions, agentOptions, currentUser }),
     [agencyOptions, agentOptions, contract, currentUser, ownerOptions, ownerUserId, propertyId]
@@ -355,12 +386,26 @@ export const ModalManageContract = ({
   }, [agentOptions, agencyAgentsQuery.data, currentUser?.role, discoverableAgentsQuery.data]);
 
   useEffect(() => {
-    if (open) {
+    if (!open) {
+      documentScopeRef.current = null;
+      return;
+    }
+
+    const nextDocumentScope = `${mode}:${contract?.id || "new"}`;
+    const shouldResetModalState = documentScopeRef.current !== nextDocumentScope;
+
+    if (shouldResetModalState) {
       reset(defaultValues);
       setUploadedDocuments(contract?.documents || []);
       setSelectedDocumentKind(documentKindOptions[0]);
+      documentScopeRef.current = nextDocumentScope;
+      return;
     }
-  }, [contract?.documents, defaultValues, open, reset]);
+
+    if (contract?.documents?.length) {
+      setUploadedDocuments((currentDocuments) => mergeDocuments(contract.documents, currentDocuments));
+    }
+  }, [contract?.documents, contract?.id, defaultValues, mode, open, reset]);
 
   useEffect(() => {
     if (!open) {
@@ -467,9 +512,12 @@ export const ModalManageContract = ({
         uploadedBatch.push(uploadedDocument);
       }
 
-      const nextDocuments = [...uploadedBatch.reverse(), ...uploadedDocuments];
-      const nextDocumentIds = [...new Set([...documentIds, ...uploadedBatch.map((item) => item.id).filter(Boolean)])];
-      const uploadedPaths = uploadedBatch.map((item) => item.publicPath).filter(Boolean);
+      const nextUploadedDocuments = uploadedBatch.filter(Boolean).reverse();
+      const nextDocumentIds = [...new Set([
+        ...normalizeDocumentIds(documentIds),
+        ...nextUploadedDocuments.map((item) => item.id).filter(Boolean)
+      ])];
+      const uploadedPaths = nextUploadedDocuments.map((item) => item.publicPath).filter(Boolean);
       const nextAttachments = [
         ...uploadedPaths.filter((item) => item !== contractFilePath),
         ...((watch("attachmentsText") || "")
@@ -478,7 +526,7 @@ export const ModalManageContract = ({
           .filter(Boolean))
       ];
 
-      setUploadedDocuments(nextDocuments);
+      setUploadedDocuments((currentDocuments) => mergeDocuments(nextUploadedDocuments, currentDocuments));
       setValue("documentIds", nextDocumentIds, { shouldDirty: true, shouldValidate: false });
 
       if (!contractFilePath && uploadedPaths[0]) {

@@ -70,7 +70,8 @@ export const useContractsWorkspace = () => {
   });
 
   const uploadContractDocumentMutation = useMutation({
-    mutationFn: uploadContractDocument
+    mutationFn: uploadContractDocument,
+    onSuccess: invalidateContracts
   });
 
   return {

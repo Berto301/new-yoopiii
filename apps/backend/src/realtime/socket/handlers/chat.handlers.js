@@ -13,6 +13,33 @@ import {
 import { conversationRoomName, userRoomName } from "../rooms/room-names.js";
 
 export const registerChatHandlers = (io, socket) => {
+  const emitToConversationParticipants = ({ conversation, eventName, payload }) => {
+    (conversation.participantIds || [])
+      .map((participantId) => String(participantId))
+      .filter((participantId) => participantId !== socket.data.user.id)
+      .forEach((participantId) => {
+        io.to(userRoomName(participantId)).emit(eventName, payload);
+      });
+  };
+
+  const normalizePositionPayload = (position) => {
+    const lat = Number(position?.lat);
+    const lng = Number(position?.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return null;
+    }
+
+    return {
+      lat,
+      lng,
+      accuracy: Number.isFinite(Number(position?.accuracy)) ? Number(position.accuracy) : null,
+      heading: Number.isFinite(Number(position?.heading)) ? Number(position.heading) : null,
+      speed: Number.isFinite(Number(position?.speed)) ? Number(position.speed) : null,
+      updatedAt: position?.updatedAt || new Date().toISOString()
+    };
+  };
+
   const buildRealtimeNotification = ({ conversationId, message, senderId, isUpdate = false }) => {
     const descriptor = buildNotificationDescriptor({
       messageType: message.messageType,
@@ -191,5 +218,55 @@ export const registerChatHandlers = (io, socket) => {
 
     socket.join(userRoomName(userId));
     callback({ ok: true });
+  });
+
+  socket.on("conversation:position:share", async ({ conversationId, position }, callback = () => {}) => {
+    try {
+      const conversation = await ensureConversationParticipant(conversationId, socket.data.user.id);
+      const normalizedPosition = normalizePositionPayload(position);
+
+      if (!normalizedPosition) {
+        callback({ ok: false, message: "Invalid position" });
+        return;
+      }
+
+      const payload = {
+        conversationId,
+        userId: socket.data.user.id,
+        position: normalizedPosition
+      };
+
+      emitToConversationParticipants({
+        conversation,
+        eventName: "conversation:position:update",
+        payload
+      });
+
+      callback({ ok: true, data: payload });
+    } catch (error) {
+      callback({ ok: false, message: error.message });
+      socket.emit("socket:error", { code: "POSITION_SHARE_FAILED", message: error.message });
+    }
+  });
+
+  socket.on("conversation:position:stop", async ({ conversationId }, callback = () => {}) => {
+    try {
+      const conversation = await ensureConversationParticipant(conversationId, socket.data.user.id);
+      const payload = {
+        conversationId,
+        userId: socket.data.user.id
+      };
+
+      emitToConversationParticipants({
+        conversation,
+        eventName: "conversation:position:stop",
+        payload
+      });
+
+      callback({ ok: true });
+    } catch (error) {
+      callback({ ok: false, message: error.message });
+      socket.emit("socket:error", { code: "POSITION_STOP_FAILED", message: error.message });
+    }
   });
 };

@@ -12,6 +12,7 @@ import { SvgDotsMenu, SvgPlus } from "../../helpers/iconeSvg.js";
 import { getManagedProperties } from "../properties/services/property.service.js";
 import { ModalManageAppointment } from "./ModalManageAppointment.jsx";
 import { ModalCommunications } from "./ModalCommunications.jsx";
+import { ModalShowPositions } from "./ModalShowPositions.jsx";
 import { ModalVisitReports } from "./ModalVisitReports.jsx";
 import {
   APPOINTMENT_STATUS,
@@ -467,6 +468,7 @@ export const ConversationPanel = () => {
     mode: "create",
     message: null
   });
+  const [showPositionsModal, setShowPositionsModal] = useState(false);
   const [isDownloadingProfile, setIsDownloadingProfile] = useState(false);
 
   const participantStatusItems = useMemo(() => {
@@ -849,6 +851,13 @@ export const ConversationPanel = () => {
   ];
 
   const conversationMenuItems = [
+    {
+      label: "Voir nos positions",
+      action: () => {
+        setShowPositionsModal(true);
+      },
+      disabled: !selectedParticipant?.id
+    },
     ...((!isAgentUser && isSelectedParticipantAgent)
       ? [{
           label: "Telecharger fiche agent",
@@ -1119,6 +1128,14 @@ export const ConversationPanel = () => {
         onClose={closeDeleteModal}
         onConfirm={confirmDelete}
         isDeleting={deleteMessageMutation.isPending || deleteConversationMutation.isPending}
+      />
+
+      <ModalShowPositions
+        open={showPositionsModal}
+        conversationId={selectedConversationId}
+        currentUser={user}
+        participant={selectedParticipant}
+        onClose={() => setShowPositionsModal(false)}
       />
 
       <ModalManageAppointment

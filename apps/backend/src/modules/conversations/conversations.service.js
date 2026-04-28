@@ -13,6 +13,8 @@ import {
   resolveMessageContent
 } from "./conversations.report-utils.js";
 
+const PARTICIPANT_PROFILE_SELECT = "firstName lastName email phone avatar role location preferences.smartMatching.location";
+
 const formatConversation = (conversation) => {
   const participantProfiles = (conversation.participantIds || []).map((participant) => {
     if (participant && typeof participant === "object" && participant._id) {
@@ -23,7 +25,9 @@ const formatConversation = (conversation) => {
         email: participant.email || "",
         phone: participant.phone || "",
         avatar: participant.avatar || null,
-        role: participant.role || ""
+        role: participant.role || "",
+        location: participant.location || null,
+        smartMatchingLocation: participant.preferences?.smartMatching?.location || null
       };
     }
 
@@ -34,7 +38,9 @@ const formatConversation = (conversation) => {
       email: "",
       phone: "",
       avatar: null,
-      role: ""
+      role: "",
+      location: null,
+      smartMatchingLocation: null
     };
   });
 
@@ -202,7 +208,7 @@ export const listUserConversations = async (userId) => {
     participantIds: userId,
     isActive: true
   })
-    .populate("participantIds", "firstName lastName email phone avatar role")
+    .populate("participantIds", PARTICIPANT_PROFILE_SELECT)
     .sort({ lastMessageAt: -1, updatedAt: -1 })
     .limit(100)
     .lean();
@@ -216,7 +222,7 @@ export const getConversationById = async (conversationId, userId) => {
     participantIds: userId,
     isActive: true
   })
-    .populate("participantIds", "firstName lastName email phone avatar role")
+    .populate("participantIds", PARTICIPANT_PROFILE_SELECT)
     .lean();
 
   if (!conversation) {
@@ -242,7 +248,7 @@ export const createOrGetPrivateConversation = async ({ userId, participantId, pr
     type: "private",
     participantIds: { $all: normalizedParticipants, $size: 2 },
     isActive: true
-  }).populate("participantIds", "firstName lastName email phone avatar role");
+  }).populate("participantIds", PARTICIPANT_PROFILE_SELECT);
 
   if (existingConversation) {
     if (!existingConversation.propertyId && propertyId) {
@@ -261,7 +267,7 @@ export const createOrGetPrivateConversation = async ({ userId, participantId, pr
   });
 
   const populatedConversation = await Conversation.findById(conversation._id)
-    .populate("participantIds", "firstName lastName email phone avatar role")
+    .populate("participantIds", PARTICIPANT_PROFILE_SELECT)
     .lean();
 
   return formatConversation(populatedConversation);
