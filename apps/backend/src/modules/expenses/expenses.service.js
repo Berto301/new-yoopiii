@@ -8,7 +8,7 @@ import { OwnerExpense } from "./expense.model.js";
 const ASSET_CATEGORIES = new Set(["rent_income", "sale_price", "property_income"]);
 const LIABILITY_CATEGORIES = new Set(["maintenance", "administrative", "commission", "other_charge"]);
 
-const formatCurrency = (value, currency = "MGA") =>
+const formatCurrency = (value, currency = "USD") =>
   `${Number(value || 0).toLocaleString("fr-FR")} ${currency}`;
 
 const normalizeExpenseType = (type) => {
@@ -110,7 +110,7 @@ const mapOwnerExpense = (expense) => ({
   type: expense.type,
   category: expense.category,
   amount: Number(expense.amount || 0),
-  currency: expense.currency || "MGA",
+  currency: expense.currency || "USD",
   expenseDate: expense.expenseDate,
   budgetAmount: Number(expense.budgetAmount || 0),
   isBudgetExceeded: Number(expense.budgetAmount || 0) > 0 && Number(expense.amount || 0) > Number(expense.budgetAmount || 0),
@@ -269,6 +269,8 @@ const syncMaintenanceExpenses = async ({ ownerId }) => {
     tickets.map((ticket) => {
       const managedPropertyId = ticket.managedPropertyId?._id || ticket.managedPropertyId || null;
       const propertyLabel = ticket.managedPropertyId?.title || ticket.propertyLabel || "Bien non renseigne";
+      const maintenanceAmount = Number(ticket.maintenanceAmount || 0);
+      const maintenanceCurrency = ticket.currency || ticket.managedPropertyId?.currency || "USD";
 
       return OwnerExpense.findOneAndUpdate(
         {
@@ -285,19 +287,21 @@ const syncMaintenanceExpenses = async ({ ownerId }) => {
             description: ticket.description || "",
             type: "passif",
             category: "maintenance",
+            amount: maintenanceAmount,
+            currency: maintenanceCurrency,
             expenseDate: ticket.lastUpdateAt || ticket.updatedAt || ticket.createdAt,
             source: "maintenance",
             sourceRefId: ticket._id,
             sourceMeta: {
               ticketStatus: ticket.status,
               priority: ticket.priority,
-              assignee: ticket.assignee || ""
+              assignee: ticket.assignee || "",
+              maintenanceAmount,
+              currency: maintenanceCurrency
             },
             updatedBy: ownerId
           },
           $setOnInsert: {
-            amount: 0,
-            currency: ticket.managedPropertyId?.currency || "MGA",
             budgetAmount: 0,
             createdBy: ownerId
           }

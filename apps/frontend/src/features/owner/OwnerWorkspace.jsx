@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
+import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
@@ -86,7 +87,7 @@ const replaceTemplate = (template, values = {}) =>
 
 export const OwnerDashboardOverview = () => {
   const { dashboardQuery } = useOwnerWorkspace();
-  const { t } = useUserPreferences();
+  const { preferences, t } = useUserPreferences();
 
   if (dashboardQuery.isLoading) {
     return <DashboardLoadingState label={t("private", "owner.dashboard.loading", "Chargement du dashboard proprietaire...")} />;
@@ -105,7 +106,7 @@ export const OwnerDashboardOverview = () => {
   const stats = [
     {
       label: t("private", "owner.dashboard.stats.monthlyRevenue", "Revenus mensuels"),
-      value: `${Number(summary.monthlyRevenue || 0).toLocaleString("fr-FR")} Ar`,
+      value: formatMoney(summary.monthlyRevenue || 0, undefined, preferences),
       helpText: t("private", "owner.dashboard.helpText.monthlyRevenue", "Encaissements attendus et deja percus sur le mois en cours.")
     },
     {
@@ -698,7 +699,7 @@ export const OwnerMaintenanceModule = () => {
     deleteMaintenanceTicketMutation
   } = useOwnerWorkspace();
   const { showError, showSuccess } = useNotification();
-  const { t } = useUserPreferences();
+  const { preferences, t } = useUserPreferences();
   const [modalState, setModalState] = useState({ open: false, mode: "create", ticket: null });
   const [deleteModalState, setDeleteModalState] = useState({ open: false, ticket: null });
   const propertyOptions = useMemo(
@@ -781,6 +782,11 @@ export const OwnerMaintenanceModule = () => {
               { key: "property", label: t("private", "owner.maintenance.columns.property", "Bien") },
               { key: "priority", label: t("private", "owner.maintenance.columns.priority", "Priorite") },
               { key: "assignee", label: t("private", "owner.maintenance.columns.assignee", "Intervenant") },
+              {
+                key: "maintenanceAmount",
+                label: t("private", "owner.maintenance.columns.totalPrice", "Prix total"),
+                render: (row) => formatMoney(row.maintenanceAmount || 0, row.currency, preferences)
+              },
               { key: "lastUpdate", label: t("private", "owner.maintenance.columns.lastUpdate", "Derniere mise a jour") },
               { key: "status", label: t("private", "owner.maintenance.columns.status", "Statut"), render: (row) => <StatusPill value={row.status} /> },
               {

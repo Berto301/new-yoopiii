@@ -491,7 +491,7 @@ const buildManagedPropertyPayload = async ({ actor, payload, existingProperty = 
   const nextType = payload.type ?? existingProperty?.type;
   const nextPurpose = payload.purpose ?? existingProperty?.purpose;
   const nextPrice = payload.price ?? existingProperty?.price;
-  const nextCurrency = (payload.currency ?? existingProperty?.currency ?? "AR").trim().toUpperCase();
+  const nextCurrency = (payload.currency ?? existingProperty?.currency ?? "USD").trim().toUpperCase();
   const nextArea = payload.area ?? existingProperty?.area ?? 0;
   const nextRooms = payload.rooms ?? existingProperty?.rooms ?? 0;
   const nextBedrooms = payload.bedrooms ?? existingProperty?.bedrooms ?? 0;

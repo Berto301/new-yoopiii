@@ -115,12 +115,16 @@ test("owner can create update and delete a maintenance ticket with notifications
       priority: "high",
       assignee: "Hydro Tech",
       status: "in_progress",
+      maintenanceAmount: 350000,
+      currency: "usd",
       lastUpdateAt: "2026-04-19"
     });
 
   assert.equal(createResponse.statusCode, 201);
   assert.equal(createResponse.body.data.property, "Residence maintenance");
   assert.equal(createResponse.body.data.statusValue, "in_progress");
+  assert.equal(createResponse.body.data.maintenanceAmount, 350000);
+  assert.equal(createResponse.body.data.currency, "USD");
 
   const ticketId = createResponse.body.data.id;
 
@@ -134,12 +138,16 @@ test("owner can create update and delete a maintenance ticket with notifications
       priority: "medium",
       assignee: "Hydro Tech",
       status: "closed",
+      maintenanceAmount: 425000,
+      currency: "eur",
       lastUpdateAt: "2026-04-20"
     });
 
   assert.equal(updateResponse.statusCode, 200);
   assert.equal(updateResponse.body.data.title, "Fuite terrasse resolue");
   assert.equal(updateResponse.body.data.statusValue, "closed");
+  assert.equal(updateResponse.body.data.maintenanceAmount, 425000);
+  assert.equal(updateResponse.body.data.currency, "EUR");
 
   const deleteResponse = await request(app)
     .delete(`/api/v1/owner/maintenance/${ticketId}`)

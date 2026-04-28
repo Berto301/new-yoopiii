@@ -6,7 +6,7 @@ import { Card } from "../../../components/ui/Card.jsx";
 import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
 import { getPropertyThreeDStatusMeta } from "../property-3d.js";
 
-const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
+const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
 const getStatusClassName = (status) => {
   if (status === "published") {

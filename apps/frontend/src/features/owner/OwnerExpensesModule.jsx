@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
+import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
 import { ModalDelete } from "../../components/layout/modals/ModalDelete.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
@@ -21,17 +22,7 @@ const replaceTemplate = (template, values = {}) =>
     template
   );
 
-const formatCurrency = ({ value, currency, locale }) => {
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: currency || "MGA",
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  } catch (_error) {
-    return `${Number(value || 0).toLocaleString(locale)} ${currency || "MGA"}`;
-  }
-};
+const formatCurrency = ({ value, currency, preferences }) => formatMoney(value, currency, preferences);
 
 const formatDate = ({ value, locale }) => {
   if (!value) {
@@ -61,7 +52,7 @@ const getBalanceTone = (value) => {
 const monthValues = ["all", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 
 export const OwnerExpensesModule = () => {
-  const { t, locale } = useUserPreferences();
+  const { t, locale, preferences } = useUserPreferences();
   const { showSuccess, showError } = useNotification();
   const currentYear = new Date().getFullYear();
   const [filters, setFilters] = useState({
@@ -141,7 +132,7 @@ export const OwnerExpensesModule = () => {
     count: 0,
     categoryBreakdown: []
   };
-  const currency = expenses[0]?.currency || "MGA";
+  const currency = preferences.currency || expenses[0]?.currency || "USD";
   const maxCategoryTotal = Math.max(...(summary.categoryBreakdown || []).map((item) => item.total), 1);
   const syncedMaintenanceCount = expenses.filter((expense) => expense.source === "maintenance").length;
   const manualMovementCount = expenses.filter((expense) => expense.source !== "maintenance").length;
@@ -149,17 +140,17 @@ export const OwnerExpensesModule = () => {
   const stats = [
     {
       label: t("private", "owner.expenses.summary.income", "Revenus"),
-      value: formatCurrency({ value: summary.totalIncome, currency, locale }),
+      value: formatCurrency({ value: summary.totalIncome, currency, preferences }),
       helpText: t("private", "owner.expenses.summary.incomeHelp", "Actifs enregistres sur la periode filtree.")
     },
     {
       label: t("private", "owner.expenses.summary.expenses", "Depenses"),
-      value: formatCurrency({ value: summary.totalExpenses, currency, locale }),
+      value: formatCurrency({ value: summary.totalExpenses, currency, preferences }),
       helpText: t("private", "owner.expenses.summary.expensesHelp", "Passifs, charges et maintenance synchronisee.")
     },
     {
       label: t("private", "owner.expenses.summary.balance", "Balance nette"),
-      value: formatCurrency({ value: summary.netBalance, currency, locale }),
+      value: formatCurrency({ value: summary.netBalance, currency, preferences }),
       helpText: t("private", "owner.expenses.summary.balanceHelp", "Revenus moins depenses sur les filtres actifs."),
       valueClassName: getBalanceTone(summary.netBalance)
     },
@@ -358,12 +349,12 @@ export const OwnerExpensesModule = () => {
                         </td>
                         <td className="px-4 py-4 align-top">
                           <p className={expense.type === "actif" ? "text-sm font-semibold text-emerald-100" : "text-sm font-semibold text-rose-100"}>
-                            {formatCurrency({ value: expense.amount, currency: expense.currency, locale })}
+                            {formatCurrency({ value: expense.amount, currency: expense.currency, preferences })}
                           </p>
                           {expense.budgetAmount ? (
                             <p className="mt-1 text-xs text-stone-500">
                               {replaceTemplate(t("private", "owner.expenses.labels.budgetAmount", "Budget {amount}"), {
-                                amount: formatCurrency({ value: expense.budgetAmount, currency: expense.currency, locale })
+                                amount: formatCurrency({ value: expense.budgetAmount, currency: expense.currency, preferences })
                               })}
                             </p>
                           ) : null}
@@ -421,7 +412,7 @@ export const OwnerExpensesModule = () => {
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span className="font-medium text-stone-200">{categoryLabels[item.category] || item.category}</span>
                       <span className={item.type === "actif" ? "font-semibold text-emerald-100" : "font-semibold text-rose-100"}>
-                        {formatCurrency({ value: item.total, currency, locale })}
+                        {formatCurrency({ value: item.total, currency, preferences })}
                       </span>
                     </div>
                     <div className="h-3 overflow-hidden rounded-full bg-stone-950/70">

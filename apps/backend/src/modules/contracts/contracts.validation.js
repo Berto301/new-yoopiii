@@ -69,7 +69,7 @@ const financialPayloadSchema = z.object({
   rentAmount: requiredNumberSchema,
   charges: optionalNumberSchema.default(0),
   deposit: optionalNumberSchema.default(0),
-  currency: z.string().trim().min(1).max(12),
+  currency: z.string().trim().min(1).max(12).transform((value) => value.toUpperCase()),
   paymentFrequency: z.string().trim().min(1).max(50),
   paymentMethod: z.string().trim().max(120).default("")
 });
@@ -106,7 +106,7 @@ const defaultFinancialValue = {
   rentAmount: 0,
   charges: 0,
   deposit: 0,
-  currency: "XOF",
+  currency: "USD",
   paymentFrequency: "monthly",
   paymentMethod: ""
 };

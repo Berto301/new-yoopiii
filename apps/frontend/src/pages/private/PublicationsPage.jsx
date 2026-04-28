@@ -37,7 +37,7 @@ const TYPE_OPTIONS = [
 ];
 const ALL_OPTION = { label: "Tous", value: "all" };
 
-const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
+const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
 const getStatusBadgeClassName = (property) => {
   if (property.status === "reserved") {

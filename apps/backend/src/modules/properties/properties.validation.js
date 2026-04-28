@@ -43,7 +43,7 @@ const propertyPayloadSchema = z.object({
   type: propertyTypeSchema,
   purpose: propertyPurposeSchema,
   price: z.coerce.number().min(0),
-  currency: z.string().trim().length(2, "Currency must contain exactly 2 characters").default("AR"),
+  currency: z.string().trim().min(2, "Currency must contain at least 2 characters").max(8, "Currency must contain at most 8 characters").transform((value) => value.toUpperCase()).default("USD"),
   area: z.coerce.number().min(0).default(0),
   rooms: z.coerce.number().min(0).default(0),
   bedrooms: z.coerce.number().min(0).default(0),

@@ -19,6 +19,8 @@ const ownerMaintenanceTicketSchema = new mongoose.Schema(
       enum: ["planned", "in_progress", "closed"],
       default: "planned"
     },
+    maintenanceAmount: { type: Number, default: 0, min: 0 },
+    currency: { type: String, default: "USD", trim: true, uppercase: true },
     lastUpdateAt: { type: Date, default: null },
     lastUpdateLabel: { type: String, default: "" }
   },

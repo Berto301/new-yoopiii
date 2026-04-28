@@ -14,7 +14,7 @@ import { usePropertyWorkspace } from "../../../features/properties/hooks/useProp
 import { ModalManageProperty } from "./ModalManageProperty.jsx";
 import { ModalManageContract } from "../contracts/ModalManageContract.jsx";
 
-const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
+const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
 const replaceTemplate = (template, values = {}) =>
   Object.entries(values).reduce(

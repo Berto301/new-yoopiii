@@ -111,7 +111,7 @@ export const SectionProfile = ({
         onUpload={onAvatarUpload}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+      <div className="flex flex-col">
         <div className="space-y-6">
           <Card className="space-y-6">
             <div className="space-y-2">
@@ -277,9 +277,7 @@ export const SectionProfile = ({
               </form>
             </Card>
           ) : null}
-        </div>
 
-        <div className="space-y-6">
           <Card className="space-y-6">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-400">{t("settings", "security.eyebrow", "Securite")}</p>

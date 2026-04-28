@@ -9,7 +9,7 @@ import { Card } from "../../components/ui/Card.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 
-const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
+const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
 const getPropertyCover = (property) => resolveAssetUrl(property.coverImage || property.media?.find((item) => item.type === "image")?.url || "");
 

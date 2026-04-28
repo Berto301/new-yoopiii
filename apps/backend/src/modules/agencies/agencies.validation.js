@@ -181,7 +181,7 @@ export const createExpenseSchema = z.object({
     label: z.string().min(2).max(150),
     category: z.enum(["marketing", "transport", "salary", "office", "legal", "maintenance", "other"]),
     amount: z.coerce.number().min(0),
-    currency: z.string().min(3).max(5).optional(),
+    currency: z.string().trim().min(3).max(8).transform((value) => value.toUpperCase()).optional(),
     expenseDate: z.string().datetime(),
     notes: z.string().max(2000).optional(),
     attachments: z.array(z.string().url()).default([])
@@ -195,7 +195,7 @@ export const updateExpenseSchema = z.object({
     label: z.string().min(2).max(150).optional(),
     category: z.enum(["marketing", "transport", "salary", "office", "legal", "maintenance", "other"]).optional(),
     amount: z.coerce.number().min(0).optional(),
-    currency: z.string().min(3).max(5).optional(),
+    currency: z.string().trim().min(3).max(8).transform((value) => value.toUpperCase()).optional(),
     expenseDate: z.string().datetime().optional(),
     notes: z.string().max(2000).optional(),
     attachments: z.array(z.string().url()).optional(),

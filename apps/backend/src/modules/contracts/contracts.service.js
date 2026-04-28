@@ -271,7 +271,7 @@ const hydrateContract = async (contract) => {
       rentAmount: Number(contract.financial?.rentAmount || 0),
       charges: Number(contract.financial?.charges || 0),
       deposit: Number(contract.financial?.deposit || 0),
-      currency: contract.financial?.currency || "XOF",
+      currency: contract.financial?.currency || "USD",
       paymentFrequency: contract.financial?.paymentFrequency || "monthly",
       paymentMethod: contract.financial?.paymentMethod || ""
     },
@@ -521,7 +521,7 @@ export const listAvailableContractProperties = async (actor) => {
     status: property.status,
     purpose: property.purpose,
     price: Number(property.price || 0),
-    currency: property.currency || "XOF",
+    currency: property.currency || "USD",
     managementContractId: property.managementContractId ? String(property.managementContractId) : null
   }));
 };
@@ -685,7 +685,7 @@ const buildContractPayload = async ({ actor, payload, existingContract = null })
       rentAmount: Number(payload.financial?.rentAmount ?? existingContract?.financial?.rentAmount ?? 0),
       charges: Number(payload.financial?.charges ?? existingContract?.financial?.charges ?? 0),
       deposit: Number(payload.financial?.deposit ?? existingContract?.financial?.deposit ?? 0),
-      currency: payload.financial?.currency ?? existingContract?.financial?.currency ?? "XOF",
+      currency: payload.financial?.currency ?? existingContract?.financial?.currency ?? "USD",
       paymentFrequency: payload.financial?.paymentFrequency ?? existingContract?.financial?.paymentFrequency ?? "monthly",
       paymentMethod: payload.financial?.paymentMethod ?? existingContract?.financial?.paymentMethod ?? ""
     },

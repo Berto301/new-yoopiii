@@ -23,6 +23,8 @@ const maintenanceTicketBodySchema = z.object({
   priority: maintenancePrioritySchema.default("medium"),
   assignee: z.string().trim().max(255).default(""),
   status: maintenanceStatusSchema.default("planned"),
+  maintenanceAmount: z.coerce.number().min(0).default(0),
+  currency: z.string().trim().min(2).max(8).transform((value) => value.toUpperCase()).default("USD"),
   lastUpdateAt: z.coerce.date()
 });
 

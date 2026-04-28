@@ -9,7 +9,7 @@ import { formatBookingDateTime } from "../../features/bookings/booking.utils.js"
 import { useBookingsWorkspace } from "../../features/bookings/hooks/useBookingsWorkspace.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 
-const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
+const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
 const formatSchedule = (booking, t) => {
   if (!booking.requestedDate) {

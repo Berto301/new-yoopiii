@@ -36,7 +36,8 @@ export const ModalManageExpense = ({
   onSubmit,
   isSaving = false
 }) => {
-  const { t } = useUserPreferences();
+  const { preferences, t } = useUserPreferences();
+  const preferredCurrency = String(preferences.currency || "USD").toUpperCase();
   const isSyncedMaintenance = expense?.source === "maintenance";
 
   const schema = useMemo(() => z.object({
@@ -66,7 +67,7 @@ export const ModalManageExpense = ({
       description: "",
       category: "maintenance",
       amount: 0,
-      currency: "MGA",
+      currency: preferredCurrency,
       expenseDate: new Date().toISOString().slice(0, 10),
       budgetAmount: 0
     }
@@ -79,11 +80,11 @@ export const ModalManageExpense = ({
       description: expense?.description || "",
       category: expense?.category || "maintenance",
       amount: expense?.amount ?? 0,
-      currency: expense?.currency || "MGA",
+      currency: preferredCurrency,
       expenseDate: toDateInputValue(expense?.expenseDate),
       budgetAmount: expense?.budgetAmount ?? 0
     });
-  }, [expense, reset]);
+  }, [expense, preferredCurrency, reset]);
 
   const portfolioOption = useMemo(
     () => ({ value: "", label: t("private", "owner.expenses.filters.portfolio", "Portefeuille") }),
@@ -131,7 +132,7 @@ export const ModalManageExpense = ({
       <div className="space-y-5">
         {isSyncedMaintenance ? (
           <div className="rounded-2xl border border-sky-400/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-            {t("private", "owner.expenses.modal.syncedMaintenance", "Ligne synchronisee avec la maintenance. Le montant et le budget restent ajustables.")}
+            {t("private", "owner.expenses.modal.syncedMaintenance", "Ligne synchronisee avec la maintenance. Le montant vient du ticket et la devise suit vos parametres.")}
           </div>
         ) : null}
 
@@ -207,6 +208,8 @@ export const ModalManageExpense = ({
                 min="0"
                 step="1"
                 error={errors.amount?.message}
+                disabled={isSyncedMaintenance}
+                className={isSyncedMaintenance ? "cursor-not-allowed bg-stone-950/90 text-stone-500" : undefined}
                 {...field}
               />
             )}
@@ -218,6 +221,8 @@ export const ModalManageExpense = ({
               <Input
                 label={t("private", "owner.expenses.fields.currency", "Devise")}
                 error={errors.currency?.message}
+                readOnly
+                className="cursor-default bg-stone-950/90 text-stone-200"
                 {...field}
               />
             )}

@@ -10,7 +10,7 @@ const agencyExpenseSchema = new mongoose.Schema(
       required: true
     },
     amount: { type: Number, required: true, min: 0 },
-    currency: { type: String, default: "XOF" },
+    currency: { type: String, default: "USD", trim: true, uppercase: true },
     expenseDate: { type: Date, required: true },
     status: {
       type: String,

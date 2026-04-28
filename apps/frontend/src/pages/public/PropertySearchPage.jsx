@@ -12,7 +12,7 @@ import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 
 const DEFAULT_MAP_CENTER = { lat: -19.872006, lng: 47.03961 };
 
-const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
+const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
 const PinIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">

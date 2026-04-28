@@ -10,7 +10,7 @@ const fallbackNameByRole = {
 
 export const formatCompactNumber = (value) => new Intl.NumberFormat("fr-FR", { notation: "compact" }).format(value || 0);
 
-export const formatCurrency = (value, currency = "AR") => formatMoney(value, currency);
+export const formatCurrency = (value, currency = "USD") => formatMoney(value, currency);
 
 export const formatDateTime = (value, format = "DD/MM/YYYY HH:mm") => (value ? dayjs(value).format(format) : "-");
 

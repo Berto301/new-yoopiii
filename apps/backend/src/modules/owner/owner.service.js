@@ -286,7 +286,13 @@ const seedOwnerWorkspace = async (ownerId) => {
 };
 
 const formatDate = (value) => new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(value));
-const formatCurrency = (value) => `${Number(value || 0).toLocaleString("fr-FR")} Ar`;
+const formatCurrency = (value, currency = "USD") => `${Number(value || 0).toLocaleString("fr-FR")} ${String(currency || "USD").toUpperCase()}`;
+
+const resolveOwnerCurrency = async (ownerId) => {
+  const owner = await User.findById(ownerId).select("preferences.currency").lean();
+
+  return owner?.preferences?.currency || "USD";
+};
 
 const propertyStatusLabelMap = {
   loue: "Loue",
@@ -352,6 +358,8 @@ const mapMaintenanceTicket = (ticket) => ({
   assignee: ticket.assignee || "-",
   status: maintenanceStatusLabelMap[ticket.status] || ticket.status,
   statusValue: ticket.status,
+  maintenanceAmount: Number(ticket.maintenanceAmount || 0),
+  currency: ticket.currency || "USD",
   lastUpdate: formatDate(ticket.lastUpdateAt || ticket.updatedAt),
   lastUpdateAt: ticket.lastUpdateAt || ticket.updatedAt,
   updatedAt: ticket.updatedAt
@@ -543,7 +551,8 @@ const ensureManagedPropertyOwnership = async ({ ownerId, managedPropertyId }) =>
 export const getOwnerWorkspace = async ({ ownerId }) => {
   await seedOwnerWorkspace(ownerId);
 
-  const [properties, contracts, tenants, rents, maintenance, alerts] = await Promise.all([
+  const [ownerCurrency, properties, contracts, tenants, rents, maintenance, alerts] = await Promise.all([
+    resolveOwnerCurrency(ownerId),
     OwnerProperty.find({ ownerId }).sort({ createdAt: -1 }).lean(),
     OwnerContract.find({ ownerId }).sort({ startDate: -1 }).lean(),
     OwnerTenant.find({ ownerId })
@@ -604,7 +613,7 @@ export const getOwnerWorkspace = async ({ ownerId }) => {
     revenueByProperty: properties.map((property) => ({
       id: String(property._id),
       name: property.title,
-      revenue: formatCurrency(property.monthlyRevenue),
+      revenue: formatCurrency(property.monthlyRevenue, ownerCurrency),
       yield: `${Number(property.annualYieldRate || 0).toFixed(1)}%`,
       status: propertyStatusLabelMap[property.status] || property.status
     })),
@@ -637,7 +646,7 @@ export const getOwnerWorkspace = async ({ ownerId }) => {
       tenant: rent.tenantId?.fullName || "Vacant",
       property: rent.propertyId?.title || "Bien non renseigne",
       dueDate: formatDate(rent.dueDate),
-      amount: formatCurrency(rent.amount),
+      amount: formatCurrency(rent.amount, ownerCurrency),
       status: rentStatusLabelMap[rent.status] || rent.status,
       receiptNumber: rent.receiptNumber || "-"
     })),
@@ -727,7 +736,8 @@ const buildOwnerDashboardPropertyMetrics = ({ properties, contracts }) => {
 };
 
 export const getOwnerDashboard = async ({ ownerId }) => {
-  const [properties, contracts, tenants, maintenance, notifications] = await Promise.all([
+  const [ownerCurrency, properties, contracts, tenants, maintenance, notifications] = await Promise.all([
+    resolveOwnerCurrency(ownerId),
     Property.find({ ownerUserId: ownerId })
       .select("title address price purpose status ownerUserId createdAt updatedAt")
       .sort({ updatedAt: -1, createdAt: -1 })
@@ -787,7 +797,7 @@ export const getOwnerDashboard = async ({ ownerId }) => {
     revenueByProperty: revenueByProperty.map((property) => ({
       id: property.id,
       name: property.title,
-      revenue: formatCurrency(property.monthlyRevenue),
+      revenue: formatCurrency(property.monthlyRevenue, ownerCurrency),
       yield: property.yield,
       status: property.status,
       ownerShare: property.ownerShare
@@ -823,7 +833,7 @@ export const getOwnerDashboard = async ({ ownerId }) => {
         tenant: contract.tenants?.find((tenant) => tenant.isMainTenant)?.fullName || contract.tenants?.[0]?.fullName || "Vacant",
         property: revenueByProperty.find((property) => property.id === resolveComparableId(contract.propertyId))?.title || "Bien non renseigne",
         dueDate: contract.paymentTracking?.nextPaymentDate ? formatDate(contract.paymentTracking.nextPaymentDate) : "-",
-        amount: formatCurrency(contract.financial?.rentAmount || 0),
+        amount: formatCurrency(contract.financial?.rentAmount || 0, ownerCurrency),
         status: contractPaymentStatusLabelMap[normalizePaymentStatus(contract.paymentTracking?.status)] || contract.paymentTracking?.status || "-",
         receiptNumber: "-"
       })),
@@ -859,6 +869,8 @@ export const createOwnerMaintenanceTicket = async ({ ownerId, payload }) => {
     priority: payload.priority,
     assignee: payload.assignee || "",
     status: payload.status,
+    maintenanceAmount: payload.maintenanceAmount || 0,
+    currency: payload.currency || "USD",
     lastUpdateAt: payload.lastUpdateAt,
     lastUpdateLabel: formatDate(payload.lastUpdateAt)
   });
@@ -1058,6 +1070,8 @@ export const updateOwnerMaintenanceTicket = async ({ ownerId, ticketId, payload 
   existingTicket.priority = payload.priority;
   existingTicket.assignee = payload.assignee || "";
   existingTicket.status = payload.status;
+  existingTicket.maintenanceAmount = payload.maintenanceAmount || 0;
+  existingTicket.currency = payload.currency || "USD";
   existingTicket.lastUpdateAt = payload.lastUpdateAt;
   existingTicket.lastUpdateLabel = formatDate(payload.lastUpdateAt);
   await existingTicket.save();

@@ -15,7 +15,7 @@ export const getEffectiveUserPreferences = (preferences = null) =>
 
 export const formatMoney = (value, currency, preferences = null) => {
   const resolvedPreferences = getEffectiveUserPreferences(preferences);
-  const resolvedCurrency = String(currency || resolvedPreferences.currency || USER_PREFERENCES_DEFAULTS.currency).toUpperCase();
+  const resolvedCurrency = String(resolvedPreferences.currency || currency || USER_PREFERENCES_DEFAULTS.currency).toUpperCase();
   const locale = getLocaleTag(resolvedPreferences.language);
 
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Number(value) || 0)} ${resolvedCurrency}`.trim();

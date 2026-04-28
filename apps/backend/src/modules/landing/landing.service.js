@@ -22,7 +22,7 @@ const mapLandingProperty = (property) => ({
   purpose: property.purpose,
   status: property.status,
   price: Number(property.price || 0),
-  currency: property.currency || "AR",
+  currency: property.currency || "USD",
   address: property.address || "",
   area: Number(property.area || 0),
   coverImage: property.coverImage || property.media?.[0]?.thumbnailUrl || property.media?.[0]?.url || null,

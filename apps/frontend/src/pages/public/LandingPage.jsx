@@ -35,7 +35,7 @@ const PROPERTY_TYPES = [
   { id: "terrain-investissement", label: "Terrain d'investissement", category: "terrain", keywords: ["terrain d'investissement", "terrain investissement", "investment land"] }
 ];
 
-const formatPrice = (value, currency = "AR") => formatMoney(value, currency);
+const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
 const buildInitials = (name) =>
   String(name || "YP")

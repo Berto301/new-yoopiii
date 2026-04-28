@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { GoogleMap, MarkerF } from "@react-google-maps/api";
+import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
+import { formatMoney } from "../../../app/preferences/user-preferences.utils.js";
 import { Input } from "../../../components/ui/Input.jsx";
 import { ModalLayout } from "../../../components/layout/modals/ModalLayout.jsx";
 import { BaseListBox } from "../../../components/form/BaseListBox.jsx";
@@ -92,13 +94,13 @@ const buildMapCenter = (location) => {
   return DEFAULT_MAP_CENTER;
 };
 
-const mapPropertyToFormValues = (property) => ({
+const mapPropertyToFormValues = (property, defaultCurrency = "USD") => ({
   title: property?.title || "",
   description: property?.description || "",
   type: propertyTypeOptions.find((item) => item.value === property?.type) || propertyTypeOptions[0],
   purpose: purposeOptions.find((item) => item.value === property?.purpose) || purposeOptions[0],
   price: property?.price || "",
-  currency: property?.currency || "AR",
+  currency: property?.currency || defaultCurrency,
   area: property?.area || 0,
   rooms: property?.rooms || 0,
   bedrooms: property?.bedrooms || 0,
@@ -168,7 +170,9 @@ export const ModalManageProperty = ({
   isUploadingAsset = false,
   isGeneratingThreeD = false
 }) => {
-  const defaultValues = useMemo(() => mapPropertyToFormValues(property), [property]);
+  const { preferences } = useUserPreferences();
+  const preferredCurrency = String(preferences.currency || "USD").toUpperCase();
+  const defaultValues = useMemo(() => mapPropertyToFormValues(property, preferredCurrency), [preferredCurrency, property]);
   const { googleMapsApiKey, isLoaded: isMapsLoaded, loadError } = useSharedGoogleMapsLoader();
 
   const {
@@ -392,7 +396,7 @@ export const ModalManageProperty = ({
       onClose={closeModal}
       onSave={handleSubmit(async (values) => {
         await onSubmit(normalizePayload(values));
-        reset(mapPropertyToFormValues(null));
+        reset(mapPropertyToFormValues(null, preferredCurrency));
         setMapCenter(DEFAULT_MAP_CENTER);
         setLocationMessage("Cliquez sur la carte pour recuperer l'adresse complete Google de ce bien.");
         setActiveUploadTarget(null);
@@ -585,13 +589,16 @@ export const ModalManageProperty = ({
               control={control}
               rules={{
                 required: "La devise est requise",
-                validate: (value) => value?.trim()?.length === 2 || "La devise doit contenir exactement 2 caracteres"
+                validate: (value) => {
+                  const length = value?.trim()?.length || 0;
+                  return (length >= 2 && length <= 8) || "La devise doit contenir entre 2 et 8 caracteres";
+                }
               }}
               render={({ field }) => (
                 <Input
                   label="Devise"
-                  maxLength={2}
-                  placeholder="AR"
+                  maxLength={8}
+                  placeholder={preferredCurrency}
                   error={errors.currency?.message}
                   {...field}
                   onChange={(event) => field.onChange(event.target.value.toUpperCase())}
@@ -648,7 +655,7 @@ export const ModalManageProperty = ({
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Loyer</p>
                         <p className="mt-2 text-sm font-medium text-white">
-                          {contractItem.financial?.rentAmount ? `${Number(contractItem.financial.rentAmount).toLocaleString("fr-FR")} ${contractItem.financial.currency || ""}`.trim() : "--"}
+                          {contractItem.financial?.rentAmount ? formatMoney(contractItem.financial.rentAmount, contractItem.financial.currency, preferences) : "--"}
                         </p>
                       </div>
                       <div>

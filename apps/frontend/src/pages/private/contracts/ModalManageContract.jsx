@@ -133,7 +133,7 @@ const buildDefaultValues = ({ contract, propertyId, ownerUserId, ownerOptions, a
     rentAmount: String(contract?.financial?.rentAmount ?? ""),
     charges: String(contract?.financial?.charges ?? ""),
     deposit: String(contract?.financial?.deposit ?? ""),
-    currency: contract?.financial?.currency || userPreferences.currency || "USD",
+    currency: userPreferences.currency || contract?.financial?.currency || "USD",
     paymentFrequency: mapOption(paymentFrequencyOptions, contract?.financial?.paymentFrequency, paymentFrequencyOptions[0]),
     paymentMethod: mapOption(paymentMethodOptions, contract?.financial?.paymentMethod, paymentMethodOptions[0]),
     ownerShare: String(contract?.distribution?.ownerShare ?? ""),
@@ -197,7 +197,7 @@ const normalizePayload = (values) => ({
     rentAmount: Number(values.rentAmount || 0),
     charges: Number(values.charges || 0),
     deposit: Number(values.deposit || 0),
-    currency: values.currency.trim(),
+    currency: values.currency.trim().toUpperCase(),
     paymentFrequency: values.paymentFrequency.value,
     paymentMethod: values.paymentMethod?.value || ""
   },
@@ -753,7 +753,14 @@ export const ModalManageContract = ({
               name="currency"
               control={control}
               rules={{ required: "La devise est requise." }}
-              render={({ field }) => <Input label="Devise" error={errors.currency?.message} {...field} />}
+              render={({ field }) => (
+                <Input
+                  label="Devise"
+                  error={errors.currency?.message}
+                  {...field}
+                  onChange={(event) => field.onChange(event.target.value.toUpperCase())}
+                />
+              )}
             />
             <Controller
               name="paymentFrequency"

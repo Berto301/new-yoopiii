@@ -26,7 +26,7 @@ const contractFinancialSchema = new mongoose.Schema(
     rentAmount: { type: Number, required: true, min: 0 },
     charges: { type: Number, default: 0, min: 0 },
     deposit: { type: Number, default: 0, min: 0 },
-    currency: { type: String, required: true, trim: true, default: "XOF" },
+    currency: { type: String, required: true, trim: true, uppercase: true, default: "USD" },
     paymentFrequency: { type: String, required: true, trim: true, default: "monthly" },
     paymentMethod: { type: String, default: "", trim: true }
   },

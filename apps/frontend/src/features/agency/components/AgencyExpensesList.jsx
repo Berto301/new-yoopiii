@@ -1,15 +1,11 @@
+import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
+import { formatMoney } from "../../../app/preferences/user-preferences.utils.js";
 import { Card } from "../../../components/ui/Card.jsx";
 import { useAgencyDashboard } from "../hooks/useAgencyDashboard.js";
 
-const formatCurrency = (value, currency = "XOF") =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0
-  }).format(value || 0);
-
 export const AgencyExpensesList = () => {
   const { expensesQuery } = useAgencyDashboard();
+  const { preferences } = useUserPreferences();
 
   if (expensesQuery.isLoading) {
     return <Card><p className="text-sm text-stone-300">Chargement des depenses...</p></Card>;
@@ -28,7 +24,7 @@ export const AgencyExpensesList = () => {
             <p className="mt-1 text-sm capitalize text-stone-400">{expense.category}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-semibold text-brand-100">{formatCurrency(expense.amount, expense.currency)}</p>
+            <p className="text-sm font-semibold text-brand-100">{formatMoney(expense.amount, expense.currency, preferences)}</p>
             <p className="mt-1 text-xs capitalize text-stone-400">{expense.status}</p>
           </div>
         </Card>

@@ -46,7 +46,7 @@ const expenseBodySchema = z.object({
   category: expenseCategorySchema,
   type: expenseTypeSchema.optional(),
   amount: z.coerce.number().min(0),
-  currency: z.string().trim().min(2).max(8).default("MGA"),
+  currency: z.string().trim().min(2).max(8).transform((value) => value.toUpperCase()).default("USD"),
   expenseDate: z.coerce.date(),
   budgetAmount: z.coerce.number().min(0).default(0)
 });

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { ModalLayout } from "../../../components/layout/modals/ModalLayout.jsx";
 import { BaseListBox } from "../../../components/form/BaseListBox.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -49,6 +50,8 @@ const ticketSchema = z.object({
   priority: z.enum(["high", "medium", "low"]),
   assignee: z.string().trim().max(255).default(""),
   status: z.enum(["planned", "in_progress", "closed"]),
+  maintenanceAmount: z.coerce.number().min(0, "Le prix total doit etre positif").default(0),
+  currency: z.string().trim().min(2).max(8),
   lastUpdateAt: z.string().trim().min(1, "La date de mise a jour est requise")
 });
 
@@ -73,6 +76,9 @@ export const ModalManageTicket = ({
   onSubmit,
   isSaving = false
 }) => {
+  const { preferences } = useUserPreferences();
+  const preferredCurrency = String(preferences.currency || "USD").toUpperCase();
+
   const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
     resolver: zodResolver(ticketSchema),
     defaultValues: {
@@ -82,6 +88,8 @@ export const ModalManageTicket = ({
       priority: "medium",
       assignee: "",
       status: "planned",
+      maintenanceAmount: 0,
+      currency: preferredCurrency,
       lastUpdateAt: new Date().toISOString().slice(0, 10)
     }
   });
@@ -94,9 +102,11 @@ export const ModalManageTicket = ({
       priority: ticket?.priorityValue || "medium",
       assignee: ticket?.assignee === "-" ? "" : ticket?.assignee || "",
       status: ticket?.statusValue || "planned",
+      maintenanceAmount: Number(ticket?.maintenanceAmount ?? 0),
+      currency: preferredCurrency,
       lastUpdateAt: ticket?.lastUpdateAt ? new Date(ticket.lastUpdateAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
     });
-  }, [ticket, reset]);
+  }, [preferredCurrency, ticket, reset]);
 
   const managedPropertyId = watch("managedPropertyId");
 
@@ -120,7 +130,9 @@ export const ModalManageTicket = ({
         onSubmit({
           ...values,
           title: values.titleSelections.map((item) => item.value).join(", "),
-          propertyLabel: selectedProperty?.label || ""
+          propertyLabel: selectedProperty?.label || "",
+          maintenanceAmount: Number(values.maintenanceAmount || 0),
+          currency: preferredCurrency
         })
       )}
       saveLabel={mode === "edit" ? "Enregistrer" : "Creer"}
@@ -210,6 +222,37 @@ export const ModalManageTicket = ({
                 label="Derniere mise a jour"
                 type="date"
                 error={errors.lastUpdateAt?.message}
+                {...field}
+              />
+            )}
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_160px]">
+          <Controller
+            name="maintenanceAmount"
+            control={control}
+            render={({ field }) => (
+              <Input
+                label="Prix total de l'entretien"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+                error={errors.maintenanceAmount?.message}
+                {...field}
+              />
+            )}
+          />
+          <Controller
+            name="currency"
+            control={control}
+            render={({ field }) => (
+              <Input
+                label="Devise"
+                readOnly
+                className="cursor-default bg-stone-950/90 text-stone-200"
+                error={errors.currency?.message}
                 {...field}
               />
             )}

@@ -32,7 +32,7 @@ const ownerExpenseSchema = new mongoose.Schema(
       index: true
     },
     amount: { type: Number, required: true, min: 0 },
-    currency: { type: String, default: "MGA", trim: true },
+    currency: { type: String, default: "USD", trim: true, uppercase: true },
     expenseDate: { type: Date, required: true, index: true },
     budgetAmount: { type: Number, default: 0, min: 0 },
     source: {

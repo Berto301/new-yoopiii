@@ -455,7 +455,7 @@ export const createAgencyExpense = async ({ agencyId, actorUserId, payload, perm
     label: payload.label,
     category: payload.category,
     amount: payload.amount,
-    currency: payload.currency || "XOF",
+    currency: payload.currency || "USD",
     expenseDate: new Date(payload.expenseDate),
     notes: payload.notes || "",
     attachments: payload.attachments || [],

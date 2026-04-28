@@ -72,6 +72,8 @@ test("owner expenses CRUD supports filters, totals, maintenance sync, and notifi
     priority: "medium",
     assignee: "Batipro",
     status: "in_progress",
+    maintenanceAmount: 275000,
+    currency: "EUR",
     lastUpdateAt: new Date("2026-04-12T00:00:00.000Z"),
     lastUpdateLabel: "12 avril 2026"
   });
@@ -86,6 +88,9 @@ test("owner expenses CRUD supports filters, totals, maintenance sync, and notifi
   assert.equal(syncedResponse.body.data.items.length, 1);
   assert.equal(syncedResponse.body.data.items[0].source, "maintenance");
   assert.equal(syncedResponse.body.data.items[0].category, "maintenance");
+  assert.equal(syncedResponse.body.data.items[0].amount, 275000);
+  assert.equal(syncedResponse.body.data.items[0].currency, "EUR");
+  assert.equal(syncedResponse.body.data.summary.totalExpenses, 275000);
 
   const createResponse = await request(app)
     .post("/api/v1/expenses")
