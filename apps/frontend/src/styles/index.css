@@ -20,25 +20,69 @@
   --color-text-inverse: #f7f9f8;
   --color-border-light: rgba(25, 22, 23, 0.12);
   --color-border-dark: rgba(247, 249, 248, 0.1);
+  --app-bg: #191617;
+  --app-surface: rgba(33, 28, 29, 0.96);
+  --app-surface-soft: rgba(255, 255, 255, 0.04);
+  --app-surface-muted: rgba(255, 255, 255, 0.06);
+  --app-surface-overlay: rgba(25, 22, 23, 0.72);
+  --app-surface-accent: rgba(157, 93, 67, 0.12);
+  --app-border: rgba(247, 249, 248, 0.1);
   color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 body {
   margin: 0;
   font-family: "Montserrat", sans-serif;
-  background:
-    radial-gradient(circle at top, rgba(157, 93, 67, 0.2), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(247, 249, 248, 0.06), transparent 30%),
-    linear-gradient(180deg, #191617 0%, #241e1f 100%);
+  background-color: var(--app-bg);
+  background-image: none;
   color: var(--color-text-inverse);
 }
 
 body[data-theme="light"] {
-  background:
-    radial-gradient(circle at top, rgba(157, 93, 67, 0.16), transparent 36%),
-    radial-gradient(circle at bottom right, rgba(25, 22, 23, 0.04), transparent 28%),
-    linear-gradient(180deg, #f7f9f8 0%, #f1f1ef 100%);
+  --app-bg: #f7f9f8;
+  --app-surface: rgba(255, 255, 255, 0.96);
+  --app-surface-soft: rgba(25, 22, 23, 0.03);
+  --app-surface-muted: rgba(25, 22, 23, 0.05);
+  --app-surface-overlay: rgba(255, 255, 255, 0.72);
+  --app-surface-accent: rgba(157, 93, 67, 0.08);
+  --app-border: rgba(25, 22, 23, 0.12);
+  background-color: var(--app-bg);
+  background-image: none;
   color: var(--color-text-main);
+}
+
+body[data-theme="dark"] {
+  --app-bg: #191617;
+  --app-surface: rgba(33, 28, 29, 0.96);
+  --app-surface-soft: rgba(255, 255, 255, 0.04);
+  --app-surface-muted: rgba(255, 255, 255, 0.06);
+  --app-surface-overlay: rgba(25, 22, 23, 0.72);
+  --app-surface-accent: rgba(157, 93, 67, 0.12);
+  --app-border: rgba(247, 249, 248, 0.1);
+}
+
+body [class*="bg-[linear-gradient"],
+body [class*="bg-[radial-gradient"],
+body [class*="bg-gradient"],
+body [class*="from-"],
+body [class*="via-"],
+body [class*="to-"] {
+  background-image: none !important;
+  background-color: var(--app-surface) !important;
+}
+
+[data-ui="card-root"] {
+  background-color: var(--app-surface) !important;
+  background-image: none !important;
+  border-color: var(--app-border) !important;
 }
 
 body[data-theme="light"] [class*="bg-stone-950"],
@@ -89,14 +133,6 @@ body[data-theme="light"] [class*="bg-[#c9a66b]"] {
   background-color: var(--color-brand-500) !important;
 }
 
-body[data-theme="light"] [class*="from-brand-"],
-body[data-theme="light"] [class*="to-stone-"],
-body[data-theme="light"] [class*="bg-gradient"] {
-  --tw-gradient-from: rgba(157, 93, 67, 0.18) var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: rgba(247, 249, 248, 0) var(--tw-gradient-to-position) !important;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
-}
-
 body[data-theme="dark"] [class*="bg-stone-950"],
 body[data-theme="dark"] [class*="bg-stone-950/"],
 body[data-theme="dark"] [class*="bg-stone-900"],
@@ -144,9 +180,14 @@ body[data-theme="light"] [data-ui="modal-overlay"] {
 }
 
 body[data-theme="light"] [data-ui="modal-panel"] {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 249, 248, 0.98)) !important;
+  background: var(--app-surface) !important;
   border-color: var(--color-border-light) !important;
   color: var(--color-text-main) !important;
+}
+
+body[data-theme="dark"] [data-ui="modal-panel"] {
+  background: var(--app-surface) !important;
+  border-color: var(--color-border-dark) !important;
 }
 
 body[data-theme="light"] [data-ui="modal-panel"] [class*="text-white"],
@@ -178,6 +219,21 @@ a {
   box-sizing: border-box;
 }
 
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+input,
+textarea,
+select,
+button {
+  max-width: 100%;
+}
+
 .calendar-shell {
   --calendar-surface: rgba(25, 22, 23, 0.78);
   --calendar-surface-soft: rgba(247, 249, 248, 0.04);
@@ -192,8 +248,8 @@ a {
   --calendar-disabled-bg: rgba(247, 249, 248, 0.03);
   --calendar-disabled-text: rgba(247, 249, 248, 0.42);
   --calendar-today-bg: rgba(157, 93, 67, 0.14);
-  --calendar-event-bg: linear-gradient(135deg, rgba(201, 141, 112, 0.96), rgba(157, 93, 67, 0.94));
-  --calendar-event-success-bg: linear-gradient(135deg, rgba(16, 185, 129, 0.92), rgba(5, 150, 105, 0.94));
+  --calendar-event-bg: rgba(157, 93, 67, 0.94);
+  --calendar-event-success-bg: rgba(5, 150, 105, 0.94);
   --calendar-event-text: #ffffff;
   color: var(--calendar-text);
 }
@@ -212,8 +268,8 @@ body[data-theme="light"] .calendar-shell {
   --calendar-disabled-bg: rgba(25, 22, 23, 0.04);
   --calendar-disabled-text: rgba(25, 22, 23, 0.42);
   --calendar-today-bg: rgba(157, 93, 67, 0.12);
-  --calendar-event-bg: linear-gradient(135deg, #9d5d43, #7d4832);
-  --calendar-event-success-bg: linear-gradient(135deg, #047857, #065f46);
+  --calendar-event-bg: #9d5d43;
+  --calendar-event-success-bg: #047857;
   --calendar-event-text: #ffffff;
 }
 
@@ -231,8 +287,8 @@ body[data-theme="dark"] .calendar-shell {
   --calendar-disabled-bg: rgba(247, 249, 248, 0.03);
   --calendar-disabled-text: rgba(247, 249, 248, 0.42);
   --calendar-today-bg: rgba(157, 93, 67, 0.14);
-  --calendar-event-bg: linear-gradient(135deg, rgba(201, 141, 112, 0.96), rgba(157, 93, 67, 0.94));
-  --calendar-event-success-bg: linear-gradient(135deg, rgba(16, 185, 129, 0.92), rgba(5, 150, 105, 0.94));
+  --calendar-event-bg: rgba(157, 93, 67, 0.94);
+  --calendar-event-success-bg: rgba(5, 150, 105, 0.94);
   --calendar-event-text: #ffffff;
 }
 

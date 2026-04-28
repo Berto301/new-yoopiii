@@ -102,15 +102,15 @@ export const FavoritesPage = () => {
 
                 <div className="space-y-6 p-6 lg:p-7">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-3">
+                    <div className="min-w-0 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-2xl font-semibold text-white">{property.title}</h2>
+                        <h2 className="break-words text-2xl font-semibold text-white">{property.title}</h2>
                         {(property.is3DEnabled ?? property.has3DView) ? <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">Visite 3D</Badge> : null}
                       </div>
-                      <p className="max-w-3xl text-sm leading-6 text-stone-300">{property.description || "Aucune description detaillee n'est disponible pour ce bien."}</p>
+                      <p className="max-w-3xl break-words text-sm leading-6 text-stone-300">{property.description || "Aucune description detaillee n'est disponible pour ce bien."}</p>
                     </div>
 
-                    <div className="rounded-3xl border border-brand-500/20 bg-brand-500/10 px-5 py-4 text-right shadow-[0_18px_40px_rgba(249,115,22,0.15)]">
+                    <div className="w-full rounded-3xl border border-brand-500/20 bg-brand-500/10 px-5 py-4 text-left shadow-[0_18px_40px_rgba(249,115,22,0.15)] lg:w-auto lg:text-right">
                       <p className="text-xs uppercase tracking-[0.2em] text-brand-100/80">Budget</p>
                       <p className="mt-2 text-2xl font-semibold text-brand-100">{formatPrice(property.price, property.currency)}</p>
                     </div>
@@ -145,8 +145,8 @@ export const FavoritesPage = () => {
                           variant="message"
                           type="agent"
                         />
-                        <div>
-                          <p className="text-lg font-semibold text-white">{property.agentName || "Agent non renseigne"}</p>
+                        <div className="min-w-0">
+                          <p className="break-words text-lg font-semibold text-white">{property.agentName || "Agent non renseigne"}</p>
                           <p className="mt-1 text-sm text-stone-400">Suivi commercial du bien</p>
                         </div>
                       </div>

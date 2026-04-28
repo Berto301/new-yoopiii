@@ -1,11 +1,15 @@
 import { USER_PREFERENCES_DEFAULTS } from "./user-preferences.constants.js";
 import { loadStoredUserPreferences } from "./user-preferences.storage.js";
+import { normalizeSmartMatchingPreferences } from "../../features/matching/matching.utils.js";
 
 export const normalizeUserPreferences = (preferences = {}) => ({
   ...USER_PREFERENCES_DEFAULTS,
   ...(preferences || {}),
   currency: String(preferences?.currency || USER_PREFERENCES_DEFAULTS.currency).toUpperCase(),
-  contractDefaultCommission: Number(preferences?.contractDefaultCommission ?? USER_PREFERENCES_DEFAULTS.contractDefaultCommission)
+  notificationsEnabled: preferences?.notificationsEnabled ?? USER_PREFERENCES_DEFAULTS.notificationsEnabled,
+  pushNotificationsEnabled: preferences?.pushNotificationsEnabled ?? USER_PREFERENCES_DEFAULTS.pushNotificationsEnabled,
+  contractDefaultCommission: Number(preferences?.contractDefaultCommission ?? USER_PREFERENCES_DEFAULTS.contractDefaultCommission),
+  smartMatching: normalizeSmartMatchingPreferences(preferences?.smartMatching || preferences?.intelligentMatching)
 });
 
 export const getLocaleTag = (language = USER_PREFERENCES_DEFAULTS.language) => (language === "en" ? "en-US" : "fr-FR");

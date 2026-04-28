@@ -950,7 +950,7 @@ export const ConversationPanel = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <p className="truncate text-sm font-semibold text-white">{peerNames.join(", ") || "Nouvelle conversation"}</p>
-                        <span className="whitespace-nowrap text-[11px] uppercase tracking-[0.2em] text-stone-500">
+                        <span className="shrink-0 text-right text-[11px] uppercase tracking-[0.2em] text-stone-500 sm:whitespace-nowrap">
                           {conversation.lastMessageAt ? formatTimestamp(conversation.lastMessageAt) : "-"}
                         </span>
                       </div>
@@ -997,7 +997,7 @@ export const ConversationPanel = () => {
                 {typingUserId ? <p className="text-xs font-medium text-brand-100">Votre interlocuteur est en train d'ecrire...</p> : null}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-4 lg:min-w-[320px]">
+              <div className="grid w-full gap-3 sm:grid-cols-4 lg:min-w-0 xl:min-w-[320px]">
                 <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-4 py-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Messages</p>
                   <p className="mt-2 text-2xl font-semibold text-white">{messages.length}</p>

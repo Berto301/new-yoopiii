@@ -146,18 +146,18 @@ export const BookingsPage = () => {
 
                 <div className="space-y-6 p-6 lg:p-7">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-2xl font-semibold text-white">{property.title || "Bien reserve"}</h2>
+                        <h2 className="break-words text-2xl font-semibold text-white">{property.title || "Bien reserve"}</h2>
                         {property.purpose ? <Badge className="border-white/10 bg-white/10 text-stone-100">{property.purpose}</Badge> : null}
                       </div>
-                      <p className="mt-3 text-sm leading-6 text-stone-300">
+                      <p className="mt-3 break-words text-sm leading-6 text-stone-300">
                         Suivi de reservation avec une vision directe sur le bien, le planning et le contact principal.
                       </p>
                     </div>
 
                     {property.price ? (
-                      <div className="rounded-3xl border border-brand-500/20 bg-brand-500/10 px-5 py-4 text-right shadow-[0_18px_40px_rgba(249,115,22,0.14)]">
+                      <div className="w-full rounded-3xl border border-brand-500/20 bg-brand-500/10 px-5 py-4 text-left shadow-[0_18px_40px_rgba(249,115,22,0.14)] lg:w-auto lg:text-right">
                         <p className="text-xs uppercase tracking-[0.2em] text-brand-100/80">Valeur du bien</p>
                         <p className="mt-2 text-2xl font-semibold text-brand-100">{formatPrice(property.price, property.currency)}</p>
                       </div>
@@ -201,8 +201,8 @@ export const BookingsPage = () => {
                             variant="message"
                             type={getParticipantType(user?.role)}
                           />
-                          <div>
-                            <p className="text-lg font-semibold text-white">{participantName}</p>
+                          <div className="min-w-0">
+                            <p className="break-words text-lg font-semibold text-white">{participantName}</p>
                             <p className="mt-1 text-sm text-stone-400">{participant?.email || t("private", "bookings.internalContact", "Contact interne")}</p>
                           </div>
                         </div>

@@ -16,7 +16,10 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
-  CONTACT_RECIPIENT_EMAIL: z.string().optional()
+  CONTACT_RECIPIENT_EMAIL: z.string().optional(),
+  PUSH_VAPID_PUBLIC_KEY: z.string().optional(),
+  PUSH_VAPID_PRIVATE_KEY: z.string().optional(),
+  PUSH_VAPID_SUBJECT: z.string().optional()
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -39,5 +42,8 @@ export const env = {
   smtpUser: parsed.data.SMTP_USER || "",
   smtpPass: parsed.data.SMTP_PASS || "",
   smtpFrom: parsed.data.SMTP_FROM || parsed.data.SMTP_USER || "",
-  contactRecipientEmail: parsed.data.CONTACT_RECIPIENT_EMAIL || parsed.data.SMTP_USER || ""
+  contactRecipientEmail: parsed.data.CONTACT_RECIPIENT_EMAIL || parsed.data.SMTP_USER || "",
+  pushVapidPublicKey: parsed.data.PUSH_VAPID_PUBLIC_KEY || "",
+  pushVapidPrivateKey: parsed.data.PUSH_VAPID_PRIVATE_KEY || "",
+  pushVapidSubject: parsed.data.PUSH_VAPID_SUBJECT || "mailto:admin@yopii.local"
 };

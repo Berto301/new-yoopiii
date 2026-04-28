@@ -9,6 +9,7 @@ const numberFromQuery = (fieldName) =>
     invalid_type_error: `${fieldName} must be a number`
   });
 const emptyStringToUndefined = (schema) => z.preprocess((value) => (value === "" ? undefined : value), schema);
+const emptyStringToNull = (schema) => z.preprocess((value) => (value === "" ? null : value), schema);
 const avatarSchema = z.preprocess(
   (value) => {
     if (value === "" || value === null || value === undefined) {
@@ -25,6 +26,32 @@ const avatarSchema = z.preprocess(
     })
     .nullable()
 );
+
+const smartMatchingSchema = z.object({
+  enabled: z.boolean().default(false),
+  budgetReal: emptyStringToNull(z.coerce.number().min(0).nullable()).optional().default(null),
+  purpose: z.enum(["sale", "rent"]).optional().or(z.literal("")).default(""),
+  propertyTypes: z.array(z.enum(["house", "land", "apartment", "commercial", "office", "warehouse"])).default([]),
+  location: z.object({
+    enabled: z.boolean().default(false),
+    lat: z.preprocess((value) => (value === "" || value === undefined ? null : value), z.coerce.number().nullable()).default(null),
+    lng: z.preprocess((value) => (value === "" || value === undefined ? null : value), z.coerce.number().nullable()).default(null),
+    label: z.string().trim().max(255).default("")
+  }).default({
+    enabled: false,
+    lat: null,
+    lng: null,
+    label: ""
+  }),
+  searchRadiusKm: z.union([z.literal(1), z.literal(5), z.literal(100)]).default(5),
+  criteria: z.object({
+    version: z.coerce.number().int().min(1).default(1),
+    custom: z.record(z.string(), z.any()).default({})
+  }).default({
+    version: 1,
+    custom: {}
+  })
+});
 
 export const updateMyProfileSchema = z.object({
   body: z.object({
@@ -46,7 +73,10 @@ export const updateMyPreferencesSchema = z.object({
     language: z.enum(["en", "fr"]),
     theme: z.enum(["light", "dark"]),
     currency: z.string().trim().min(3).max(8).transform((value) => value.toUpperCase()),
-    contractDefaultCommission: z.coerce.number().min(0).max(100)
+    notificationsEnabled: z.boolean().optional().default(true),
+    pushNotificationsEnabled: z.boolean().optional().default(false),
+    contractDefaultCommission: z.coerce.number().min(0).max(100),
+    smartMatching: smartMatchingSchema.optional()
   }),
   params: z.object({}).default({}),
   query: z.object({}).default({})

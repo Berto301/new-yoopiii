@@ -6,8 +6,7 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
 
-const coverPlaceholder =
-  "linear-gradient(135deg, rgba(245, 158, 11, 0.38), rgba(249, 115, 22, 0.18), rgba(15, 23, 42, 0.92))";
+const coverPlaceholder = "rgba(33, 28, 29, 0.96)";
 
 const MediaPanel = ({
   title,

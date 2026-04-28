@@ -178,7 +178,7 @@ export const AuthForm = ({ mode = "login", title, subtitle }) => {
     : null;
 
   return (
-    <Card className="border-none bg-transparent p-0 shadow-none">
+    <Card className="border-none  p-0 shadow-none !bg-transparent">
       <div className="space-y-2">
         <h2 className="text-3xl font-semibold text-white">{title}</h2>
         <p className="text-sm leading-7 text-stone-300">{subtitle}</p>

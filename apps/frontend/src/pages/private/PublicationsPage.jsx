@@ -11,6 +11,8 @@ import { BaseListBox } from "../../components/form/BaseListBox.jsx";
 import { useSharedGoogleMapsLoader } from "../../lib/utils/google-maps.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 import { createConversation } from "../../features/chat/services/chat.service.js";
+import { SMART_MATCHING_PROPERTY_TYPE_OPTIONS } from "../../features/matching/matching.constants.js";
+import { buildDefaultPublicationFilters } from "../../features/matching/matching.utils.js";
 import { ModalViewDetail } from "../../features/properties/components/ModalViewDetail.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
 import { SettingsTabButton } from "./settings/SettingsTabButton.jsx";
@@ -18,23 +20,6 @@ import { SettingsTabButton } from "./settings/SettingsTabButton.jsx";
 const DEFAULT_SEARCH_CENTER = { lat: -19.872006, lng: 47.03961 };
 const DEFAULT_MAP_ZOOM = 12;
 const INITIAL_VISIBLE_ITEMS = 12;
-const DISTANCE_OPTIONS = [
-  { label: "Toutes distances", value: "all" },
-  { label: "1 km", value: "1" },
-  { label: "2 km", value: "2" },
-  { label: "5 km", value: "5" }
-];
-const PURPOSE_OPTIONS = [
-  { label: "Tous objectifs", value: "all" },
-  { label: "Location", value: "rent" },
-  { label: "Vente", value: "sale" }
-];
-const TYPE_OPTIONS = [
-  { label: "Tous types", value: "all" },
-  { label: "Maison", value: "house" },
-  { label: "Terrain", value: "land" },
-  { label: "Appartement", value: "apartment" }
-];
 const ALL_OPTION = { label: "Tous", value: "all" };
 
 const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
@@ -338,20 +323,22 @@ export const PublicationsPage = () => {
   const [detailModalIdentifier, setDetailModalIdentifier] = useState("");
   const [referenceCenter, setReferenceCenter] = useState(DEFAULT_SEARCH_CENTER);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS);
+  const [hasAppliedUserDefaultFilters, setHasAppliedUserDefaultFilters] = useState(false);
   const [rawFilters, setRawFilters] = useState({
     distanceKm: "all",
     agentId: "all",
     agencyId: "all",
     purpose: "all",
-    type: "all"
+    type: "all",
+    budgetMax: ""
   });
   const [debouncedFilters, setDebouncedFilters] = useState(rawFilters);
   const items = propertyPublicationsQuery.data?.items || [];
   const distanceOptions = useMemo(() => [
     { label: t("private", "publications.filters.allDistances", "Toutes distances"), value: "all" },
     { label: "1 km", value: "1" },
-    { label: "2 km", value: "2" },
-    { label: "5 km", value: "5" }
+    { label: "5 km", value: "5" },
+    { label: "100 km", value: "100" }
   ], [t]);
   const purposeOptions = useMemo(() => [
     { label: t("private", "publications.filters.allPurposes", "Tous objectifs"), value: "all" },
@@ -360,9 +347,7 @@ export const PublicationsPage = () => {
   ], [t]);
   const typeOptions = useMemo(() => [
     { label: t("private", "publications.filters.allTypes", "Tous types"), value: "all" },
-    { label: "Maison", value: "house" },
-    { label: "Terrain", value: "land" },
-    { label: "Appartement", value: "apartment" }
+    ...SMART_MATCHING_PROPERTY_TYPE_OPTIONS
   ], [t]);
 
   useEffect(() => {
@@ -392,6 +377,23 @@ export const PublicationsPage = () => {
       }
     );
   }, []);
+
+  useEffect(() => {
+    if (!user || user.role !== "user" || hasAppliedUserDefaultFilters) {
+      return;
+    }
+
+    const defaultFilters = buildDefaultPublicationFilters(user);
+
+    setRawFilters((current) => ({
+      ...current,
+      purpose: current.purpose === "all" ? defaultFilters.purpose : current.purpose,
+      type: current.type === "all" ? defaultFilters.type : current.type,
+      distanceKm: current.distanceKm === "all" ? defaultFilters.distanceKm : current.distanceKm,
+      budgetMax: current.budgetMax || defaultFilters.budgetMax
+    }));
+    setHasAppliedUserDefaultFilters(true);
+  }, [hasAppliedUserDefaultFilters, user]);
 
   const agentOptions = useMemo(() => getFilterOptions(items, "agentId", "agentName"), [items]);
   const agencyOptions = useMemo(() => getFilterOptions(items, "agencyId", "agencyName"), [items]);
@@ -423,6 +425,14 @@ export const PublicationsPage = () => {
 
         if (debouncedFilters.type !== "all" && property.type !== debouncedFilters.type) {
           return false;
+        }
+
+        if (debouncedFilters.budgetMax) {
+          const maximumBudget = Number(debouncedFilters.budgetMax);
+
+          if (Number.isFinite(maximumBudget) && Number(property.price || 0) > maximumBudget) {
+            return false;
+          }
         }
 
         if (debouncedFilters.distanceKm !== "all") {
@@ -561,7 +571,7 @@ export const PublicationsPage = () => {
           </div>
         </div>
 
-        <div className="grid gap-4 border-b border-white/10 px-5 py-5 sm:grid-cols-2 xl:grid-cols-5 sm:px-6">
+        <div className="grid gap-4 border-b border-white/10 px-5 py-5 sm:grid-cols-2 xl:grid-cols-6 sm:px-6">
           <BaseListBox
             label={t("private", "publications.filters.distance", "Distance")}
             options={distanceOptions}
@@ -592,6 +602,22 @@ export const PublicationsPage = () => {
             value={typeOptions.find((option) => option.value === rawFilters.type) || typeOptions[0]}
             onChange={(option) => handleFilterChange("type", option)}
           />
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-stone-200">{t("private", "publications.filters.budgetMax", "Budget max")}</span>
+            <input
+              type="number"
+              min="0"
+              value={rawFilters.budgetMax}
+              onChange={(event) =>
+                setRawFilters((current) => ({
+                  ...current,
+                  budgetMax: event.target.value
+                }))
+              }
+              placeholder="250000"
+              className="w-full rounded-2xl border border-white/10 bg-stone-900/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-brand-500"
+            />
+          </label>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-6">
@@ -600,6 +626,11 @@ export const PublicationsPage = () => {
             <Badge className="border-white/10 bg-white/5 text-stone-200">
               {t("private", "publications.results.reference", "Reference distance")}: {referenceCenter.lat.toFixed(4)}, {referenceCenter.lng.toFixed(4)}
             </Badge>
+            {user?.role === "user" && hasAppliedUserDefaultFilters ? (
+              <Badge className="border-sky-400/30 bg-sky-500/10 text-sky-100">
+                Matching intelligent applique sur Publications
+              </Badge>
+            ) : null}
           </div>
           <Button
             type="button"
@@ -610,7 +641,8 @@ export const PublicationsPage = () => {
                 agentId: "all",
                 agencyId: "all",
                 purpose: "all",
-                type: "all"
+                type: "all",
+                budgetMax: ""
               });
             }}
           >

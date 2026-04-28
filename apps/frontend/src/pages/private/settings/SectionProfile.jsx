@@ -8,8 +8,10 @@ import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
 import { PasswordInput } from "../../../components/ui/PasswordInput.jsx";
 import { Switch } from "../../../components/ui/Switch.jsx";
+import { usePwa } from "../../../app/pwa/PwaProvider.jsx";
 import { Profile } from "../../../features/settings/components/Profile.jsx";
 import { PERMISSION_TREE } from "../../../helpers/constants.js";
+import { SMART_MATCHING_PROPERTY_TYPE_OPTIONS, SMART_MATCHING_PURPOSE_OPTIONS, SMART_MATCHING_RADIUS_OPTIONS } from "../../../features/matching/matching.constants.js";
 import { SectionConnectionSettings } from "./SectionConnectionSettings.jsx";
 
 const buildPermissionSections = (permissionCodes = []) =>
@@ -29,7 +31,7 @@ const PermissionTooltipContent = ({ permissionCodes }) => {
   }
 
   return (
-    <div className="w-[320px] space-y-3">
+    <div className="w-full max-w-[320px] space-y-3">
       <div className="border-b border-white/10 pb-2">
         <p className="text-sm font-semibold text-white">{t("settings", "permissions.title", "Permissions actives")}</p>
         <p className="mt-1 text-[11px] text-stone-300">{t("settings", "permissions.description", "Routes, modules et sections accessibles pour ce role.")}</p>
@@ -73,6 +75,7 @@ export const SectionProfile = ({
   onPreferencesSubmit,
   onAvatarUpload,
   onPasswordSubmit,
+  onCaptureSmartMatchingLocation,
   roleOptions = [],
   currentRoleKey = "",
   currentRoleLabel = "",
@@ -80,6 +83,7 @@ export const SectionProfile = ({
   roleMode = "input"
 }) => {
   const { t } = useUserPreferences();
+  const { canInstall, installApp, pushSupported, pushPermission, pushEnabled, pushBusy, pushConfigured, enablePush, disablePush } = usePwa();
   const genderOptions = [
     { label: t("settings", "profile.genderOptions.male", "Homme"), value: "homme" },
     { label: t("settings", "profile.genderOptions.female", "Femme"), value: "femme" },
@@ -94,6 +98,12 @@ export const SectionProfile = ({
   const preferencesErrors = preferencesForm.formState.errors;
   const currentAvatar = profileForm.watch("avatar") || profile?.avatar || "";
   const canManageCommission = ["agency", "agency_agent", "independent_agent"].includes(profile?.role);
+  const isSimpleUserRole = profile?.role === "user";
+  const smartMatchingEnabled = Boolean(preferencesForm.watch("smartMatching.enabled"));
+  const smartMatchingLocationEnabled = Boolean(preferencesForm.watch("smartMatching.location.enabled"));
+  const smartMatchingLocationLabel = preferencesForm.watch("smartMatching.location.label");
+  const smartMatchingLocationLat = preferencesForm.watch("smartMatching.location.lat");
+  const smartMatchingLocationLng = preferencesForm.watch("smartMatching.location.lng");
   const userName = [profileForm.watch("firstName") || profile?.firstName, profileForm.watch("lastName") || profile?.lastName]
     .filter(Boolean)
     .join(" ")
@@ -237,6 +247,36 @@ export const SectionProfile = ({
                   />
                 )}
               />
+              <Controller
+                name="notificationsEnabled"
+                control={preferencesForm.control}
+                render={({ field }) => (
+                  <Switch
+                    label="Notifications internes"
+                    description={field.value ? "Les alertes in-app restent visibles dans votre espace prive." : "Les notifications internes seront considerees comme desactivees pour votre compte."}
+                    checked={Boolean(field.value)}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              <Controller
+                name="pushNotificationsEnabled"
+                control={preferencesForm.control}
+                render={({ field }) => (
+                  <Switch
+                    label="Push notifications"
+                    description={
+                      !pushSupported
+                        ? "Push non supporte sur cet appareil ou navigateur."
+                        : field.value
+                          ? "Les notifications web push pourront etre envoyees quand l'application est fermee."
+                          : "Activez cette option pour autoriser les notifications push web."
+                    }
+                    checked={Boolean(field.value)}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
               <div className="flex justify-end">
                 <Button type="submit" disabled={updatePreferencesMutation.isPending}>
                   {t("settings", "actions.saveAccount", "Enregistrer les preferences")}
@@ -244,6 +284,194 @@ export const SectionProfile = ({
               </div>
             </form>
           </Card>
+
+          <Card className="space-y-6">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-400">PWA & Push</p>
+              <h3 className="text-xl font-semibold text-white">Application installable et alertes web</h3>
+              <p className="text-sm text-stone-300">Installez l'application et activez les push pour recevoir les messages, alertes sur biens, contrats, loyers, rendez-vous et maintenance.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Installation</p>
+                <p className="mt-2 text-sm text-white">{canInstall ? "Disponible sur cet appareil" : "Deja installee ou non proposee par le navigateur"}</p>
+                <div className="mt-4">
+                  <Button type="button" variant="secondary" disabled={!canInstall} onClick={installApp}>
+                    Installer l'application
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Etat push</p>
+                <p className="mt-2 text-sm text-white">
+                  {!pushSupported ? "Non supporte" : pushEnabled ? "Actif" : pushConfigured ? "Disponible a l'activation" : "Configuration serveur requise"}
+                </p>
+                <p className="mt-2 text-xs text-stone-400">Permission navigateur: {pushPermission}</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button type="button" variant="secondary" disabled={!pushSupported || !pushConfigured || pushBusy} onClick={enablePush}>
+                    {pushBusy ? "Activation..." : "Activer push"}
+                  </Button>
+                  <Button type="button" variant="ghost" disabled={!pushEnabled || pushBusy} onClick={disablePush}>
+                    Desactiver push
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {isSimpleUserRole ? (
+            <Card className="space-y-6">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-400">Matching intelligent</p>
+                <h3 className="text-xl font-semibold text-white">Criteres de recherche par defaut</h3>
+                <p className="text-sm text-stone-300">
+                  Activez un socle de matching maintenable pour prefiltrer les biens et preparer une future couche IA sur la recommandation.
+                </p>
+              </div>
+
+              <form className="grid gap-4" onSubmit={preferencesForm.handleSubmit(onPreferencesSubmit)}>
+                <Controller
+                  name="smartMatching.enabled"
+                  control={preferencesForm.control}
+                  render={({ field }) => (
+                    <Switch
+                      label="Activer le Matching intelligent"
+                      description={field.value ? "Les criteres serviront de filtres par defaut pendant vos recherches." : "Le matching reste inactif tant que cette option n'est pas activee."}
+                      checked={Boolean(field.value)}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Controller
+                    name="smartMatching.purpose"
+                    control={preferencesForm.control}
+                    render={({ field }) => (
+                      <BaseListBox
+                        label="Objectif"
+                        options={SMART_MATCHING_PURPOSE_OPTIONS}
+                        value={SMART_MATCHING_PURPOSE_OPTIONS.find((option) => option.value === field.value) || null}
+                        onChange={(nextValue) => field.onChange(nextValue?.value || "")}
+                        placeholder="Selectionner un objectif"
+                        disabled={!smartMatchingEnabled}
+                        error={preferencesErrors.smartMatching?.purpose?.message}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="smartMatching.budgetReal"
+                    control={preferencesForm.control}
+                    render={({ field }) => (
+                      <Input
+                        label="Budget reel"
+                        type="number"
+                        min="0"
+                        placeholder="250000"
+                        disabled={!smartMatchingEnabled}
+                        error={preferencesErrors.smartMatching?.budgetReal?.message}
+                        {...field}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="smartMatching.searchRadiusKm"
+                    control={preferencesForm.control}
+                    render={({ field }) => (
+                      <BaseListBox
+                        label="Rayon de recherche"
+                        options={SMART_MATCHING_RADIUS_OPTIONS}
+                        value={SMART_MATCHING_RADIUS_OPTIONS.find((option) => option.value === field.value) || SMART_MATCHING_RADIUS_OPTIONS[1]}
+                        onChange={(nextValue) => field.onChange(nextValue?.value || 5)}
+                        disabled={!smartMatchingEnabled}
+                        error={preferencesErrors.smartMatching?.searchRadiusKm?.message}
+                      />
+                    )}
+                  />
+                </div>
+
+                <Controller
+                  name="smartMatching.propertyTypes"
+                  control={preferencesForm.control}
+                  render={({ field }) => (
+                    <BaseListBox
+                      label="Types de bien recherches"
+                      options={SMART_MATCHING_PROPERTY_TYPE_OPTIONS}
+                      value={SMART_MATCHING_PROPERTY_TYPE_OPTIONS.filter((option) => (field.value || []).includes(option.value))}
+                      onChange={(nextValue) => field.onChange((nextValue || []).map((item) => item.value))}
+                      placeholder="Selectionner un ou plusieurs types"
+                      multiple
+                      disabled={!smartMatchingEnabled}
+                      error={preferencesErrors.smartMatching?.propertyTypes?.message}
+                    />
+                  )}
+                />
+
+                <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+                  <Controller
+                    name="smartMatching.location.enabled"
+                    control={preferencesForm.control}
+                    render={({ field }) => (
+                      <Switch
+                        label="Activer l'emplacement utilisateur"
+                        description={field.value ? "Le rayon sera compare a votre derniere position enregistree." : "Aucune contrainte geographique ne sera appliquee."}
+                        checked={Boolean(field.value)}
+                        onChange={(nextValue) => {
+                          field.onChange(nextValue);
+
+                          if (!nextValue) {
+                            preferencesForm.setValue("smartMatching.location.lat", null, { shouldDirty: true, shouldValidate: false });
+                            preferencesForm.setValue("smartMatching.location.lng", null, { shouldDirty: true, shouldValidate: false });
+                            preferencesForm.setValue("smartMatching.location.label", "", { shouldDirty: true, shouldValidate: false });
+                          }
+                        }}
+                        disabled={!smartMatchingEnabled}
+                      />
+                    )}
+                  />
+
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-sm font-medium text-white">Position enregistree</p>
+                      <p className="break-words text-xs leading-5 text-stone-400">
+                        {smartMatchingLocationEnabled && smartMatchingLocationLabel
+                          ? smartMatchingLocationLabel
+                          : "Aucune position capturee pour le moment."}
+                      </p>
+                      {smartMatchingLocationEnabled && smartMatchingLocationLat != null && smartMatchingLocationLng != null ? (
+                        <p className="text-xs text-stone-500">Lat {smartMatchingLocationLat} • Lng {smartMatchingLocationLng}</p>
+                      ) : null}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full px-4 py-2 lg:w-auto"
+                      disabled={!smartMatchingEnabled || !smartMatchingLocationEnabled}
+                      onClick={onCaptureSmartMatchingLocation}
+                    >
+                      Utiliser ma position
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-stone-950/40 px-4 py-4">
+                  <p className="text-sm font-medium text-white">Structure extensible deja prete</p>
+                  <p className="mt-2 text-sm leading-6 text-stone-400">
+                    Les criteres sont stockes dans un objet dedie avec versioning et champs `custom`, ce qui permettra d'ajouter plus tard des signaux IA, styles de vie, priorites ou exclusions sans refonte du formulaire.
+                  </p>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={updatePreferencesMutation.isPending}>
+                    Enregistrer le matching intelligent
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          ) : null}
 
           {canManageCommission ? (
             <Card className="space-y-6">

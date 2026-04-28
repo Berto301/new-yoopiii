@@ -13,6 +13,7 @@ import { getPropertyThreeDStatusMeta } from "../../../features/properties/proper
 import { usePropertyWorkspace } from "../../../features/properties/hooks/usePropertyWorkspace.js";
 import { ModalManageProperty } from "./ModalManageProperty.jsx";
 import { ModalManageContract } from "../contracts/ModalManageContract.jsx";
+import { ModalMatchingUser } from "./ModalMatchingUser.jsx";
 
 const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
@@ -77,7 +78,8 @@ const PropertyCard = ({
   onEdit,
   onDuplicate,
   onDelete,
-  onAssociateContract
+  onAssociateContract,
+  onOpenMatching
 }) => {
   const { t } = useUserPreferences();
   const coverImage = resolveAssetUrl(property.coverImage || property.media?.find((item) => item.type === "image")?.url || "");
@@ -176,6 +178,11 @@ const PropertyCard = ({
               <Button type="button" variant="ghost" className="px-4 py-2" disabled={duplicateManagedPropertyMutation.isPending} onClick={() => onDuplicate(property)}>
                 {t("private", "properties.card.duplicate", "Dupliquer")}
               </Button>
+              {!isOwnerRole ? (
+                <Button type="button" variant="ghost" className="px-4 py-2" onClick={() => onOpenMatching(property)}>
+                  Matching intelligent
+                </Button>
+              ) : null}
               {canReserve ? (
                 <Button
                   type="button"
@@ -231,6 +238,7 @@ export const PropertyManagementPage = () => {
   const [modalMode, setModalMode] = useState("create");
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [isMatchingModalOpen, setIsMatchingModalOpen] = useState(false);
   const [contractModalState, setContractModalState] = useState({ open: false, mode: "create", contract: null });
   const summaryCards = [
     {
@@ -285,6 +293,16 @@ export const PropertyManagementPage = () => {
   const closeManageModal = () => {
     setSelectedProperty(null);
     setIsManageModalOpen(false);
+  };
+
+  const openMatchingModal = (property) => {
+    setSelectedProperty(property);
+    setIsMatchingModalOpen(true);
+  };
+
+  const closeMatchingModal = () => {
+    setIsMatchingModalOpen(false);
+    setSelectedProperty(null);
   };
 
   const openEditContractModal = (contract) => {
@@ -554,6 +572,7 @@ export const PropertyManagementPage = () => {
                 onDuplicate={handleDuplicateProperty}
                 onDelete={handleDeleteProperty}
                 onAssociateContract={handleAssociateContract}
+                onOpenMatching={openMatchingModal}
               />
               );
             })()
@@ -587,6 +606,12 @@ export const PropertyManagementPage = () => {
         isUploadingAsset={uploadPropertyAssetMutation.isPending}
         isGeneratingThreeD={generateManagedPropertyThreeDMutation.isPending}
         isSaving={createManagedPropertyMutation.isPending || updateManagedPropertyMutation.isPending}
+      />
+
+      <ModalMatchingUser
+        open={isMatchingModalOpen}
+        property={selectedProperty}
+        onClose={closeMatchingModal}
       />
 
       <ModalManageContract

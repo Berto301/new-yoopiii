@@ -11,15 +11,7 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
 import { useSharedGoogleMapsLoader } from "../../../lib/utils/google-maps.js";
 import { getPropertyThreeDStatusMeta } from "../../../features/properties/property-3d.js";
-
-const propertyTypeOptions = [
-  { label: "Maison", value: "house" },
-  { label: "Terrain", value: "land" },
-  { label: "Appartement", value: "apartment" },
-  { label: "Commerce", value: "commercial" },
-  { label: "Bureau", value: "office" },
-  { label: "Entrepot", value: "warehouse" }
-];
+import { SMART_MATCHING_PROPERTY_TYPE_OPTIONS as propertyTypeOptions } from "../../../features/matching/matching.constants.js";
 
 const purposeOptions = [
   { label: "Vente", value: "sale" },

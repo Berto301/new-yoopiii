@@ -1,5 +1,6 @@
 import { Notification } from "./notification.model.js";
 import { User } from "../users/user.model.js";
+import { dispatchPushNotifications } from "./push.service.js";
 
 export const createNotifications = async (payloads) => {
   const validPayloads = payloads.filter(Boolean);
@@ -8,7 +9,9 @@ export const createNotifications = async (payloads) => {
     return [];
   }
 
-  return Notification.insertMany(validPayloads, { ordered: false });
+  const createdNotifications = await Notification.insertMany(validPayloads, { ordered: false });
+  await dispatchPushNotifications(createdNotifications.map((item) => item.toObject?.() || item));
+  return createdNotifications;
 };
 
 const resolveContactTargetId = (notification) =>

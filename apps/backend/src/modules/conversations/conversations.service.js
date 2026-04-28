@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
-import { Notification } from "../notifications/notification.model.js";
+import { createNotifications } from "../notifications/notifications.service.js";
 import { syncOwnerTenantFromClosedWon } from "../owner/owner.service.js";
 import { Property } from "../properties/property.model.js";
 import { User } from "../users/user.model.js";
@@ -328,13 +328,13 @@ export const createConversationMessage = async ({
   conversation.lastMessagePreview = resolvedContent.slice(0, 120);
   await conversation.save();
 
-  await Notification.create(buildNotificationPayload({
+  await createNotifications([buildNotificationPayload({
     conversationId,
     message,
     actorId: senderId,
     recipientId: receiverId,
     isUpdate: false
-  }));
+  })]);
 
   await syncAppointmentPropertyOutcome(message.appointment);
 
@@ -393,13 +393,13 @@ export const updateConversationMessage = async ({
 
   const refreshedConversation = await refreshConversationLastMessage(conversationId);
 
-  await Notification.create(buildNotificationPayload({
+  await createNotifications([buildNotificationPayload({
     conversationId,
     message,
     actorId: userId,
     recipientId,
     isUpdate: true
-  }));
+  })]);
 
   await syncAppointmentPropertyOutcome(message.appointment);
 

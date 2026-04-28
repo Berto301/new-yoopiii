@@ -172,19 +172,19 @@ export const NotificationsPage = () => {
 
                     <div className="min-w-0 flex-1 space-y-4">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge className={tone.badge}>{notification.isRead ? t("private", "notifications.status.read", "Lue") : t("private", "notifications.status.unread", "Non lue")}</Badge>
                             <Badge className="border-white/10 bg-white/5 text-stone-200">{notification.type}</Badge>
                           </div>
-                          <h3 className="text-xl font-semibold text-white">{notification.title}</h3>
+                          <h3 className="break-words text-xl font-semibold text-white">{notification.title}</h3>
                         </div>
-                        <p className="whitespace-nowrap text-xs uppercase tracking-[0.2em] text-stone-500">
+                        <p className="text-left text-xs uppercase tracking-[0.2em] text-stone-500 lg:text-right">
                           {dayjs(notification.createdAt).format("DD/MM/YYYY HH:mm")}
                         </p>
                       </div>
 
-                      <p className="max-w-4xl text-sm leading-7 text-stone-300">{notification.body}</p>
+                      <p className="max-w-4xl break-words text-sm leading-7 text-stone-300">{notification.body}</p>
 
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div className="rounded-[1.35rem] border border-white/10 bg-black/20 px-4 py-4">

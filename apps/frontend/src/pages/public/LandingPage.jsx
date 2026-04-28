@@ -390,8 +390,8 @@ export const LandingPage = () => {
 
   return (
     <div className="relative overflow-hidden">
-      <div className="absolute left-0 top-[26rem] hidden h-[900px] w-48 bg-[radial-gradient(circle,rgba(157,93,67,0.12)_1px,transparent_1px)] [background-size:18px_18px] lg:block" />
-      <div className="absolute right-0 top-[70rem] hidden h-[900px] w-48 bg-[radial-gradient(circle,rgba(157,93,67,0.12)_1px,transparent_1px)] [background-size:18px_18px] lg:block" />
+      {/* <div className="absolute left-0 top-[26rem] hidden h-[900px] w-48 bg-[radial-gradient(circle,rgba(157,93,67,0.12)_1px,transparent_1px)] [background-size:18px_18px] lg:block" />
+      <div className="absolute right-0 top-[70rem] hidden h-[900px] w-48 bg-[radial-gradient(circle,rgba(157,93,67,0.12)_1px,transparent_1px)] [background-size:18px_18px] lg:block" /> */}
 
       <section className="mx-auto max-w-7xl px-6 pb-8 pt-12 md:pt-16">
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">

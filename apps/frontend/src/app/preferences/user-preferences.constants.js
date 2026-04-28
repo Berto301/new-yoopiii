@@ -4,7 +4,26 @@ export const USER_PREFERENCES_DEFAULTS = {
   language: "fr",
   theme: "light",
   currency: "USD",
-  contractDefaultCommission: 0
+  notificationsEnabled: true,
+  pushNotificationsEnabled: false,
+  contractDefaultCommission: 0,
+  smartMatching: {
+    enabled: false,
+    budgetReal: null,
+    purpose: "",
+    propertyTypes: [],
+    location: {
+      enabled: false,
+      lat: null,
+      lng: null,
+      label: ""
+    },
+    searchRadiusKm: 5,
+    criteria: {
+      version: 1,
+      custom: {}
+    }
+  }
 };
 
 export const LANGUAGE_OPTIONS = [

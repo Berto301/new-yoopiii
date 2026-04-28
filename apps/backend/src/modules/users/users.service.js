@@ -120,15 +120,53 @@ export const updateMyPreferences = async ({ userId, payload }) => {
   }
 
   const canManageCommission = ["agency", "agency_agent", "independent_agent"].includes(user.role);
+  const normalizedSmartMatching = user.role === "user"
+    ? {
+        enabled: Boolean(payload.smartMatching?.enabled),
+        budgetReal: payload.smartMatching?.budgetReal == null ? null : Number(payload.smartMatching.budgetReal),
+        purpose: payload.smartMatching?.purpose || "",
+        propertyTypes: Array.isArray(payload.smartMatching?.propertyTypes) ? payload.smartMatching.propertyTypes : [],
+        location: {
+          enabled: Boolean(payload.smartMatching?.location?.enabled),
+          lat: payload.smartMatching?.location?.enabled ? payload.smartMatching?.location?.lat ?? null : null,
+          lng: payload.smartMatching?.location?.enabled ? payload.smartMatching?.location?.lng ?? null : null,
+          label: payload.smartMatching?.location?.enabled ? payload.smartMatching?.location?.label || "" : ""
+        },
+        searchRadiusKm: payload.smartMatching?.searchRadiusKm || 5,
+        criteria: {
+          version: Number(payload.smartMatching?.criteria?.version || 1),
+          custom: payload.smartMatching?.criteria?.custom || {}
+        }
+      }
+      : (user.preferences?.smartMatching || {
+        enabled: false,
+        budgetReal: null,
+        purpose: "",
+        propertyTypes: [],
+        location: {
+          enabled: false,
+          lat: null,
+          lng: null,
+          label: ""
+        },
+        searchRadiusKm: 5,
+        criteria: {
+          version: 1,
+          custom: {}
+        }
+      });
 
   user.preferences = {
     ...(user.preferences || {}),
+    notificationsEnabled: payload.notificationsEnabled ?? true,
+    pushNotificationsEnabled: user.role === "user" ? Boolean(payload.pushNotificationsEnabled) : Boolean(user.preferences?.pushNotificationsEnabled),
     language: payload.language,
     theme: payload.theme,
     currency: payload.currency,
     contractDefaultCommission: canManageCommission
       ? payload.contractDefaultCommission
-      : Number(user.preferences?.contractDefaultCommission || 0)
+      : Number(user.preferences?.contractDefaultCommission || 0),
+    smartMatching: normalizedSmartMatching
   };
 
   await user.save();

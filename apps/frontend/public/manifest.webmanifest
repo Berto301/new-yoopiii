@@ -1,0 +1,24 @@
+{
+  "name": "Yopii",
+  "short_name": "Yopii",
+  "description": "Workspace prive immobilier Yopii",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#191617",
+  "theme_color": "#191617",
+  "icons": [
+    {
+      "src": "/icons/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/pwa-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

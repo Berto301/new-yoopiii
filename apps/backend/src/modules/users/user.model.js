@@ -55,6 +55,7 @@ const userSchema = new mongoose.Schema(
     preferences: {
       radiusInKm: { type: Number, default: 10 },
       notificationsEnabled: { type: Boolean, default: true },
+      pushNotificationsEnabled: { type: Boolean, default: false },
       language: {
         type: String,
         enum: ["en", "fr"],
@@ -75,6 +76,41 @@ const userSchema = new mongoose.Schema(
         type: Number,
         min: 0,
         default: 0
+      },
+      smartMatching: {
+        enabled: { type: Boolean, default: false },
+        budgetReal: {
+          type: Number,
+          min: 0,
+          default: null
+        },
+        purpose: {
+          type: String,
+          enum: ["sale", "rent", ""],
+          default: ""
+        },
+        propertyTypes: {
+          type: [String],
+          default: []
+        },
+        location: {
+          enabled: { type: Boolean, default: false },
+          lat: { type: Number, default: null },
+          lng: { type: Number, default: null },
+          label: { type: String, trim: true, default: "" }
+        },
+        searchRadiusKm: {
+          type: Number,
+          enum: [1, 5, 100],
+          default: 5
+        },
+        criteria: {
+          version: { type: Number, default: 1 },
+          custom: {
+            type: mongoose.Schema.Types.Mixed,
+            default: {}
+          }
+        }
       }
     },
     socialProviders: { type: [socialProviderSchema], default: [] },

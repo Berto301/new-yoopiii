@@ -14,6 +14,8 @@ import { SectionMembers } from "./SectionMembers.jsx";
 import { SectionProfile } from "./SectionProfile.jsx";
 import { SectionRoles } from "./SectionRoles.jsx";
 import { SettingsTabButton } from "./SettingsTabButton.jsx";
+import { DEFAULT_SMART_MATCHING } from "../../../features/matching/matching.constants.js";
+import { buildSmartMatchingPayload, normalizeSmartMatchingPreferences } from "../../../features/matching/matching.utils.js";
 
 const extractErrorMessage = (error, fallback) => error?.response?.data?.message || fallback;
 const normalizeText = (value) => (typeof value === "string" ? value.trim() : value);
@@ -78,7 +80,10 @@ export const SettingsPage = () => {
       language: "fr",
       theme: true,
       currency: "USD",
-      contractDefaultCommission: 0
+      notificationsEnabled: true,
+      pushNotificationsEnabled: false,
+      contractDefaultCommission: 0,
+      smartMatching: DEFAULT_SMART_MATCHING
     }
   });
 
@@ -111,7 +116,12 @@ export const SettingsPage = () => {
         language: profileQuery.data.preferences?.language || "fr",
         theme: (profileQuery.data.preferences?.theme || "dark") === "dark",
         currency: profileQuery.data.preferences?.currency || "USD",
-        contractDefaultCommission: Number(profileQuery.data.preferences?.contractDefaultCommission ?? 0)
+        notificationsEnabled: profileQuery.data.preferences?.notificationsEnabled ?? true,
+        pushNotificationsEnabled: profileQuery.data.preferences?.pushNotificationsEnabled ?? false,
+        contractDefaultCommission: Number(profileQuery.data.preferences?.contractDefaultCommission ?? 0),
+        smartMatching: normalizeSmartMatchingPreferences(
+          profileQuery.data.preferences?.smartMatching || profileQuery.data.preferences?.intelligentMatching
+        )
       });
     }
   }, [preferencesForm, profileForm, profileQuery.data]);
@@ -239,7 +249,10 @@ export const SettingsPage = () => {
         language: values.language,
         theme: values.theme ? "dark" : "light",
         currency: values.currency,
-        contractDefaultCommission: Number(values.contractDefaultCommission || 0)
+        notificationsEnabled: Boolean(values.notificationsEnabled),
+        pushNotificationsEnabled: Boolean(values.pushNotificationsEnabled),
+        contractDefaultCommission: Number(values.contractDefaultCommission || 0),
+        smartMatching: buildSmartMatchingPayload(values.smartMatching)
       });
 
       showSuccess("preferences.saved", {
@@ -249,6 +262,34 @@ export const SettingsPage = () => {
       });
     } catch (error) {
       showError(extractErrorMessage(error, t("messages", "errors.preferencesUpdate", "La mise a jour des parametres a echoue.")));
+    }
+  };
+
+  const handleCaptureSmartMatchingLocation = async () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      showError("La geolocalisation n'est pas disponible sur cet appareil.");
+      return;
+    }
+
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+      });
+
+      preferencesForm.setValue("smartMatching.location.enabled", true, { shouldDirty: true, shouldValidate: false });
+      preferencesForm.setValue("smartMatching.location.lat", Number(position.coords.latitude.toFixed(6)), { shouldDirty: true, shouldValidate: false });
+      preferencesForm.setValue("smartMatching.location.lng", Number(position.coords.longitude.toFixed(6)), { shouldDirty: true, shouldValidate: false });
+      preferencesForm.setValue(
+        "smartMatching.location.label",
+        `Lat ${position.coords.latitude.toFixed(4)}, Lng ${position.coords.longitude.toFixed(4)}`,
+        { shouldDirty: true, shouldValidate: false }
+      );
+      showSuccess("Position enregistree pour le matching intelligent.");
+    } catch (_error) {
+      showError("Impossible de recuperer votre position actuelle.");
     }
   };
 
@@ -388,6 +429,7 @@ export const SettingsPage = () => {
         onPreferencesSubmit={handlePreferencesSubmit}
         onAvatarUpload={handleAvatarUpload}
         onPasswordSubmit={handlePasswordSubmit}
+        onCaptureSmartMatchingLocation={handleCaptureSmartMatchingLocation}
         roleOptions={rolesQuery.data || []}
         currentRoleKey={currentRoleKey}
         currentRoleLabel={currentRoleLabel}

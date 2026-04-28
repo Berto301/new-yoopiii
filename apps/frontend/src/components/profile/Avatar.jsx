@@ -55,7 +55,7 @@ export const Avatar = ({
             onError={() => setImageErrored(true)}
           />
           {imageErrored ? (
-            <span className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-stone-700 to-stone-900 font-semibold uppercase tracking-[0.12em] text-stone-100">
+            <span className="absolute inset-0 flex items-center justify-center bg-stone-800 font-semibold uppercase tracking-[0.12em] text-stone-100">
               {initials}
             </span>
           ) : null}
