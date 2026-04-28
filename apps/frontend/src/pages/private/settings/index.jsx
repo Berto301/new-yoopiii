@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
+import { logoutSuccess } from "../../../app/store/session.store.js";
+import { performLogout } from "../../../features/auth/utils/logout.js";
 import { PERMISSION_IDS } from "../../../helpers/constants.js";
 import { hasPermission } from "../../../helpers/_functions.js";
 import { useNotification } from "../../../hooks/useNotification.js";
@@ -22,6 +25,7 @@ const normalizeText = (value) => (typeof value === "string" ? value.trim() : val
 
 export const SettingsPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const {
     user,
     profileQuery,
@@ -265,6 +269,11 @@ export const SettingsPage = () => {
     }
   };
 
+  const handleLogout = () => {
+    performLogout(dispatch, logoutSuccess);
+    navigate("/login", { replace: true });
+  };
+
   const handleCaptureSmartMatchingLocation = async () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       showError("La geolocalisation n'est pas disponible sur cet appareil.");
@@ -426,14 +435,15 @@ export const SettingsPage = () => {
         verifyTwoFactorMutation={verifyTwoFactorMutation}
         disableTwoFactorMutation={disableTwoFactorMutation}
         onProfileSubmit={handleProfileSubmit}
-        onPreferencesSubmit={handlePreferencesSubmit}
-        onAvatarUpload={handleAvatarUpload}
-        onPasswordSubmit={handlePasswordSubmit}
-        onCaptureSmartMatchingLocation={handleCaptureSmartMatchingLocation}
-        roleOptions={rolesQuery.data || []}
-        currentRoleKey={currentRoleKey}
-        currentRoleLabel={currentRoleLabel}
-        permissionDetails={currentPermissionDetails}
+              onPreferencesSubmit={handlePreferencesSubmit}
+              onAvatarUpload={handleAvatarUpload}
+              onPasswordSubmit={handlePasswordSubmit}
+              onCaptureSmartMatchingLocation={handleCaptureSmartMatchingLocation}
+              onLogout={handleLogout}
+              roleOptions={rolesQuery.data || []}
+              currentRoleKey={currentRoleKey}
+              currentRoleLabel={currentRoleLabel}
+              permissionDetails={currentPermissionDetails}
         roleMode={isAgencyWorkspace ? "select" : "input"}
       />
     ),

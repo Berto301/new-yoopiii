@@ -76,6 +76,7 @@ export const SectionProfile = ({
   onAvatarUpload,
   onPasswordSubmit,
   onCaptureSmartMatchingLocation,
+  onLogout,
   roleOptions = [],
   currentRoleKey = "",
   currentRoleLabel = "",
@@ -98,7 +99,8 @@ export const SectionProfile = ({
   const preferencesErrors = preferencesForm.formState.errors;
   const currentAvatar = profileForm.watch("avatar") || profile?.avatar || "";
   const canManageCommission = ["agency", "agency_agent", "independent_agent"].includes(profile?.role);
-  const isSimpleUserRole = profile?.role === "user";
+  const isSimpleUserRole = ["agency", "agency_agent", "independent_agent"].includes(profile?.role);
+  const isOwnerRole = profile?.role === "proprietaire";
   const smartMatchingEnabled = Boolean(preferencesForm.watch("smartMatching.enabled"));
   const smartMatchingLocationEnabled = Boolean(preferencesForm.watch("smartMatching.location.enabled"));
   const smartMatchingLocationLabel = preferencesForm.watch("smartMatching.location.label");
@@ -471,7 +473,7 @@ export const SectionProfile = ({
                 </div>
               </form>
             </Card>
-          ) : null}
+          ) : isOwnerRole ? <></> : null}
 
           {canManageCommission ? (
             <Card className="space-y-6">
@@ -530,6 +532,30 @@ export const SectionProfile = ({
                 </Button>
               </div>
             </form>
+          </Card>
+
+          <Card className="space-y-6">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-400">Informations personnelles</p>
+              <h3 className="text-xl font-semibold text-white">Deconexion du compte</h3>
+              <p className="text-sm text-stone-300">
+                Deconnectez-vous proprement de cet appareil si vous avez termine votre session.
+              </p>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white">Session active</p>
+                  <p className="mt-1 text-sm text-stone-400">
+                    Cette action ferme votre session locale et vous redirige vers la page de connexion.
+                  </p>
+                </div>
+                <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={onLogout}>
+                  Se deconnecter
+                </Button>
+              </div>
+            </div>
           </Card>
         </div>
       </div>

@@ -1,6 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#191617"/>
-  <rect x="72" y="72" width="368" height="368" rx="80" fill="#9d5d43"/>
-  <path d="M152 311.5 256 200l104 111.5" fill="none" stroke="#f7f9f8" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M186 277.5V356h140v-78.5" fill="none" stroke="#f7f9f8" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <rect x="64" y="64" width="384" height="384" rx="96" fill="#f7f9f8"/>
+  <image
+    x="104"
+    y="96"
+    width="304"
+    height="320"
+    preserveAspectRatio="xMidYMid meet"
+    href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAkCAYAAADo6zjiAAAABHNCSVQICAgIfAhkiAAAAYNJREFUWEftWEFOg1AQnfmNa71BvYH1BNZyAF0aUxYV3dMTWG/QA5SUhMaturctnkBv4gnKOE39yLetGX4gweSzgZDH/MebN/MHEL6P6XW3k7XUEgCP9L16zhQHyWKgY6O+iPxeyouf1bOoGTUjPL+bvfJ6vKIjIFGAAF6Q6ENjCTBEhMOisBKMxpdOQZDM81Stg0T93ggQ74sEJBhHwFoBtVqdDh7T3AOTvvfEHrgspkCCsSZQdW8obcIGEKBhRipPgYJszFVwYhKTYDZPlFZAUmISjLUHJMElmP9LgAhChVnuAfbDmMuwY7RiAcZagQZUQbUUSlfBVpfzvWfenS7+7IQ7MNYpkDhcgnEErBXgMuSc/0xEPEmGv6dnCcaaQLU1YLEXOAKNU2A9gt8m83wk23zWtd6lREt3wq3ARA/BbDEq3o98j3nJDkfAKWAoML3qHtMBtndNOfstRTG35tiYiEClMgsC6AnrJlm+If+Y+Kz/r8g+ajRkAvLykb6hGMfl/AU1Wr6bXzCQTgAAAABJRU5ErkJggg=="
+  />
 </svg>

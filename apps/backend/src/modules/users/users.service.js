@@ -6,6 +6,46 @@ import { User } from "./user.model.js";
 import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { RoleTemplate } from "../agencies/models/role-template.model.js";
 
+const DEFAULT_SMART_MATCHING = {
+  enabled: false,
+  budgetReal: null,
+  purpose: "",
+  propertyTypes: [],
+  location: {
+    enabled: false,
+    lat: null,
+    lng: null,
+    label: ""
+  },
+  searchRadiusKm: 5,
+  criteria: {
+    version: 1,
+    custom: {}
+  }
+};
+
+const normalizeSmartMatchingPreferences = (input) => {
+  const source = input && typeof input === "object" ? input : {};
+
+  return {
+    enabled: Boolean(source.enabled),
+    budgetReal: source.budgetReal == null || source.budgetReal === "" ? null : Number(source.budgetReal),
+    purpose: source.purpose || "",
+    propertyTypes: Array.isArray(source.propertyTypes) ? source.propertyTypes.filter(Boolean) : [],
+    location: {
+      enabled: Boolean(source.location?.enabled),
+      lat: source.location?.enabled && source.location?.lat != null ? Number(source.location.lat) : null,
+      lng: source.location?.enabled && source.location?.lng != null ? Number(source.location.lng) : null,
+      label: source.location?.enabled ? source.location?.label || "" : ""
+    },
+    searchRadiusKm: source.searchRadiusKm || DEFAULT_SMART_MATCHING.searchRadiusKm,
+    criteria: {
+      version: Number(source.criteria?.version || DEFAULT_SMART_MATCHING.criteria.version),
+      custom: source.criteria?.custom && typeof source.criteria.custom === "object" ? source.criteria.custom : {}
+    }
+  };
+};
+
 const resolveUserPermissions = async (user) => {
   if (user.role === "agency" && user.permissionId) {
     const roleTemplate = await RoleTemplate.findById(user.permissionId).lean();
@@ -121,53 +161,24 @@ export const updateMyPreferences = async ({ userId, payload }) => {
 
   const canManageCommission = ["agency", "agency_agent", "independent_agent"].includes(user.role);
   const normalizedSmartMatching = user.role === "user"
-    ? {
-        enabled: Boolean(payload.smartMatching?.enabled),
-        budgetReal: payload.smartMatching?.budgetReal == null ? null : Number(payload.smartMatching.budgetReal),
-        purpose: payload.smartMatching?.purpose || "",
-        propertyTypes: Array.isArray(payload.smartMatching?.propertyTypes) ? payload.smartMatching.propertyTypes : [],
-        location: {
-          enabled: Boolean(payload.smartMatching?.location?.enabled),
-          lat: payload.smartMatching?.location?.enabled ? payload.smartMatching?.location?.lat ?? null : null,
-          lng: payload.smartMatching?.location?.enabled ? payload.smartMatching?.location?.lng ?? null : null,
-          label: payload.smartMatching?.location?.enabled ? payload.smartMatching?.location?.label || "" : ""
-        },
-        searchRadiusKm: payload.smartMatching?.searchRadiusKm || 5,
-        criteria: {
-          version: Number(payload.smartMatching?.criteria?.version || 1),
-          custom: payload.smartMatching?.criteria?.custom || {}
-        }
-      }
-      : (user.preferences?.smartMatching || {
-        enabled: false,
-        budgetReal: null,
-        purpose: "",
-        propertyTypes: [],
-        location: {
-          enabled: false,
-          lat: null,
-          lng: null,
-          label: ""
-        },
-        searchRadiusKm: 5,
-        criteria: {
-          version: 1,
-          custom: {}
-        }
-      });
+    ? normalizeSmartMatchingPreferences(payload.smartMatching)
+    : normalizeSmartMatchingPreferences(user.preferences?.smartMatching || DEFAULT_SMART_MATCHING);
 
-  user.preferences = {
-    ...(user.preferences || {}),
-    notificationsEnabled: payload.notificationsEnabled ?? true,
-    pushNotificationsEnabled: user.role === "user" ? Boolean(payload.pushNotificationsEnabled) : Boolean(user.preferences?.pushNotificationsEnabled),
-    language: payload.language,
-    theme: payload.theme,
-    currency: payload.currency,
-    contractDefaultCommission: canManageCommission
-      ? payload.contractDefaultCommission
-      : Number(user.preferences?.contractDefaultCommission || 0),
-    smartMatching: normalizedSmartMatching
-  };
+  if (!user.preferences || typeof user.preferences !== "object") {
+    user.preferences = {};
+  }
+
+  user.preferences.notificationsEnabled = payload.notificationsEnabled ?? true;
+  user.preferences.pushNotificationsEnabled = user.role === "user"
+    ? Boolean(payload.pushNotificationsEnabled)
+    : Boolean(user.preferences?.pushNotificationsEnabled);
+  user.preferences.language = payload.language;
+  user.preferences.theme = payload.theme;
+  user.preferences.currency = payload.currency;
+  user.preferences.contractDefaultCommission = canManageCommission
+    ? payload.contractDefaultCommission
+    : Number(user.preferences?.contractDefaultCommission || 0);
+  user.preferences.smartMatching = normalizedSmartMatching;
 
   await user.save();
 
