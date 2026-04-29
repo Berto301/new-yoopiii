@@ -5,9 +5,12 @@ export default defineConfig({
   plugins: [react()],
   envPrefix: ["VITE_", "GOOGLE_"],
   envDir: "../../",
+  resolve: {
+    dedupe: ["react", "react-dom"]
+  },
   optimizeDeps: {
     force: true,
-    include: ["three", "three/examples/jsm/controls/OrbitControls.js"]
+    include: ["react", "react-dom", "react/jsx-runtime", "three", "three/examples/jsm/controls/OrbitControls.js"]
   },
   server: {
     host: "0.0.0.0",

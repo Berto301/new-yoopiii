@@ -3,8 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
-import { ThreeDPropertyViewer } from "../../features/properties/components/ThreeDPropertyViewer.jsx";
-import { getPropertyThreeDStatusMeta } from "../../features/properties/property-3d.js";
+import { getPropertyThreeDStatusMeta, hasPropertyThreeDLink } from "../../features/properties/property-3d.js";
 import { getPropertyThreeDDetail } from "../../features/properties/services/property.service.js";
 
 const PropertyThreeDViewerSkeleton = () => (
@@ -51,11 +50,11 @@ export const PropertyThreeDViewerPage = () => {
   }
 
   const threeDStatus = getPropertyThreeDStatusMeta({
-    is3DEnabled: property.is3DEnabled ?? property.has3DView,
-    status: property.threeDStatus
+    is3DEnabled: hasPropertyThreeDLink(property),
+    status: hasPropertyThreeDLink(property) ? "generated" : null
   });
 
-  if (!(property.is3DEnabled ?? property.has3DView) || !property.threeDUrl) {
+  if (!hasPropertyThreeDLink(property)) {
     return (
       <section className="mx-auto max-w-5xl px-6 py-16">
         <Card className="rounded-[2rem] border-white/10 bg-white/[0.04]">
@@ -63,9 +62,9 @@ export const PropertyThreeDViewerPage = () => {
             <Badge className={threeDStatus.className}>{threeDStatus.label}</Badge>
             <Badge className="border-white/10 bg-white/5 text-stone-200">{property.title}</Badge>
           </div>
-          <h1 className="mt-4 font-serif text-4xl text-white">Visite 3D non generee</h1>
+          <h1 className="mt-4 font-serif text-4xl text-white">Aucun lien de visite 3D</h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-300">
-            La visite 3D n&apos;est pas encore disponible pour ce bien. Revenez plus tard ou consultez la fiche detail.
+            Aucun lien externe de visite 3D ou de video immersive n&apos;est rattache a ce bien.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button as={Link} to={`/properties/${property.slug || property.id}`} variant="secondary">
@@ -85,9 +84,7 @@ export const PropertyThreeDViewerPage = () => {
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <Badge className={threeDStatus.className}>{threeDStatus.label}</Badge>
-          <Badge className="border-white/10 bg-white/5 text-stone-200">
-            {property.threeDSourceMedia?.length || 0} medias relies
-          </Badge>
+          <Badge className="border-white/10 bg-white/5 text-stone-200">Lien externe</Badge>
         </div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
@@ -96,6 +93,9 @@ export const PropertyThreeDViewerPage = () => {
             <p className="max-w-3xl text-sm leading-7 text-stone-300">{property.address}</p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <Button as="a" href={property.threeDUrl} target="_blank" rel="noreferrer">
+              Ouvrir la visite 3D
+            </Button>
             <Button as={Link} to={`/properties/${property.slug || property.id}`} variant="secondary">
               Retour a l'annonce
             </Button>
@@ -103,12 +103,11 @@ export const PropertyThreeDViewerPage = () => {
         </div>
       </div>
 
-      <ThreeDPropertyViewer property={property} />
-
       <Card className="rounded-[2rem] border-white/10 bg-white/[0.04]">
-        <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Mode d'exploration</p>
+        <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Lien de visite</p>
+        <p className="mt-4 break-all text-sm leading-7 text-stone-300">{property.threeDUrl}</p>
         <p className="mt-4 max-w-4xl text-sm leading-7 text-stone-300">
-          Cette visite 3D est construite automatiquement a partir des medias du bien, avec priorite aux fichiers televerses, puis aux images disponibles et enfin a la couverture en secours.
+          La visite est deja hebergee sur une plateforme externe. Yopii affiche simplement le lien rattache au bien.
         </p>
       </Card>
     </section>

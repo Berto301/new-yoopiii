@@ -7,6 +7,7 @@ import { Badge } from "../../components/ui/Badge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
+import { hasPropertyThreeDLink } from "../../features/properties/property-3d.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 
 const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
@@ -35,7 +36,7 @@ export const FavoritesPage = () => {
 
   const metrics = useMemo(() => {
     const reserved = items.filter((item) => item.status === "reserved").length;
-    const with3D = items.filter((item) => item.is3DEnabled ?? item.has3DView).length;
+    const with3D = items.filter(hasPropertyThreeDLink).length;
     const averageBudget = items.length ? Math.round(items.reduce((sum, item) => sum + (item.price || 0), 0) / items.length) : 0;
 
     return [
@@ -105,7 +106,7 @@ export const FavoritesPage = () => {
                     <div className="min-w-0 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="break-words text-2xl font-semibold text-white">{property.title}</h2>
-                        {(property.is3DEnabled ?? property.has3DView) ? <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">Visite 3D</Badge> : null}
+                        {hasPropertyThreeDLink(property) ? <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">Visite 3D</Badge> : null}
                       </div>
                       <p className="max-w-3xl break-words text-sm leading-6 text-stone-300">{property.description || "Aucune description detaillee n'est disponible pour ce bien."}</p>
                     </div>

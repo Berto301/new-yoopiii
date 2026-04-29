@@ -15,6 +15,7 @@ import { SMART_MATCHING_PROPERTY_TYPE_OPTIONS } from "../../features/matching/ma
 import { buildDefaultPublicationFilters } from "../../features/matching/matching.utils.js";
 import { ModalViewDetail } from "../../features/properties/components/ModalViewDetail.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
+import { hasPropertyThreeDLink } from "../../features/properties/property-3d.js";
 import { SettingsTabButton } from "./settings/SettingsTabButton.jsx";
 
 const DEFAULT_SEARCH_CENTER = { lat: -19.872006, lng: 47.03961 };
@@ -169,7 +170,7 @@ const PublicationCard = ({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-2xl font-semibold text-white">{property.title}</h3>
-              {(property.is3DEnabled ?? property.has3DView) ? <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">3D</Badge> : null}
+              {hasPropertyThreeDLink(property) ? <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">3D</Badge> : null}
             </div>
             <p className="mt-2 text-sm leading-6 text-stone-300">{property.description}</p>
           </div>

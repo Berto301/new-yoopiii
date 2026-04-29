@@ -256,17 +256,18 @@ test("proprietaire keeps visibility and can create a property without contract a
   assert.equal(listResponse.body.data.items.length, 1);
 });
 
-test("3D generation stores status, full URL and selected source media for an enabled property", async () => {
+test("3D tour stores only an external pre-generated link", async () => {
   const owner = await createUser({ firstName: "Owner", role: "proprietaire" });
   const token = signAccessToken(owner);
   const app = createApp();
+  const threeDUrl = "https://www.youtube.com/watch?v=visite-yopii-3d";
 
   const createResponse = await request(app)
     .post("/api/v1/properties/management")
     .set("Authorization", `Bearer ${token}`)
     .send({
       title: "Bien visite 3D",
-      description: "Bien avec medias suffisants pour generer une visite 3D exploitable.",
+      description: "Bien avec une visite 3D deja preparee sur une plateforme externe.",
       type: "house",
       purpose: "sale",
       price: 175000000,
@@ -293,13 +294,18 @@ test("3D generation stores status, full URL and selected source media for an ena
           order: 1
         }
       ],
-      is3DEnabled: true
+      is3DEnabled: true,
+      has3DView: true,
+      threeDUrl
     });
 
   assert.equal(createResponse.statusCode, 201);
   assert.equal(createResponse.body.data.is3DEnabled, true);
-  assert.equal(createResponse.body.data.threeDStatus, "pending");
-  assert.equal(createResponse.body.data.threeDUrl, null);
+  assert.equal(createResponse.body.data.has3DView, true);
+  assert.equal(createResponse.body.data.threeDStatus, "generated");
+  assert.equal(createResponse.body.data.threeDUrl, threeDUrl);
+  assert.equal(createResponse.body.data.threeDGeneratedAt, null);
+  assert.deepEqual(createResponse.body.data.threeDSourceMedia, []);
 
   const propertyId = createResponse.body.data.id;
 
@@ -308,22 +314,15 @@ test("3D generation stores status, full URL and selected source media for an ena
     .set("Authorization", `Bearer ${token}`)
     .send({ force: true });
 
-  assert.equal(generationResponse.statusCode, 200);
-  assert.equal(generationResponse.body.data.is3DEnabled, true);
-  assert.equal(generationResponse.body.data.has3DView, true);
-  assert.equal(generationResponse.body.data.threeDStatus, "generated");
-  assert.match(generationResponse.body.data.threeDUrl, /http:\/\/localhost:5173\/properties\/.+\/3d-tour$/);
-  assert.ok(generationResponse.body.data.threeDGeneratedAt);
-  assert.ok(Array.isArray(generationResponse.body.data.threeDSourceMedia));
-  assert.equal(generationResponse.body.data.threeDSourceMedia.length >= 1, true);
-  assert.equal(generationResponse.body.data.threeDSourceMedia[0].origin, "uploaded_media");
+  assert.equal(generationResponse.statusCode, 404);
 
   const storedProperty = await Property.findById(propertyId).lean();
   assert.equal(storedProperty.is3DEnabled, true);
   assert.equal(storedProperty.has3DView, true);
   assert.equal(storedProperty.threeDStatus, "generated");
-  assert.ok(storedProperty.threeDGeneratedAt instanceof Date);
-  assert.equal(storedProperty.threeDSourceMedia.length >= 1, true);
+  assert.equal(storedProperty.threeDUrl, threeDUrl);
+  assert.equal(storedProperty.threeDGeneratedAt, null);
+  assert.deepEqual(storedProperty.threeDSourceMedia, []);
 });
 
 test("owner deleting a contract keeps linked properties and detaches them", async () => {

@@ -29,11 +29,6 @@ export const updateManagedProperty = async ({ propertyId, payload }) => {
   return response.data.data;
 };
 
-export const generateManagedPropertyThreeD = async ({ propertyId, force = false }) => {
-  const response = await apiClient.post(`/properties/management/${propertyId}/three-d/generate`, { force });
-  return response.data.data;
-};
-
 export const duplicateManagedProperty = async ({ propertyId, payload = {} }) => {
   const response = await apiClient.post(`/properties/management/${propertyId}/duplicate`, payload);
   return response.data.data;

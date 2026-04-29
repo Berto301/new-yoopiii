@@ -11,6 +11,8 @@ import { useSharedGoogleMapsLoader } from "../../lib/utils/google-maps.js";
 import { formatParticipantName, isAgentRole } from "./appointment.utils.js";
 
 const DEFAULT_MAP_CENTER = { lat: -19.872006, lng: 47.03961 };
+const EARTH_RADIUS_METERS = 6371000;
+const MEETING_DISTANCE_THRESHOLD_METERS = 20;
 
 const mapOptions = {
   disableDefaultUI: true,
@@ -85,6 +87,56 @@ const toLatLngLiteral = (position) => ({
 
 const formatCoordinate = (value) => Number(value || 0).toFixed(5);
 
+const toRadians = (value) => (Number(value) * Math.PI) / 180;
+
+const getDistanceInMeters = (firstPosition, secondPosition) => {
+  if (!firstPosition || !secondPosition) {
+    return null;
+  }
+
+  const deltaLat = toRadians(secondPosition.lat - firstPosition.lat);
+  const deltaLng = toRadians(secondPosition.lng - firstPosition.lng);
+  const firstLat = toRadians(firstPosition.lat);
+  const secondLat = toRadians(secondPosition.lat);
+  const haversine =
+    Math.sin(deltaLat / 2) ** 2
+    + Math.cos(firstLat) * Math.cos(secondLat) * Math.sin(deltaLng / 2) ** 2;
+
+  return 2 * EARTH_RADIUS_METERS * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+};
+
+const arePositionsClose = (firstPosition, secondPosition, thresholdMeters = 1) => {
+  const distanceMeters = getDistanceInMeters(firstPosition, secondPosition);
+  return distanceMeters != null && distanceMeters <= thresholdMeters;
+};
+
+const shouldKeepPreviousPosition = (previousPosition, nextPosition) => {
+  if (!previousPosition || !nextPosition || previousPosition.source !== nextPosition.source) {
+    return false;
+  }
+
+  const previousAccuracy = previousPosition.accuracy ?? 0;
+  const nextAccuracy = nextPosition.accuracy ?? 0;
+
+  return arePositionsClose(previousPosition, nextPosition) && Math.abs(previousAccuracy - nextAccuracy) <= 1;
+};
+
+const formatDistanceMeters = (value) => {
+  if (value == null) {
+    return "-";
+  }
+
+  if (value < 1) {
+    return "0 m";
+  }
+
+  if (value < 1000) {
+    return `${Math.round(value)} m`;
+  }
+
+  return `${(value / 1000).toFixed(1).replace(".", ",")} km`;
+};
+
 const getRouteSummary = (directions) => {
   const leg = directions?.routes?.[0]?.legs?.[0];
 
@@ -143,6 +195,63 @@ const PositionMarker = ({ profile, position, label, tone = "brand" }) => {
   );
 };
 
+const MeetingAnnouncement = ({ currentUser, participant, distanceLabel, t }) => {
+  const currentUserName = formatParticipantName(currentUser);
+  const participantName = formatParticipantName(participant);
+
+  return (
+    <div className="overflow-hidden rounded-[1.6rem] border border-emerald-300/30 bg-emerald-500/10 shadow-[0_22px_70px_rgba(6,95,70,0.18)]">
+      <div className="relative p-5 sm:p-6">
+        <div className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-emerald-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 left-8 h-48 w-48 rounded-full bg-brand-300/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex -space-x-3">
+              <div className="rounded-full border-2 border-emerald-100/80 bg-stone-950 p-1">
+                <Avatar
+                  src={currentUser?.avatar}
+                  alt={`Photo de ${currentUserName}`}
+                  name={currentUserName}
+                  size="sm"
+                  variant="message"
+                  type={isAgentRole(currentUser?.role) ? "agent" : "user"}
+                />
+              </div>
+              <div className="rounded-full border-2 border-emerald-100/80 bg-stone-950 p-1">
+                <Avatar
+                  src={participant?.avatar}
+                  alt={`Photo de ${participantName}`}
+                  name={participantName}
+                  size="sm"
+                  variant="message"
+                  type={isAgentRole(participant?.role) ? "agent" : "user"}
+                />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-100">
+                {t("private", "messages.positions.meeting.eyebrow", "Point de rencontre confirme")}
+              </p>
+              <h3 className="mt-2 text-xl font-semibold text-white">
+                {t("private", "messages.positions.meeting.title", "Vous vous etes retrouves.")}
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50/85">
+                {currentUserName} {t("private", "messages.positions.meeting.connector", "et")} {participantName} {t("private", "messages.positions.meeting.description", "sont au meme endroit. L'itineraire est mis en pause parce que la distance restante est deja couverte.")}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-emerald-200/20 bg-black/20 px-5 py-4 text-left lg:text-right">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-100/80">
+              {t("private", "messages.positions.meeting.distance", "Ecart estime")}
+            </p>
+            <p className="mt-1 text-2xl font-semibold text-white">{distanceLabel}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ModalShowPositions = ({
   open,
   conversationId,
@@ -154,6 +263,8 @@ export const ModalShowPositions = ({
   const { googleMapsApiKey, isLoaded: isMapsLoaded, loadError } = useSharedGoogleMapsLoader();
   const mapRef = useRef(null);
   const directionsServiceRef = useRef(null);
+  const directionsRequestIdRef = useRef(0);
+  const hasMetParticipantRef = useRef(false);
   const [currentUserPosition, setCurrentUserPosition] = useState(null);
   const [participantPosition, setParticipantPosition] = useState(null);
   const [positionError, setPositionError] = useState("");
@@ -170,6 +281,26 @@ export const ModalShowPositions = ({
   const currentUserName = formatParticipantName(currentUser);
   const participantName = formatParticipantName(participant);
   const routeSummary = useMemo(() => getRouteSummary(directions), [directions]);
+  const meetingProximity = useMemo(() => {
+    const distanceMeters = getDistanceInMeters(currentUserPosition, participantPosition);
+
+    if (distanceMeters == null) {
+      return null;
+    }
+
+    return {
+      distanceMeters,
+      isMeeting: distanceMeters <= MEETING_DISTANCE_THRESHOLD_METERS
+    };
+  }, [
+    currentUserPosition?.lat,
+    currentUserPosition?.lng,
+    participantPosition?.lat,
+    participantPosition?.lng
+  ]);
+  const hasMetParticipant = Boolean(meetingProximity?.isMeeting);
+  const meetingDistanceLabel = formatDistanceMeters(meetingProximity?.distanceMeters);
+  const visibleDirectionsError = hasMetParticipant ? "" : directionsError;
 
   const travelModeOptions = useMemo(() => ([
     { label: t("private", "messages.positions.travelModes.driving", "Voiture"), value: "DRIVING" },
@@ -177,6 +308,17 @@ export const ModalShowPositions = ({
     { label: t("private", "messages.positions.travelModes.bicycling", "Velo"), value: "BICYCLING" },
     { label: t("private", "messages.positions.travelModes.transit", "Transport"), value: "TRANSIT" }
   ]), [t]);
+
+  useEffect(() => {
+    hasMetParticipantRef.current = hasMetParticipant;
+
+    if (hasMetParticipant) {
+      directionsRequestIdRef.current += 1;
+      setDirections(null);
+      setDirectionsError("");
+      setIsCalculatingDirections(false);
+    }
+  }, [hasMetParticipant]);
 
   useEffect(() => {
     if (!open) {
@@ -216,7 +358,11 @@ export const ModalShowPositions = ({
           return;
         }
 
-        setCurrentUserPosition(nextPosition);
+        setCurrentUserPosition((previousPosition) =>
+          shouldKeepPreviousPosition(previousPosition, nextPosition)
+            ? previousPosition
+            : nextPosition
+        );
         setPositionError("");
       },
       (error) => {
@@ -293,7 +439,11 @@ export const ModalShowPositions = ({
       const nextPosition = normalizePosition(payload.position, "socket");
 
       if (nextPosition) {
-        setParticipantPosition(nextPosition);
+        setParticipantPosition((previousPosition) =>
+          shouldKeepPreviousPosition(previousPosition, nextPosition)
+            ? previousPosition
+            : nextPosition
+        );
       }
     };
 
@@ -337,22 +487,41 @@ export const ModalShowPositions = ({
       return;
     }
 
+    if (hasMetParticipant) {
+      mapRef.current.panTo(toLatLngLiteral(currentUserPosition));
+      mapRef.current.setZoom(17);
+      return;
+    }
+
     const bounds = new window.google.maps.LatLngBounds();
     visiblePositions.forEach((position) => bounds.extend(toLatLngLiteral(position)));
     mapRef.current.fitBounds(bounds, 80);
   }, [
     currentUserPosition?.lat,
     currentUserPosition?.lng,
+    hasMetParticipant,
     participantPosition?.lat,
     participantPosition?.lng
   ]);
 
   useEffect(() => {
     if (!open || !isMapsLoaded || !window.google?.maps || !currentUserPosition || !participantPosition) {
+      directionsRequestIdRef.current += 1;
       setDirections(null);
       setIsCalculatingDirections(false);
       return undefined;
     }
+
+    if (hasMetParticipant) {
+      directionsRequestIdRef.current += 1;
+      setDirections(null);
+      setDirectionsError("");
+      setIsCalculatingDirections(false);
+      return undefined;
+    }
+
+    const requestId = directionsRequestIdRef.current + 1;
+    directionsRequestIdRef.current = requestId;
 
     let isCancelled = false;
     setIsCalculatingDirections(true);
@@ -372,7 +541,7 @@ export const ModalShowPositions = ({
         avoidTolls
       },
       (result, status) => {
-        if (isCancelled) {
+        if (isCancelled || directionsRequestIdRef.current !== requestId || hasMetParticipantRef.current) {
           return;
         }
 
@@ -396,10 +565,13 @@ export const ModalShowPositions = ({
     avoidFerries,
     avoidHighways,
     avoidTolls,
-    currentUserPosition,
+    currentUserPosition?.lat,
+    currentUserPosition?.lng,
+    hasMetParticipant,
     isMapsLoaded,
     open,
-    participantPosition,
+    participantPosition?.lat,
+    participantPosition?.lng,
     t,
     travelMode
   ]);
@@ -457,14 +629,23 @@ export const ModalShowPositions = ({
           <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:w-[320px]">
             <div className="rounded-2xl border border-white/10 bg-brand-500/15 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400">{t("private", "messages.positions.labels.distance", "Distance")}</p>
-              <p className="mt-2 text-2xl font-semibold text-white">{routeSummary?.distance || "-"}</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{hasMetParticipant ? meetingDistanceLabel : routeSummary?.distance || "-"}</p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-sky-500/10 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400">{t("private", "messages.positions.labels.duration", "Duree")}</p>
-              <p className="mt-2 text-2xl font-semibold text-white">{routeSummary?.duration || "-"}</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{hasMetParticipant ? t("private", "messages.positions.status.arrived", "Arrive") : routeSummary?.duration || "-"}</p>
             </div>
           </div>
         </div>
+
+        {hasMetParticipant ? (
+          <MeetingAnnouncement
+            currentUser={currentUser}
+            participant={participant}
+            distanceLabel={meetingDistanceLabel}
+            t={t}
+          />
+        ) : null}
 
         <div className="sticky top-0 z-20 rounded-2xl border border-white/10 bg-stone-950/95 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur">
           <div className="grid gap-4 xl:grid-cols-[220px_1fr] xl:items-end">
@@ -568,20 +749,25 @@ export const ModalShowPositions = ({
                   {t("private", "messages.positions.status.calculating", "Calcul itineraire...")}
                 </div>
               ) : null}
-            </div>
-          )}
+              {hasMetParticipant ? (
+                <div className="absolute left-4 top-4 max-w-[calc(100%-2rem)] rounded-2xl border border-emerald-200/30 bg-emerald-950/90 px-4 py-3 text-sm font-semibold text-emerald-50 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur">
+                  {t("private", "messages.positions.meeting.mapBadge", "Position commune detectee: rencontre confirmee.")}
+                </div>
+              ) : null}
+              </div>
+            )}
         </div>
 
-        {(positionError || directionsError) ? (
+        {(positionError || visibleDirectionsError) ? (
           <div className="grid gap-3 md:grid-cols-2">
             {positionError ? (
               <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
                 {positionError}
               </div>
             ) : null}
-            {directionsError ? (
+            {visibleDirectionsError ? (
               <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm leading-6 text-red-100">
-                {directionsError}
+                {visibleDirectionsError}
               </div>
             ) : null}
           </div>

@@ -12,8 +12,6 @@ import { PropertyFavorite } from "./models/property-favorite.model.js";
 import { PropertyView } from "./models/property-view.model.js";
 import { Property } from "./property.model.js";
 import {
-  buildPropertyThreeDSourceMedia,
-  buildPropertyThreeDUrl,
   PROPERTY_THREE_D_STATUSES,
   resolvePropertyThreeDState
 } from "./properties.3d.service.js";
@@ -31,6 +29,7 @@ const slugify = (value) =>
     .slice(0, 80);
 
 const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const hasThreeDLink = (property) => Boolean(String(property?.threeDUrl || "").trim());
 
 const ensureUniqueSlug = async (baseValue, excludedId = null) => {
   const baseSlug = slugify(baseValue) || `property-${Date.now()}`;
@@ -182,64 +181,69 @@ const buildMapMarker = (property) => ({
   label: `${property.price} ${property.currency}`
 });
 
-const mapPropertyListItem = (property, favoriteIds = new Set()) => ({
-  id: String(property._id || property.id),
-  title: property.title,
-  slug: property.slug,
-  description: property.description,
-  type: property.type,
-  purpose: property.purpose,
-  price: property.price,
-  currency: property.currency,
-  area: property.area,
-  rooms: property.rooms,
-  bedrooms: property.bedrooms,
-  bathrooms: property.bathrooms,
-  features: property.features || [],
-  address: property.address,
-  location: property.location,
-  coverImage: property.coverImage,
-  media: property.media || [],
-  is3DEnabled: property.is3DEnabled ?? property.has3DView,
-  has3DView: property.is3DEnabled ?? property.has3DView,
-  threeDUrl: property.threeDUrl,
-  threeDStatus: property.threeDStatus || null,
-  threeDGeneratedAt: property.threeDGeneratedAt || null,
-  threeDSourceMedia: property.threeDSourceMedia || [],
-  status: property.status,
-  publicationStatus: property.publicationStatus,
-  averageRating: property.averageRating,
-  favoriteCount: property.favoriteCount || 0,
-  agentId: property.agentId?._id ? String(property.agentId._id) : property.agentId,
-  agentName:
-    property.agentName ||
-    [property.agentId?.firstName, property.agentId?.lastName].filter(Boolean).join(" ").trim() ||
-    "Agent",
-  agentAvatar: property.agentAvatar || property.agentId?.avatar || null,
-  agencyId: property.agencyId?._id ? String(property.agencyId._id) : property.agencyId,
-  agencyName: property.agencyName || property.agencyId?.name || null,
-  ownerType: property.ownerType,
-  ownerUserId: property.ownerUserId?._id ? String(property.ownerUserId._id) : property.ownerUserId || null,
-  ownerName:
-    property.ownerName ||
-    [property.ownerUserId?.firstName, property.ownerUserId?.lastName].filter(Boolean).join(" ").trim() ||
-    "",
-  ownerAvatar: property.ownerAvatar || property.ownerUserId?.avatar || null,
-  ownerPhone: property.ownerPhone || property.ownerUserId?.phone || "",
-  ownerEmail: property.ownerEmail || property.ownerUserId?.email || "",
-  publicationOwnerDisplay: property.publicationOwnerDisplay || null,
-  isUnderMaintenance: Boolean(property.isUnderMaintenance),
-  managementContractId: property.managementContractId?._id ? String(property.managementContractId._id) : property.managementContractId || null,
-  reservedByUserId: property.reservedByUserId?._id ? String(property.reservedByUserId._id) : property.reservedByUserId || null,
-  reservedAt: property.reservedAt || null,
-  distanceInMeters: property.distanceInMeters ?? null,
-  distanceInKm: property.distanceInKm ?? null,
-  isFavorite: favoriteIds.has(String(property._id)),
-  isReserved: property.status === "reserved",
-  mapMarker: buildMapMarker(property),
-  createdAt: property.createdAt,
-  updatedAt: property.updatedAt
-});
+const mapPropertyListItem = (property, favoriteIds = new Set()) => {
+  const propertyHasThreeDLink = hasThreeDLink(property);
+  const threeDUrl = propertyHasThreeDLink ? String(property.threeDUrl).trim() : null;
+
+  return {
+    id: String(property._id || property.id),
+    title: property.title,
+    slug: property.slug,
+    description: property.description,
+    type: property.type,
+    purpose: property.purpose,
+    price: property.price,
+    currency: property.currency,
+    area: property.area,
+    rooms: property.rooms,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    features: property.features || [],
+    address: property.address,
+    location: property.location,
+    coverImage: property.coverImage,
+    media: property.media || [],
+    is3DEnabled: propertyHasThreeDLink,
+    has3DView: propertyHasThreeDLink,
+    threeDUrl,
+    threeDStatus: propertyHasThreeDLink ? PROPERTY_THREE_D_STATUSES.GENERATED : null,
+    threeDGeneratedAt: propertyHasThreeDLink ? property.threeDGeneratedAt || null : null,
+    threeDSourceMedia: [],
+    status: property.status,
+    publicationStatus: property.publicationStatus,
+    averageRating: property.averageRating,
+    favoriteCount: property.favoriteCount || 0,
+    agentId: property.agentId?._id ? String(property.agentId._id) : property.agentId,
+    agentName:
+      property.agentName ||
+      [property.agentId?.firstName, property.agentId?.lastName].filter(Boolean).join(" ").trim() ||
+      "Agent",
+    agentAvatar: property.agentAvatar || property.agentId?.avatar || null,
+    agencyId: property.agencyId?._id ? String(property.agencyId._id) : property.agencyId,
+    agencyName: property.agencyName || property.agencyId?.name || null,
+    ownerType: property.ownerType,
+    ownerUserId: property.ownerUserId?._id ? String(property.ownerUserId._id) : property.ownerUserId || null,
+    ownerName:
+      property.ownerName ||
+      [property.ownerUserId?.firstName, property.ownerUserId?.lastName].filter(Boolean).join(" ").trim() ||
+      "",
+    ownerAvatar: property.ownerAvatar || property.ownerUserId?.avatar || null,
+    ownerPhone: property.ownerPhone || property.ownerUserId?.phone || "",
+    ownerEmail: property.ownerEmail || property.ownerUserId?.email || "",
+    publicationOwnerDisplay: property.publicationOwnerDisplay || null,
+    isUnderMaintenance: Boolean(property.isUnderMaintenance),
+    managementContractId: property.managementContractId?._id ? String(property.managementContractId._id) : property.managementContractId || null,
+    reservedByUserId: property.reservedByUserId?._id ? String(property.reservedByUserId._id) : property.reservedByUserId || null,
+    reservedAt: property.reservedAt || null,
+    distanceInMeters: property.distanceInMeters ?? null,
+    distanceInKm: property.distanceInKm ?? null,
+    isFavorite: favoriteIds.has(String(property._id)),
+    isReserved: property.status === "reserved",
+    mapMarker: buildMapMarker(property),
+    createdAt: property.createdAt,
+    updatedAt: property.updatedAt
+  };
+};
 
 const buildPagination = ({ page, limit, total, itemsLength }) => ({
   page,
@@ -507,8 +511,10 @@ const buildManagedPropertyPayload = async ({ actor, payload, existingProperty = 
     duplicate && nextThreeDState.is3DEnabled
       ? {
           ...nextThreeDState,
+          is3DEnabled: false,
+          has3DView: false,
           threeDUrl: null,
-          threeDStatus: PROPERTY_THREE_D_STATUSES.PENDING,
+          threeDStatus: null,
           threeDGeneratedAt: null,
           threeDSourceMedia: []
         }
@@ -920,51 +926,6 @@ export const updateManagedProperty = async ({ propertyId, actor, payload }) => {
   if (previousStatus !== property.status || previousPublicationStatus !== property.publicationStatus) {
     await createPropertyWorkflowNotifications({ property, actor, previousStatus, previousPublicationStatus, eventType: "property_updated" });
   }
-
-  return mapPropertyListItem(property.toObject());
-};
-
-export const generateManagedPropertyThreeDView = async ({ propertyId, actor, force = false }) => {
-  const property = await ensurePropertyExists(propertyId);
-  await ensurePropertyManagementAccess(property, actor, "edit");
-
-  if (!(property.is3DEnabled ?? property.has3DView)) {
-    throw new AppError("La visite 3D doit d'abord etre activee sur ce bien.", StatusCodes.BAD_REQUEST);
-  }
-
-  if (!force && property.threeDStatus === PROPERTY_THREE_D_STATUSES.GENERATED && property.threeDUrl) {
-    return mapPropertyListItem(property.toObject());
-  }
-
-  property.is3DEnabled = true;
-  property.has3DView = true;
-  property.threeDStatus = PROPERTY_THREE_D_STATUSES.PROCESSING;
-  await property.save();
-
-  const selectedSources = buildPropertyThreeDSourceMedia(property);
-
-  if (!selectedSources.length) {
-    property.threeDStatus = PROPERTY_THREE_D_STATUSES.ERROR;
-    property.threeDUrl = null;
-    property.threeDGeneratedAt = null;
-    property.threeDSourceMedia = [];
-    await property.save();
-    throw new AppError("Impossible de generer la visite 3D sans image ou couverture exploitable.", StatusCodes.BAD_REQUEST);
-  }
-
-  property.threeDSourceMedia = selectedSources;
-  property.threeDUrl = buildPropertyThreeDUrl(property);
-  property.threeDGeneratedAt = new Date();
-  property.threeDStatus = PROPERTY_THREE_D_STATUSES.GENERATED;
-  await property.save();
-
-  await createPropertyActivityNotification({
-    property,
-    actor,
-    type: "property.3d.generated",
-    title: `Visite 3D generee pour ${property.title}`,
-    body: `La visite 3D du bien ${property.title} a ete preparee automatiquement a partir des medias disponibles.`
-  });
 
   return mapPropertyListItem(property.toObject());
 };

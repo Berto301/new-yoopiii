@@ -102,11 +102,7 @@ const mapPropertyToFormValues = (property, defaultCurrency = "USD") => ({
   googlePlaceId: property?.googlePlaceId || "",
   location: buildCoordinateState(property),
   coverImage: property?.coverImage || "",
-  is3DEnabled: Boolean(property?.is3DEnabled ?? property?.has3DView),
-  has3DView: Boolean(property?.is3DEnabled ?? property?.has3DView),
   threeDUrl: property?.threeDUrl || "",
-  threeDStatus: property?.threeDStatus || null,
-  threeDGeneratedAt: property?.threeDGeneratedAt || null,
   media: (property?.media || []).length
     ? property.media.map((item) => ({
         type: mediaTypeOptions.find((option) => option.value === item.type) || mediaTypeOptions[0],
@@ -116,36 +112,44 @@ const mapPropertyToFormValues = (property, defaultCurrency = "USD") => ({
     : [{ type: mediaTypeOptions[0], url: "", thumbnailUrl: "" }]
 });
 
-const normalizePayload = (values) => ({
-  title: values.title,
-  description: values.description,
-  type: values.type.value,
-  purpose: values.purpose.value,
-  price: Number(values.price || 0),
-  currency: values.currency.trim().toUpperCase(),
-  area: Number(values.area || 0),
-  rooms: Number(values.rooms || 0),
-  bedrooms: Number(values.bedrooms || 0),
-  bathrooms: Number(values.bathrooms || 0),
-  features: values.features.map((item) => item.value),
-  address: values.address,
-  location: {
-    lat: Number(values.location.lat || 0),
-    lng: Number(values.location.lng || 0),
-    placeId: values.googlePlaceId || null
-  },
-  coverImage: values.coverImage || null,
-  is3DEnabled: Boolean(values.is3DEnabled ?? values.has3DView),
-  has3DView: Boolean(values.is3DEnabled ?? values.has3DView),
-  media: values.media
-    .filter((item) => item.url)
-    .map((item, index) => ({
-      type: item.type.value,
-      url: item.url,
-      thumbnailUrl: item.thumbnailUrl || null,
-      order: index
-    }))
-});
+const normalizePayload = (values) => {
+  const threeDUrl = String(values.threeDUrl || "").trim();
+
+  return {
+    title: values.title,
+    description: values.description,
+    type: values.type.value,
+    purpose: values.purpose.value,
+    price: Number(values.price || 0),
+    currency: values.currency.trim().toUpperCase(),
+    area: Number(values.area || 0),
+    rooms: Number(values.rooms || 0),
+    bedrooms: Number(values.bedrooms || 0),
+    bathrooms: Number(values.bathrooms || 0),
+    features: values.features.map((item) => item.value),
+    address: values.address,
+    location: {
+      lat: Number(values.location.lat || 0),
+      lng: Number(values.location.lng || 0),
+      placeId: values.googlePlaceId || null
+    },
+    coverImage: values.coverImage || null,
+    is3DEnabled: Boolean(threeDUrl),
+    has3DView: Boolean(threeDUrl),
+    threeDUrl: threeDUrl || null,
+    threeDStatus: threeDUrl ? "generated" : null,
+    threeDGeneratedAt: null,
+    threeDSourceMedia: [],
+    media: values.media
+      .filter((item) => item.url)
+      .map((item, index) => ({
+        type: item.type.value,
+        url: item.url,
+        thumbnailUrl: item.thumbnailUrl || null,
+        order: index
+      }))
+  };
+};
 
 export const ModalManageProperty = ({
   open,
@@ -155,12 +159,10 @@ export const ModalManageProperty = ({
   onEditContract,
   onClose,
   onSubmit,
-  onGenerateThreeD,
   onUploadAsset,
   onUploadError,
   isSaving = false,
-  isUploadingAsset = false,
-  isGeneratingThreeD = false
+  isUploadingAsset = false
 }) => {
   const { preferences } = useUserPreferences();
   const preferredCurrency = String(preferences.currency || "USD").toUpperCase();
@@ -186,19 +188,16 @@ export const ModalManageProperty = ({
   );
   const [activeUploadTarget, setActiveUploadTarget] = useState(null);
 
-  const has3DView = watch("has3DView");
   const threeDUrl = watch("threeDUrl");
-  const threeDStatus = watch("threeDStatus");
-  const threeDGeneratedAt = watch("threeDGeneratedAt");
+  const has3DView = Boolean(String(threeDUrl || "").trim());
   const latitude = watch("location.lat");
   const longitude = watch("location.lng");
   const coverImage = watch("coverImage");
   const resolvedCoverImage = resolveAssetUrl(coverImage);
   const threeDStatusMeta = getPropertyThreeDStatusMeta({
     is3DEnabled: has3DView,
-    status: threeDStatus
+    status: has3DView ? "generated" : null
   });
-  const threeDGeneratedLabel = threeDGeneratedAt ? new Date(threeDGeneratedAt).toLocaleString("fr-FR") : null;
   const markerPosition =
     isFiniteCoordinate(latitude) && isFiniteCoordinate(longitude)
       ? { lat: Number(latitude), lng: Number(longitude) }
@@ -361,24 +360,6 @@ export const ModalManageProperty = ({
     setMapCenter(buildMapCenter(defaultValues.location));
     setActiveUploadTarget(null);
     onClose();
-  };
-
-  const handleGenerateThreeD = async (force = true) => {
-    if (!property?.id || !onGenerateThreeD) {
-      return;
-    }
-
-    const updatedProperty = await onGenerateThreeD({ propertyId: property.id, force });
-
-    if (!updatedProperty) {
-      return;
-    }
-
-    setValue("is3DEnabled", Boolean(updatedProperty.is3DEnabled ?? updatedProperty.has3DView), { shouldDirty: false });
-    setValue("has3DView", Boolean(updatedProperty.is3DEnabled ?? updatedProperty.has3DView), { shouldDirty: false });
-    setValue("threeDUrl", updatedProperty.threeDUrl || "", { shouldDirty: false });
-    setValue("threeDStatus", updatedProperty.threeDStatus || null, { shouldDirty: false });
-    setValue("threeDGeneratedAt", updatedProperty.threeDGeneratedAt || null, { shouldDirty: false });
   };
 
   return (
@@ -823,48 +804,26 @@ export const ModalManageProperty = ({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Visite 3D</p>
-              <h3 className="text-lg font-semibold text-white">Activation et generation automatiques</h3>
+              <h3 className="text-lg font-semibold text-white">Lien de visite deja generee</h3>
               <p className="max-w-2xl text-sm leading-6 text-stone-300">
-                La generation priorise les fichiers televerses du bien, puis les images disponibles et enfin la couverture si besoin.
+                Collez ici un lien existant vers une visite virtuelle, une video YouTube, Matterport, Kuula ou toute autre plateforme externe. Yopii ne genere plus la visite automatiquement.
               </p>
             </div>
             <Badge className={threeDStatusMeta.className}>{threeDStatusMeta.label}</Badge>
           </div>
 
           <Controller
-            name="has3DView"
+            name="threeDUrl"
             control={control}
             render={({ field }) => (
-              <label className="flex items-center justify-between gap-4 rounded-[1.4rem] border border-white/10 bg-stone-950/45 px-4 py-4 text-sm text-stone-200">
-                <div>
-                  <p className="font-medium text-white">Activer la version 3D du bien</p>
-                  <p className="mt-1 text-xs text-stone-400">
-                    L&apos;URL complete de visite sera generee et stockee automatiquement a l&apos;enregistrement.
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 rounded border border-white/10 bg-stone-900/70"
-                  checked={Boolean(field.value)}
-                  onChange={(event) => {
-                    const nextValue = event.target.checked;
-                    field.onChange(nextValue);
-                    setValue("is3DEnabled", nextValue, { shouldDirty: true, shouldValidate: false });
-                    if (!nextValue) {
-                      setValue("threeDUrl", "", { shouldDirty: true, shouldValidate: false });
-                      setValue("threeDStatus", null, { shouldDirty: true, shouldValidate: false });
-                      setValue("threeDGeneratedAt", null, { shouldDirty: true, shouldValidate: false });
-                    }
-                  }}
-                />
-              </label>
+              <Input
+                {...field}
+                type="url"
+                label="URL de visite 3D / visite virtuelle"
+                placeholder="https://youtube.com/watch?v=... ou https://my.matterport.com/show/..."
+              />
             )}
           />
-
-          <Controller name="is3DEnabled" control={control} render={({ field }) => <input type="hidden" {...field} />} />
-          <Controller name="threeDStatus" control={control} render={({ field }) => <input type="hidden" {...field} />} />
-          <Controller name="threeDGeneratedAt" control={control} render={({ field }) => <input type="hidden" {...field} />} />
-          <Controller name="threeDUrl" control={control} render={({ field }) => <input type="hidden" {...field} />} />
 
           {has3DView ? (
             <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
@@ -872,35 +831,22 @@ export const ModalManageProperty = ({
                 <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Statut courant</p>
                 <p className="mt-3 text-sm font-medium text-white">{threeDStatusMeta.label}</p>
                 <p className="mt-2 text-sm leading-6 text-stone-400">
-                  {threeDStatus === "generated"
-                    ? "La visite 3D est disponible et son lien complet est deja rattache au bien."
-                    : threeDStatus === "error"
-                      ? "La derniere tentative a echoue. Verifiez les medias du bien puis relancez la generation."
-                      : "La visite 3D sera preparee a partir des medias existants du bien."}
+                  Le bien affichera ce lien aux visiteurs. La visite reste hebergee sur la plateforme indiquee.
                 </p>
-                {threeDGeneratedLabel ? (
-                  <p className="mt-4 text-xs uppercase tracking-[0.2em] text-stone-500">Generee le {threeDGeneratedLabel}</p>
-                ) : null}
               </div>
 
               <div className="rounded-[1.5rem] border border-white/10 bg-stone-950/45 p-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Lien de visite</p>
                 <p className="mt-3 break-all text-sm leading-6 text-stone-300">
-                  {threeDUrl || "Le lien sera cree automatiquement des que la generation aboutit."}
+                  {threeDUrl}
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
-                  {threeDUrl ? (
-                    <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => window.open(threeDUrl, "_blank", "noopener,noreferrer")}>
-                      Voir la visite 3D
-                    </Button>
-                  ) : null}
-                  {property?.id ? (
-                    <Button type="button" variant="ghost" className="px-4 py-2" disabled={isGeneratingThreeD} onClick={() => handleGenerateThreeD(Boolean(threeDUrl))}>
-                      {isGeneratingThreeD ? "Generation..." : threeDUrl ? "Regenerer" : "Generer maintenant"}
-                    </Button>
-                  ) : (
-                    <span className="self-center text-xs text-stone-400">En creation, la generation demarrera apres l&apos;enregistrement.</span>
-                  )}
+                  <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => window.open(threeDUrl, "_blank", "noopener,noreferrer")}>
+                    Ouvrir la visite
+                  </Button>
+                  <Button type="button" variant="ghost" className="px-4 py-2" onClick={() => setValue("threeDUrl", "", { shouldDirty: true, shouldValidate: true })}>
+                    Retirer le lien
+                  </Button>
                 </div>
               </div>
             </div>

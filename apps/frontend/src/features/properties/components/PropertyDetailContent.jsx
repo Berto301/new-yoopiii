@@ -4,7 +4,7 @@ import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
-import { getPropertyThreeDStatusMeta } from "../property-3d.js";
+import { getPropertyThreeDStatusMeta, hasPropertyThreeDLink } from "../property-3d.js";
 
 const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
@@ -67,9 +67,10 @@ export const PropertyDetailContent = ({
     { label: "Salles de bain", value: property.bathrooms ?? 0 }
   ];
   const threeDStatus = getPropertyThreeDStatusMeta({
-    is3DEnabled: property.is3DEnabled ?? property.has3DView,
-    status: property.threeDStatus
+    is3DEnabled: hasPropertyThreeDLink(property),
+    status: hasPropertyThreeDLink(property) ? "generated" : null
   });
+  const hasThreeDLink = hasPropertyThreeDLink(property);
 
   return (
     <div className="space-y-8">
@@ -81,7 +82,7 @@ export const PropertyDetailContent = ({
           {property.isUnderMaintenance ? (
             <Badge className="border-amber-400/30 bg-amber-500/15 text-amber-100">En maintenance</Badge>
           ) : null}
-          {(property.is3DEnabled ?? property.has3DView) ? (
+          {hasThreeDLink ? (
             <Badge className={threeDStatus.className}>3D {threeDStatus.label}</Badge>
           ) : null}
         </div>
@@ -196,9 +197,9 @@ export const PropertyDetailContent = ({
                   {browseLabel}
                 </Button>
               ) : null}
-              {(property.is3DEnabled ?? property.has3DView) && property.threeDUrl ? (
+              {hasThreeDLink ? (
                 <Button as="a" href={property.threeDUrl} target="_blank" rel="noreferrer" variant="secondary">
-                  Ouvrir la vue 3D
+                  Ouvrir la visite 3D
                 </Button>
               ) : null}
             </div>

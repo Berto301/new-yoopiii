@@ -5,7 +5,6 @@ import {
   createManagedProperty,
   deleteManagedProperty,
   duplicateManagedProperty,
-  generateManagedPropertyThreeDView,
   getManagedPropertyDetail,
   getManagedProperties,
   getPublicPropertyDetail,
@@ -118,16 +117,6 @@ export const patchManagedPropertyHandler = async (req, res) => {
     propertyId: req.validated.params.propertyId,
     actor: req.user,
     payload: req.validated.body
-  });
-
-  res.status(StatusCodes.OK).json({ success: true, data });
-};
-
-export const postManagedPropertyThreeDGenerationHandler = async (req, res) => {
-  const data = await generateManagedPropertyThreeDView({
-    propertyId: req.validated.params.propertyId,
-    actor: req.user,
-    force: req.validated.body.force
   });
 
   res.status(StatusCodes.OK).json({ success: true, data });

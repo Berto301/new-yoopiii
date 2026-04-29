@@ -254,7 +254,7 @@ test("GET /api/v1/properties/management/view/:identifier returns a managed draft
     ],
     is3DEnabled: true,
     has3DView: true,
-    threeDUrl: `http://localhost:5173/properties/${`villa-3d-privee-${Date.now()}`}/3d-tour`,
+    threeDUrl: "https://my.matterport.com/show/?m=villa-3d-privee",
     threeDStatus: "generated",
     threeDGeneratedAt: new Date(),
     ownerType: "proprietaire",

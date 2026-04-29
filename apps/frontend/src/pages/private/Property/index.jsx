@@ -9,7 +9,7 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { useNotification } from "../../../hooks/useNotification.js";
 import { notifyApiErrors } from "../../../lib/errors/api-error.js";
 import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
-import { getPropertyThreeDStatusMeta } from "../../../features/properties/property-3d.js";
+import { getPropertyThreeDStatusMeta, hasPropertyThreeDLink } from "../../../features/properties/property-3d.js";
 import { usePropertyWorkspace } from "../../../features/properties/hooks/usePropertyWorkspace.js";
 import { ModalManageProperty } from "./ModalManageProperty.jsx";
 import { ModalManageContract } from "../contracts/ModalManageContract.jsx";
@@ -90,9 +90,10 @@ const PropertyCard = ({
   const canEdit = isOwnerRole || Boolean(linkedContract?.actions?.canEditProperty);
   const canDelete = isOwnerRole || Boolean(linkedContract?.actions?.canDeleteProperty);
   const threeDStatus = getPropertyThreeDStatusMeta({
-    is3DEnabled: property.is3DEnabled ?? property.has3DView,
-    status: property.threeDStatus
+    is3DEnabled: hasPropertyThreeDLink(property),
+    status: hasPropertyThreeDLink(property) ? "generated" : null
   });
+  const hasThreeDLink = hasPropertyThreeDLink(property);
   const detailItems = [
     { label: t("private", "properties.card.type", "Type"), value: property.type || "--" },
     { label: t("private", "properties.card.usage", "Usage"), value: property.purpose || "--" },
@@ -115,7 +116,7 @@ const PropertyCard = ({
             <div className="flex flex-wrap gap-2">
               <Badge className={getPublicationBadgeClassName(property.publicationStatus)}>{property.publicationStatus}</Badge>
               <Badge className={getStatusBadgeClassName(property.status)}>{property.status}</Badge>
-              {(property.is3DEnabled ?? property.has3DView) ? <Badge className={threeDStatus.className}>3D {threeDStatus.label}</Badge> : null}
+              {hasThreeDLink ? <Badge className={threeDStatus.className}>3D {threeDStatus.label}</Badge> : null}
             </div>
 
             <div className="space-y-3">
@@ -152,7 +153,7 @@ const PropertyCard = ({
 
           <div className="flex flex-col gap-4 border-t border-white/10 pt-5 lg:flex-row lg:items-center lg:justify-between">
             <p className="text-xs uppercase tracking-[0.22em] text-stone-500">
-              {property.favoriteCount || 0} favoris • {mediaCount} fichiers • {(property.is3DEnabled ?? property.has3DView) ? `Visite 3D ${threeDStatus.label.toLowerCase()}` : "Sans visite 3D"}
+              {property.favoriteCount || 0} favoris • {mediaCount} fichiers • {hasThreeDLink ? `Visite 3D ${threeDStatus.label.toLowerCase()}` : "Sans visite 3D"}
             </p>
             <div className="flex flex-wrap gap-2">
               {canEdit ? (
@@ -230,7 +231,6 @@ export const PropertyManagementPage = () => {
     uploadPropertyAssetMutation,
     updateContractMutation,
     updateManagedPropertyMutation,
-    generateManagedPropertyThreeDMutation,
     duplicateManagedPropertyMutation,
     deleteManagedPropertyMutation
   } = usePropertyWorkspace();
@@ -320,49 +320,19 @@ export const PropertyManagementPage = () => {
 
   const handleSaveProperty = async (payload) => {
     try {
-      let savedProperty;
-
       if (modalMode === "edit" && selectedProperty) {
-        savedProperty = await updateManagedPropertyMutation.mutateAsync({
+        await updateManagedPropertyMutation.mutateAsync({
           propertyId: selectedProperty.id,
           payload
         });
       } else {
-        savedProperty = await createManagedPropertyMutation.mutateAsync(payload);
-      }
-
-      if (payload.is3DEnabled ?? payload.has3DView) {
-        try {
-          savedProperty = await generateManagedPropertyThreeDMutation.mutateAsync({
-            propertyId: savedProperty.id,
-            force: Boolean(savedProperty.threeDUrl)
-          });
-          showSuccess("Visite 3D generee automatiquement.");
-        } catch (generationError) {
-          notifyApiErrors({
-            error: generationError,
-            showError,
-            fallbackMessage: "Le bien a ete enregistre, mais la generation 3D a echoue."
-          });
-        }
+        await createManagedPropertyMutation.mutateAsync(payload);
       }
 
       closeManageModal();
       showSuccess(modalMode === "edit" ? t("private", "properties.propertyUpdateSuccess", "Bien mis a jour.") : t("private", "properties.propertyCreateSuccess", "Bien cree avec succes."));
     } catch (error) {
       notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.propertySaveError", "La gestion du bien a echoue.") });
-      throw error;
-    }
-  };
-
-  const handleGenerateThreeD = async ({ propertyId, force = true }) => {
-    try {
-      const updatedProperty = await generateManagedPropertyThreeDMutation.mutateAsync({ propertyId, force });
-      setSelectedProperty((current) => (current?.id === updatedProperty.id ? updatedProperty : current));
-      showSuccess(force ? "Visite 3D regeneree avec succes." : "Visite 3D generee avec succes.");
-      return updatedProperty;
-    } catch (error) {
-      notifyApiErrors({ error, showError, fallbackMessage: "La generation de la visite 3D a echoue." });
       throw error;
     }
   };
@@ -600,11 +570,9 @@ export const PropertyManagementPage = () => {
         onEditContract={openEditContractModal}
         onClose={closeManageModal}
         onSubmit={handleSaveProperty}
-        onGenerateThreeD={handleGenerateThreeD}
         onUploadAsset={handlePropertyAssetUpload}
         onUploadError={(error) => notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.uploadAssetError", "Le televersement du fichier a echoue.") })}
         isUploadingAsset={uploadPropertyAssetMutation.isPending}
-        isGeneratingThreeD={generateManagedPropertyThreeDMutation.isPending}
         isSaving={createManagedPropertyMutation.isPending || updateManagedPropertyMutation.isPending}
       />
 

@@ -27,7 +27,6 @@ const propertyMediaSchema = z.object({
   thumbnailUrl: assetPathSchema.nullable().optional(),
   order: z.coerce.number().min(0).default(0)
 });
-
 const propertyThreeDStatusSchema = z.enum(["pending", "processing", "generated", "error"]);
 
 const propertyThreeDSourceSchema = z.object({
@@ -58,8 +57,8 @@ const propertyPayloadSchema = z.object({
   coverImage: assetPathSchema.nullable().optional(),
   media: z.array(propertyMediaSchema).default([]),
   is3DEnabled: z.coerce.boolean().optional(),
-  has3DView: z.coerce.boolean().default(false),
-  threeDUrl: z.string().url().nullable().optional(),
+  has3DView: z.coerce.boolean().optional(),
+  threeDUrl: z.string().trim().url().nullable().optional(),
   threeDStatus: propertyThreeDStatusSchema.nullable().optional(),
   threeDGeneratedAt: z.coerce.date().nullable().optional(),
   threeDSourceMedia: z.array(propertyThreeDSourceSchema).default([]),
@@ -209,14 +208,4 @@ export const propertyAssetUploadSchema = z.object({
   query: z.object({
     mediaType: propertyUploadMediaTypeSchema
   })
-});
-
-export const propertyThreeDGenerationSchema = z.object({
-  body: z.object({
-    force: z.coerce.boolean().optional().default(false)
-  }).default({}),
-  params: z.object({
-    propertyId: objectIdSchema
-  }),
-  query: z.object({}).default({})
 });
