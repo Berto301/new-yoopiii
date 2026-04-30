@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+﻿import dayjs from "dayjs";
 import { apiClient } from "../../../lib/api/client.js";
 
 export const getAgencyDashboardSummary = async (agencyId) => {
@@ -22,5 +22,20 @@ export const getAgencyCalendarEvents = async (agencyId) => {
   const response = await apiClient.get(`/agencies/${agencyId}/calendar/events`, {
     params: { startAt, endAt, page: 1, limit: 20 }
   });
+  return response.data.data;
+};
+
+export const getTopAgencies = async ({ limit = 10 } = {}) => {
+  const response = await apiClient.get("/agencies/top", { params: { limit } });
+  return response.data.data;
+};
+
+export const getAgencyScore = async (agencyId) => {
+  const response = await apiClient.get(`/agencies/${agencyId}/score`);
+  return response.data.data;
+};
+
+export const recalculateAgencyScore = async (agencyId) => {
+  const response = await apiClient.post(`/agencies/${agencyId}/recalculate-score`);
   return response.data.data;
 };

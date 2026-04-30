@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 const phoneSchema = z.string().max(40).optional().or(z.literal(""));
 const cinSchema = z.string().trim().max(120).optional().or(z.literal(""));
@@ -112,4 +112,37 @@ export const discoverAgentsSchema = z.object({
     page: numberFromQuery("page").min(1).default(1),
     limit: numberFromQuery("limit").min(1).max(100).default(20)
   })
+});
+
+export const agentIdParamsSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({
+    agentId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid agent id")
+  }),
+  query: z.object({}).default({})
+});
+
+export const agentScoreCollectionSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({}).default({}),
+  query: z.object({}).default({})
+});
+
+export const topAgentsSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({}).default({}),
+  query: z.object({
+    limit: numberFromQuery("limit").min(1).max(50).default(10)
+  })
+});
+
+export const agentReviewSchema = z.object({
+  body: z.object({
+    score: z.coerce.number().min(0).max(100),
+    description: z.string().trim().max(1000).optional().or(z.literal(""))
+  }),
+  params: z.object({
+    agentId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid agent id")
+  }),
+  query: z.object({}).default({})
 });

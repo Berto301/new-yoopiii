@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Avatar } from "../../../components/profile/Avatar.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
+import { ScoreBadge } from "../../../components/ui/ScoreBadge.jsx";
 import { useBookingsWorkspace } from "../../bookings/hooks/useBookingsWorkspace.js";
 import { getDiscoverableAgents, getAgencyDirectory } from "../../directory/services/directory.service.js";
 import { usePropertyWorkspace } from "../../properties/hooks/usePropertyWorkspace.js";
@@ -12,15 +13,15 @@ import { useDashboardMessaging } from "../hooks/useDashboardMessaging.js";
 
 const sortAgencies = (items = []) =>
   [...items].sort((left, right) => {
-    const rightScore = (right.ratingAverage || 0) * 10 + (right.activeAgentsCount || 0) + (right.managedPropertiesCount || 0);
-    const leftScore = (left.ratingAverage || 0) * 10 + (left.activeAgentsCount || 0) + (left.managedPropertiesCount || 0);
+    const rightScore = right.score || ((right.ratingAverage || 0) * 10 + (right.activeAgentsCount || 0) + (right.managedPropertiesCount || 0));
+    const leftScore = left.score || ((left.ratingAverage || 0) * 10 + (left.activeAgentsCount || 0) + (left.managedPropertiesCount || 0));
     return rightScore - leftScore;
   });
 
 const sortAgents = (items = []) =>
   [...items].sort((left, right) => {
-    const rightScore = (right.clientRating || 0) * 10 + (right.managedPropertiesCount || 0);
-    const leftScore = (left.clientRating || 0) * 10 + (left.managedPropertiesCount || 0);
+    const rightScore = right.score || ((right.clientRating || 0) * 10 + (right.managedPropertiesCount || 0));
+    const leftScore = left.score || ((left.clientRating || 0) * 10 + (left.managedPropertiesCount || 0));
     return rightScore - leftScore;
   });
 
@@ -120,7 +121,7 @@ export const UserDashboardOverview = () => {
                   <p className="mt-1 text-sm text-stone-400">{property.address}</p>
                   <div className="mt-4 flex items-center justify-between gap-3 text-sm">
                     <span className="text-amber-100">{formatCurrency(property.price, property.currency)}</span>
-                    <span className="uppercase tracking-[0.18em] text-stone-500">{property.status}</span>
+                    <ScoreBadge score={property.score || 0} showScore />
                   </div>
                 </div>
               ))}
@@ -172,7 +173,7 @@ export const UserDashboardOverview = () => {
                       <p className="font-semibold text-white">{agency.name}</p>
                       <p className="mt-1 text-sm text-stone-400">{agency.address || "Adresse non renseignee"}</p>
                     </div>
-                    <span className="text-sm text-amber-100">{agency.ratingAverage ? `${agency.ratingAverage.toFixed(1)}/5` : "-"}</span>
+                    <ScoreBadge score={agency.score || 0} showScore />
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 text-xs uppercase tracking-[0.18em] text-stone-500">
                     <span>{agency.activeAgentsCount || 0} agents</span>
@@ -201,7 +202,7 @@ export const UserDashboardOverview = () => {
                     </div>
                   </div>
                   <div className="text-right text-sm">
-                    <p className="text-amber-100">{agent.clientRating ? `${agent.clientRating.toFixed(1)}/5` : "-"}</p>
+                    <ScoreBadge score={agent.score || 0} showScore />
                     <p className="text-stone-500">{agent.managedPropertiesCount || 0} biens</p>
                   </div>
                 </div>

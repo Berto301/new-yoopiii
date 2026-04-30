@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../components/ui/Button.jsx";
+import { ScoreBadge } from "../../../components/ui/ScoreBadge.jsx";
 import { useBookingsWorkspace } from "../../bookings/hooks/useBookingsWorkspace.js";
 import { usePropertyWorkspace } from "../../properties/hooks/usePropertyWorkspace.js";
 import { DashboardEmptyState, DashboardHero, DashboardLoadingState, DashboardPanel, DashboardStatsGrid } from "../components/DashboardBlocks.jsx";
@@ -88,7 +89,10 @@ export const AgentDashboardOverview = () => {
                     <p className="mt-1 text-sm text-stone-400">{property.address}</p>
                   </div>
                   <div className="text-sm md:text-right">
-                    <p className="uppercase tracking-[0.18em] text-amber-100">{property.publicationStatus}</p>
+                    <div className="flex justify-start md:justify-end">
+                      <ScoreBadge score={property.score || 0} showScore />
+                    </div>
+                    <p className="mt-2 uppercase tracking-[0.18em] text-amber-100">{property.publicationStatus}</p>
                     <p className="mt-1 text-stone-500">Maj {formatDateTime(property.updatedAt || property.createdAt)}</p>
                   </div>
                 </div>
@@ -135,6 +139,9 @@ export const AgentDashboardOverview = () => {
                 <div key={property.id} className="rounded-[1.5rem] border border-white/10 bg-stone-950/50 p-4">
                   <p className="font-semibold text-white">{property.title}</p>
                   <p className="mt-1 text-sm text-stone-400">Statut {property.status} / publication {property.publicationStatus}</p>
+                  <div className="mt-3">
+                    <ScoreBadge score={property.score || 0} showScore />
+                  </div>
                   <p className="mt-3 text-xs uppercase tracking-[0.18em] text-stone-500">{formatDateTime(property.updatedAt || property.createdAt)}</p>
                 </div>
               ))}

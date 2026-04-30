@@ -1,4 +1,4 @@
-import { Property } from "../properties/property.model.js";
+﻿import { Property } from "../properties/property.model.js";
 import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { User } from "./user.model.js";
 
@@ -28,6 +28,8 @@ const mapRecentProperty = (property) => ({
   status: property.status,
   purpose: property.purpose,
   publicationStatus: property.publicationStatus,
+  score: property.score || 0,
+  scoreDetails: property.scoreDetails || null,
   updatedAt: property.updatedAt
 });
 
@@ -37,7 +39,7 @@ const buildAgentStatsMap = async (agentIds) => {
   }
 
   const properties = await Property.find({ agentId: { $in: agentIds } })
-    .select("agentId title status purpose publicationStatus averageRating updatedAt")
+    .select("agentId title status purpose publicationStatus averageRating score scoreDetails updatedAt")
     .sort({ updatedAt: -1, createdAt: -1 })
     .lean();
 
@@ -72,11 +74,11 @@ const buildAgentStatsMap = async (agentIds) => {
 export const listDiscoverableAgents = async ({ filters }) => {
   const [members, independentAgents] = await Promise.all([
     AgencyMember.find({ status: { $ne: "removed" } })
-      .populate("userId", "firstName lastName email avatar role status")
+      .populate("userId", "firstName lastName email avatar role status score scoreDetails")
       .populate("agencyId", "name status")
       .lean(),
     User.find({ role: "independent_agent", status: "active" })
-      .select("firstName lastName email avatar role status")
+      .select("firstName lastName email avatar role status score scoreDetails")
       .lean()
   ]);
 
@@ -99,7 +101,9 @@ export const listDiscoverableAgents = async ({ filters }) => {
       agencyName: member.agencyId.name || "",
       organizationLabel: member.agencyId.name || "Agence",
       jobTitle: member.jobTitle || "",
-      membershipStatus: member.status
+      membershipStatus: member.status,
+      score: member.userId.score || 0,
+      scoreDetails: member.userId.scoreDetails || null
     }));
 
   const standaloneAgents = independentAgents.map((agent) => ({
@@ -114,7 +118,9 @@ export const listDiscoverableAgents = async ({ filters }) => {
     agencyId: null,
     agencyName: null,
     organizationLabel: "Agent independant",
-    jobTitle: ""
+    jobTitle: "",
+    score: agent.score || 0,
+    scoreDetails: agent.scoreDetails || null
   }));
 
   const combinedAgents = [...agencyAgents, ...standaloneAgents]
@@ -142,7 +148,7 @@ export const listDiscoverableAgents = async ({ filters }) => {
 
       return haystack.includes(normalizeText(filters.search));
     })
-    .sort((left, right) => normalizeText(`${left.firstName} ${left.lastName}`).localeCompare(normalizeText(`${right.firstName} ${right.lastName}`)));
+    .sort((left, right) => (right.score || 0) - (left.score || 0) || normalizeText(`${left.firstName} ${left.lastName}`).localeCompare(normalizeText(`${right.firstName} ${right.lastName}`)));
 
   const agentIds = combinedAgents.map((agent) => agent.userId);
   const statsMap = await buildAgentStatsMap(agentIds);

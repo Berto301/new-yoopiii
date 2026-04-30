@@ -1,16 +1,18 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { formatMoney } from "../../../app/preferences/user-preferences.utils.js";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
+import { ScoreBadge } from "../../../components/ui/ScoreBadge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { useNotification } from "../../../hooks/useNotification.js";
 import { notifyApiErrors } from "../../../lib/errors/api-error.js";
 import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
 import { getPropertyThreeDStatusMeta, hasPropertyThreeDLink } from "../../../features/properties/property-3d.js";
 import { usePropertyWorkspace } from "../../../features/properties/hooks/usePropertyWorkspace.js";
+import { PROPERTY_SCORE_CRITERIA, ScoreDetailsPanel } from "../../../features/scoring/ScoreDetailsPanel.jsx";
 import { ModalManageProperty } from "./ModalManageProperty.jsx";
 import { ModalManageContract } from "../contracts/ModalManageContract.jsx";
 import { ModalMatchingUser } from "./ModalMatchingUser.jsx";
@@ -117,6 +119,7 @@ const PropertyCard = ({
               <Badge className={getPublicationBadgeClassName(property.publicationStatus)}>{property.publicationStatus}</Badge>
               <Badge className={getStatusBadgeClassName(property.status)}>{property.status}</Badge>
               {hasThreeDLink ? <Badge className={threeDStatus.className}>3D {threeDStatus.label}</Badge> : null}
+              <ScoreBadge score={property.score || 0} showScore />
             </div>
 
             <div className="space-y-3">
@@ -142,6 +145,14 @@ const PropertyCard = ({
             </div>
           </div>
 
+          <ScoreDetailsPanel
+            title="Analyse qualite"
+            score={property.score || 0}
+            details={property.scoreDetails}
+            criteria={PROPERTY_SCORE_CRITERIA}
+            compact
+          />
+
           <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
             {detailItems.map((item) => (
               <div key={item.label} className="rounded-[1.4rem] border border-white/10 bg-stone-950/60 px-4 py-4">
@@ -153,7 +164,7 @@ const PropertyCard = ({
 
           <div className="flex flex-col gap-4 border-t border-white/10 pt-5 lg:flex-row lg:items-center lg:justify-between">
             <p className="text-xs uppercase tracking-[0.22em] text-stone-500">
-              {property.favoriteCount || 0} favoris • {mediaCount} fichiers • {hasThreeDLink ? `Visite 3D ${threeDStatus.label.toLowerCase()}` : "Sans visite 3D"}
+              {property.favoriteCount || 0} favoris â€¢ {mediaCount} fichiers â€¢ {hasThreeDLink ? `Visite 3D ${threeDStatus.label.toLowerCase()}` : "Sans visite 3D"}
             </p>
             <div className="flex flex-wrap gap-2">
               {canEdit ? (
@@ -414,7 +425,7 @@ export const PropertyManagementPage = () => {
   const items = managed?.items || [];
   const summary = managed?.summary || {};
   const contractOptions = (activeContractsQuery.data || []).map((contract) => ({
-    label: `${contract.reference} • ${contract.owner?.fullName || "Proprietaire"} • ${contract.endDateLabel}`,
+    label: `${contract.reference} â€¢ ${contract.owner?.fullName || "Proprietaire"} â€¢ ${contract.endDateLabel}`,
     value: contract.id
   }));
   const allContracts = contractsQuery.data || activeContractsQuery.data || [];
@@ -458,7 +469,7 @@ export const PropertyManagementPage = () => {
     : [];
   const ownerOptions = selectedProperty?.ownerUserId
     ? [{
-        label: `${selectedProperty.ownerName || "Proprietaire"}${selectedProperty.ownerEmail ? ` • ${selectedProperty.ownerEmail}` : selectedProperty.ownerPhone ? ` • ${selectedProperty.ownerPhone}` : ""}`,
+        label: `${selectedProperty.ownerName || "Proprietaire"}${selectedProperty.ownerEmail ? ` â€¢ ${selectedProperty.ownerEmail}` : selectedProperty.ownerPhone ? ` â€¢ ${selectedProperty.ownerPhone}` : ""}`,
         value: selectedProperty.ownerUserId
       }]
     : [];

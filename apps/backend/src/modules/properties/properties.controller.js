@@ -1,5 +1,6 @@
-import { StatusCodes } from "http-status-codes";
+﻿import { StatusCodes } from "http-status-codes";
 import { Property } from "./property.model.js";
+import { getPropertyScore, recalculateAllPropertyScores, recalculatePropertyScore } from "../scoring/scoring.service.js";
 import {
   addPropertyToFavorites,
   createManagedProperty,
@@ -211,6 +212,24 @@ export const getPropertyHistoryHandler = async (req, res) => {
     userId: req.user.id,
     filters: req.validated.query
   });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const getPropertyScoreHandler = async (req, res) => {
+  const data = await getPropertyScore(req.validated.params.propertyId);
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const postPropertyScoreRecalculationHandler = async (req, res) => {
+  const data = await recalculatePropertyScore(req.validated.params.propertyId);
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const postPropertiesScoreRecalculationHandler = async (_req, res) => {
+  const data = await recalculateAllPropertyScores();
 
   res.status(StatusCodes.OK).json({ success: true, data });
 };

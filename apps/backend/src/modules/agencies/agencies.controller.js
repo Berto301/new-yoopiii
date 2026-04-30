@@ -1,5 +1,6 @@
-import { StatusCodes } from "http-status-codes";
+﻿import { StatusCodes } from "http-status-codes";
 import { Agency } from "./agency.model.js";
+import { getAgencyScore, listTopAgencies, recalculateAgencyScore, recalculateAllAgencyScores } from "../scoring/scoring.service.js";
 import { AGENCY_PERMISSIONS } from "./constants/agency-permissions.js";
 import { listAgencyDirectoryAgencies, listAgencyDirectoryAgents } from "./services/agency-directory.service.js";
 import {
@@ -303,6 +304,30 @@ export const deleteAgencyHandler = async (req, res) => {
     agencyId: req.validated.params.agencyId,
     actorUserId: req.user.id
   });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const getAgencyScoreHandler = async (req, res) => {
+  const data = await getAgencyScore(req.validated.params.agencyId);
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const postAgencyScoreRecalculationHandler = async (req, res) => {
+  const data = await recalculateAgencyScore(req.validated.params.agencyId);
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const postAgenciesScoreRecalculationHandler = async (_req, res) => {
+  const data = await recalculateAllAgencyScores();
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const getTopAgenciesHandler = async (req, res) => {
+  const data = await listTopAgencies(req.validated.query);
 
   res.status(StatusCodes.OK).json({ success: true, data });
 };

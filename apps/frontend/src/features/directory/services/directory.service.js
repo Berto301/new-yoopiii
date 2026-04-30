@@ -1,4 +1,4 @@
-import { apiClient } from "../../../lib/api/client.js";
+﻿import { apiClient } from "../../../lib/api/client.js";
 
 export const getAgencyDirectory = async ({ search = "", status = "all", page = 1, limit = 24 } = {}) => {
   const response = await apiClient.get("/agencies/discovery", {
@@ -21,5 +21,25 @@ export const getDiscoverableAgents = async ({ search = "", agencyType = "all", r
     params: { search, agencyType, role, page, limit }
   });
 
+  return response.data.data;
+};
+
+export const getTopAgents = async ({ limit = 10 } = {}) => {
+  const response = await apiClient.get("/users/agents/top", { params: { limit } });
+  return response.data.data;
+};
+
+export const getAgentScore = async (agentId) => {
+  const response = await apiClient.get(`/users/agents/${agentId}/score`);
+  return response.data.data;
+};
+
+export const recalculateAgentScore = async (agentId) => {
+  const response = await apiClient.post(`/users/agents/${agentId}/recalculate-score`);
+  return response.data.data;
+};
+
+export const rateAgent = async ({ agentId, payload }) => {
+  const response = await apiClient.post(`/users/agents/${agentId}/ratings`, payload);
   return response.data.data;
 };

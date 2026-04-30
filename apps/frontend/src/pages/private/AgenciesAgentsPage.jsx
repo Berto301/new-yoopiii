@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+﻿import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { selectCurrentUser } from "../../app/store/session.store.js";
 import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
 import { Button } from "../../components/ui/Button.jsx";
+import { ScoreBadge } from "../../components/ui/ScoreBadge.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { Input } from "../../components/ui/Input.jsx";
 import { createConversation } from "../../features/chat/services/chat.service.js";
-import { getAgencyDirectory, getAgencyDirectoryAgents, getDiscoverableAgents } from "../../features/directory/services/directory.service.js";
+import { AGENCY_SCORE_CRITERIA, AGENT_SCORE_CRITERIA, ScoreDetailsPanel } from "../../features/scoring/ScoreDetailsPanel.jsx";
+import { getAgencyDirectory, getAgencyDirectoryAgents, getDiscoverableAgents, rateAgent } from "../../features/directory/services/directory.service.js";
 import { useNotification } from "../../hooks/useNotification.js";
 import { SettingsTabButton } from "./settings/SettingsTabButton.jsx";
+import ModalScoreAgent from "./ModalScoreAgent.jsx";
 
 const tabs = [
   { id: "agency", label: "Agence" },
@@ -75,9 +78,10 @@ const AgentProperties = ({ properties = [] }) => {
       {properties.map((property) => (
         <span
           key={property.id}
-          className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-stone-200"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-stone-200"
         >
           {property.title} - {statusLabels[property.status] || property.status}
+          <ScoreBadge score={property.score || 0} />
         </span>
       ))}
     </div>
@@ -87,7 +91,8 @@ const AgentProperties = ({ properties = [] }) => {
 export const AgenciesAgentsPage = () => {
   const navigate = useNavigate();
   const currentUser = useSelector(selectCurrentUser);
-  const { showError, showInfo } = useNotification();
+  const { showError, showSuccess } = useNotification();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("agency");
   const [agencySearch, setAgencySearch] = useState("");
   const [agencyStatus, setAgencyStatus] = useState("all");
@@ -98,6 +103,7 @@ export const AgenciesAgentsPage = () => {
   const [agentSearch, setAgentSearch] = useState("");
   const [agentType, setAgentType] = useState("all");
   const [agentRole, setAgentRole] = useState("all");
+  const [agentToRate, setAgentToRate] = useState(null);
 
   const agenciesQuery = useQuery({
     queryKey: ["agency-directory", agencySearch, agencyStatus],
@@ -136,6 +142,20 @@ export const AgenciesAgentsPage = () => {
     enabled: currentUser?.role === "user"
   });
 
+
+  const rateAgentMutation = useMutation({
+    mutationFn: ({ agent, payload }) => rateAgent({ agentId: agent.userId, payload }),
+    onSuccess: () => {
+      showSuccess("Note agent enregistree. Le score intelligent a ete recalcule.");
+      setAgentToRate(null);
+      queryClient.invalidateQueries({ queryKey: ["discoverable-agents"] });
+      queryClient.invalidateQueries({ queryKey: ["agency-directory-agents"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-top-agents"] });
+    },
+    onError: (error) => {
+      showError(error?.response?.data?.message || error?.message || "Impossible d'enregistrer la note agent.");
+    }
+  });
   const handleContact = async (participantId) => {
     try {
       const conversation = await createConversation({ participantId });
@@ -146,8 +166,10 @@ export const AgenciesAgentsPage = () => {
   };
 
   const handleRateAgent = (agent) => {
-    showInfo(`La notation directe de ${getPersonName(agent)} n'est pas encore disponible. La note affichee est calculee depuis ses biens.`);
+    setAgentToRate(agent);
   };
+
+  const canRateAgent = (agent) => !["agency", "owner", "viewer"].includes(agent?.role);
 
   if (currentUser?.role !== "user") {
     return (
@@ -162,7 +184,8 @@ export const AgenciesAgentsPage = () => {
   }
 
   return (
-    <section className="space-y-8">
+    <>
+      <section className="space-y-8">
       <SectionTitle
         eyebrow="Agence et Agents"
         title="Annuaire professionnel"
@@ -233,9 +256,12 @@ export const AgenciesAgentsPage = () => {
                         <p className="text-xl font-semibold text-white">{agency.name}</p>
                         <p className="mt-2 text-sm text-stone-300">{agency.description || "Agence professionnelle sans description detaillee pour le moment."}</p>
                       </div>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-stone-300">
-                        {agency.status}
-                      </span>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-stone-300">
+                          {agency.status}
+                        </span>
+                        <ScoreBadge score={agency.score || 0} showScore />
+                      </div>
                     </div>
 
                     <div className="mt-5 grid gap-3 text-sm text-stone-300 md:grid-cols-2">
@@ -243,6 +269,16 @@ export const AgenciesAgentsPage = () => {
                       <p>Biens geres: <span className="text-white">{agency.managedPropertiesCount}</span></p>
                       <p>Note agence: <span className="text-white">{formatRating(agency.ratingAverage)}</span></p>
                       <p>Adresse: <span className="text-white">{agency.address || "-"}</span></p>
+                    </div>
+
+                    <div className="mt-5">
+                      <ScoreDetailsPanel
+                        title="Score agence"
+                        score={agency.score || 0}
+                        details={agency.scoreDetails}
+                        criteria={AGENCY_SCORE_CRITERIA}
+                        compact
+                      />
                     </div>
                   </div>
                 </button>
@@ -259,6 +295,14 @@ export const AgenciesAgentsPage = () => {
                   <p className="mt-2 text-sm text-stone-300">Liste des agents et collaborateurs visibles pour cette agence avec recherche et filtre de role.</p>
                 </div>
               </div>
+
+              <ScoreDetailsPanel
+                title="Score agence selectionnee"
+                score={selectedAgency.score || 0}
+                details={selectedAgency.scoreDetails}
+                criteria={AGENCY_SCORE_CRITERIA}
+                compact
+              />
 
               <div className="grid gap-4 lg:grid-cols-[minmax(260px,1fr)_220px]">
                 <Input
@@ -302,9 +346,22 @@ export const AgenciesAgentsPage = () => {
                             <p className="mt-1 text-sm text-stone-400">{agent.roleLabel}{agent.jobTitle ? ` - ${agent.jobTitle}` : ""}</p>
                           </div>
                         </div>
-                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-100">
-                          {formatRating(agent.clientRating)}
-                        </span>
+                        <div className="flex flex-col items-end gap-2">
+                          <ScoreBadge score={agent.score || 0} showScore />
+                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-100">
+                            {formatRating(agent.clientRating)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <ScoreDetailsPanel
+                          title="Score agent"
+                          score={agent.score || 0}
+                          details={agent.scoreDetails}
+                          criteria={AGENT_SCORE_CRITERIA}
+                          compact
+                        />
                       </div>
 
                       <div className="mt-4 space-y-3 text-sm text-stone-300">
@@ -320,6 +377,11 @@ export const AgenciesAgentsPage = () => {
                         <Button type="button" variant="secondary" onClick={() => handleContact(agent.userId)}>
                           Contacter
                         </Button>
+                        {canRateAgent(agent) ? (
+                          <Button type="button" variant="ghost" onClick={() => handleRateAgent(agent)}>
+                            Noter
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -389,10 +451,21 @@ export const AgenciesAgentsPage = () => {
                         <p className="mt-1 text-sm text-stone-400">{agent.organizationLabel}</p>
                       </div>
                     </div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-stone-200">
-                      {agent.roleLabel}
-                    </span>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-stone-200">
+                        {agent.roleLabel}
+                      </span>
+                      <ScoreBadge score={agent.score || 0} showScore />
+                    </div>
                   </div>
+
+                  <ScoreDetailsPanel
+                    title="Score agent"
+                    score={agent.score || 0}
+                    details={agent.scoreDetails}
+                    criteria={AGENT_SCORE_CRITERIA}
+                    compact
+                  />
 
                   <div className="grid gap-3 text-sm text-stone-300 md:grid-cols-2">
                     <p>Note client: <span className="text-white">{formatRating(agent.clientRating)}</span></p>
@@ -409,9 +482,11 @@ export const AgenciesAgentsPage = () => {
                     <Button type="button" onClick={() => handleContact(agent.userId)}>
                       Discuter
                     </Button>
-                    <Button type="button" variant="secondary" onClick={() => handleRateAgent(agent)}>
-                      Noter l'agent
-                    </Button>
+                    {canRateAgent(agent) ? (
+                      <Button type="button" variant="secondary" onClick={() => handleRateAgent(agent)}>
+                        Noter l'agent
+                      </Button>
+                    ) : null}
                   </div>
                 </Card>
               ))}
@@ -419,7 +494,15 @@ export const AgenciesAgentsPage = () => {
           )}
         </div>
       )}
-    </section>
+      </section>
+      <ModalScoreAgent
+        open={Boolean(agentToRate)}
+        agent={agentToRate}
+        onClose={() => setAgentToRate(null)}
+        isSaving={rateAgentMutation.isPending}
+        onSubmit={(payload) => rateAgentMutation.mutate({ agent: agentToRate, payload })}
+      />
+    </>
   );
 };
 

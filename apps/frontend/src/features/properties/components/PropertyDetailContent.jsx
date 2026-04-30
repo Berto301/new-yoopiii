@@ -1,10 +1,12 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { formatMoney } from "../../../app/preferences/user-preferences.utils.js";
 import { Badge } from "../../../components/ui/Badge.jsx";
+import { ScoreBadge } from "../../../components/ui/ScoreBadge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { resolveAssetUrl } from "../../../lib/utils/asset-url.js";
 import { getPropertyThreeDStatusMeta, hasPropertyThreeDLink } from "../property-3d.js";
+import { PROPERTY_SCORE_CRITERIA, ScoreDetailsPanel } from "../../scoring/ScoreDetailsPanel.jsx";
 
 const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
@@ -79,6 +81,7 @@ export const PropertyDetailContent = ({
           <Badge className={getStatusClassName(property.status)}>{property.status}</Badge>
           <Badge className="border-white/10 bg-white/5 text-stone-200">{property.type}</Badge>
           <Badge className="border-white/10 bg-white/5 text-stone-200">{property.purpose}</Badge>
+          <ScoreBadge score={property.score || 0} showScore />
           {property.isUnderMaintenance ? (
             <Badge className="border-amber-400/30 bg-amber-500/15 text-amber-100">En maintenance</Badge>
           ) : null}
@@ -152,6 +155,13 @@ export const PropertyDetailContent = ({
               ))}
             </div>
           </Card>
+
+          <ScoreDetailsPanel
+            title="Score du bien"
+            score={property.score || 0}
+            details={property.scoreDetails}
+            criteria={PROPERTY_SCORE_CRITERIA}
+          />
 
           <Card className="rounded-[2rem] border-white/10 bg-white/[0.04]">
             <p className="text-xs uppercase tracking-[0.24em] text-stone-500">Intervenants</p>

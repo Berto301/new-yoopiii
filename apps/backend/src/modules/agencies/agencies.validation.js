@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import { AGENCY_MEMBER_ROLES } from "./constants/agency-permissions.js";
 
 const objectIdSchema = z.string().regex(/^[a-fA-F0-9]{24}$/u, "Invalid object id");
@@ -203,4 +203,18 @@ export const updateExpenseSchema = z.object({
   }),
   params: z.object({ agencyId: objectIdSchema, expenseId: objectIdSchema }),
   query: z.object({}).default({})
+});
+
+export const agencyScoreCollectionSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({}).default({}),
+  query: z.object({}).default({})
+});
+
+export const topAgenciesSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({}).default({}),
+  query: z.object({
+    limit: numberFromQuery("limit").min(1).max(50).default(10)
+  })
 });

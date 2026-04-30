@@ -1,4 +1,4 @@
-import { StatusCodes } from "http-status-codes";
+﻿import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../../core/errors/app-error.js";
 import { Property } from "../../properties/property.model.js";
 import { Agency } from "../agency.model.js";
@@ -28,6 +28,8 @@ const mapRecentProperty = (property) => ({
   status: property.status,
   purpose: property.purpose,
   publicationStatus: property.publicationStatus,
+  score: property.score || 0,
+  scoreDetails: property.scoreDetails || null,
   updatedAt: property.updatedAt
 });
 
@@ -40,7 +42,7 @@ const buildAgentStatsMap = async (agentIds, agencyId = null) => {
     agentId: { $in: agentIds },
     ...(agencyId ? { agencyId } : {})
   })
-    .select("agentId title status purpose publicationStatus averageRating updatedAt")
+    .select("agentId title status purpose publicationStatus averageRating score scoreDetails updatedAt")
     .sort({ updatedAt: -1, createdAt: -1 })
     .lean();
 
@@ -92,8 +94,8 @@ export const listAgencyDirectoryAgencies = async ({ filters }) => {
 
   const [agencies, total, memberCounts, propertyCounts] = await Promise.all([
     Agency.find(query)
-      .select("name logo coverImage description address contactEmail contactPhone ratingAverage status")
-      .sort({ ratingAverage: -1, createdAt: -1 })
+      .select("name logo coverImage description address contactEmail contactPhone ratingAverage status score scoreDetails")
+      .sort({ score: -1, ratingAverage: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean(),
@@ -123,6 +125,8 @@ export const listAgencyDirectoryAgencies = async ({ filters }) => {
       contactPhone: agency.contactPhone || "",
       ratingAverage: Number(agency.ratingAverage || 0),
       status: agency.status,
+      score: agency.score || 0,
+      scoreDetails: agency.scoreDetails || null,
       activeAgentsCount: memberCountMap.get(String(agency._id)) || 0,
       managedPropertiesCount: propertyCountMap.get(String(agency._id)) || 0
     })),
@@ -146,7 +150,7 @@ export const listAgencyDirectoryAgents = async ({ agencyId, filters }) => {
     status: { $ne: "removed" },
     ...(filters.role && filters.role !== "all" ? { role: filters.role } : {})
   })
-    .populate("userId", "firstName lastName email avatar role status")
+    .populate("userId", "firstName lastName email avatar role status score scoreDetails")
     .lean();
 
   const searchableMembers = members
@@ -196,6 +200,8 @@ export const listAgencyDirectoryAgents = async ({ agencyId, filters }) => {
         roleLabel: ROLE_LABELS[member.role] || member.role,
         jobTitle: member.jobTitle || "",
         membershipStatus: member.status,
+        score: user.score || 0,
+        scoreDetails: user.scoreDetails || null,
         agencyId: String(agency._id),
         agencyName: agency.name,
         clientRating: stats.ratedPropertiesCount ? Number((stats.ratingTotal / stats.ratedPropertiesCount).toFixed(1)) : 0,

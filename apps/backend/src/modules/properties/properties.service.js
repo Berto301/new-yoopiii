@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+﻿import mongoose from "mongoose";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 import { Agency } from "../agencies/agency.model.js";
@@ -6,6 +6,7 @@ import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { Booking } from "../bookings/booking.model.js";
 import { getActiveManagementContractIdsForActor, validateActiveContractForActor } from "../contracts/contracts.service.js";
 import { createNotifications } from "../notifications/notifications.service.js";
+import { calculatePropertyScore, recalculateAgencyScore, recalculateAgentScore } from "../scoring/scoring.service.js";
 import { OwnerMaintenanceTicket } from "../owner/models/owner-maintenance-ticket.model.js";
 import { ManagementContract } from "../contracts/management-contract.model.js";
 import { PropertyFavorite } from "./models/property-favorite.model.js";
@@ -160,6 +161,8 @@ const buildProjection = () => ({
   publicationStatus: 1,
   averageRating: 1,
   favoriteCount: 1,
+  score: 1,
+  scoreDetails: 1,
   agentId: 1,
   agencyId: 1,
   ownerType: 1,
@@ -213,6 +216,8 @@ const mapPropertyListItem = (property, favoriteIds = new Set()) => {
     publicationStatus: property.publicationStatus,
     averageRating: property.averageRating,
     favoriteCount: property.favoriteCount || 0,
+    score: property.score || 0,
+    scoreDetails: property.scoreDetails || null,
     agentId: property.agentId?._id ? String(property.agentId._id) : property.agentId,
     agentName:
       property.agentName ||
@@ -415,6 +420,50 @@ const createReservationNotifications = async ({ property, userId, action }) => {
   );
 };
 
+
+const syncRelatedBusinessScores = async (property) => {
+  const plainProperty = property?.toObject?.() || property || {};
+  const tasks = [];
+
+  if (plainProperty.agentId) {
+    tasks.push(recalculateAgentScore(plainProperty.agentId));
+  }
+
+  if (plainProperty.agencyId) {
+    tasks.push(recalculateAgencyScore(plainProperty.agencyId));
+  }
+
+  await Promise.all(tasks.map((task) => task.catch(() => null)));
+};
+
+const syncPropertyScore = async (property, { syncBusinessScores = true } = {}) => {
+  if (!property) return property;
+
+  try {
+    const calculated = await calculatePropertyScore(property);
+    property.score = calculated.score;
+    property.scoreDetails = calculated.scoreDetails;
+
+    if (typeof property.save === "function") {
+      await property.save();
+    } else if (property._id) {
+      await Property.updateOne(
+        { _id: property._id },
+        { $set: { score: calculated.score, scoreDetails: calculated.scoreDetails } }
+      );
+      property.score = calculated.score;
+      property.scoreDetails = calculated.scoreDetails;
+    }
+
+    if (syncBusinessScores) {
+      await syncRelatedBusinessScores(property);
+    }
+  } catch (_error) {
+    // Scoring must never block the main property workflow.
+  }
+
+  return property;
+};
 const ensurePropertyExists = async (propertyId) => {
   const property = await Property.findById(propertyId);
   if (!property) throw new AppError("Property not found", StatusCodes.NOT_FOUND);
@@ -655,7 +704,7 @@ export const getManagedProperties = async ({ user, filters }) => {
 
   if (user.role === "proprietaire") {
     const [items, total, summary] = await Promise.all([
-      Property.find(matchQuery).sort({ updatedAt: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Property.find(matchQuery).sort({ score: -1, updatedAt: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
       Property.countDocuments(matchQuery),
       mapManagedSummary(matchQuery)
     ]);
@@ -682,7 +731,7 @@ export const getManagedProperties = async ({ user, filters }) => {
   matchQuery.managementContractId = { $in: activeContractIds };
 
   const [items, total, summary] = await Promise.all([
-    Property.find(matchQuery).sort({ updatedAt: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Property.find(matchQuery).sort({ score: -1, updatedAt: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
     Property.countDocuments(matchQuery),
     mapManagedSummary(matchQuery)
   ]);
@@ -731,7 +780,7 @@ export const getPropertyPublications = async ({ user, filters }) => {
       .populate("agentId", "firstName lastName")
       .populate("agencyId", "name")
       .populate("ownerUserId", "firstName lastName email phone avatar")
-      .sort({ updatedAt: -1, createdAt: -1 })
+      .sort({ score: -1, updatedAt: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean(),
@@ -896,6 +945,7 @@ export const createManagedProperty = async ({ actor, payload }) => {
   if (!["agency", "agency_agent", "independent_agent", "proprietaire"].includes(actor.role)) throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
   const data = await buildManagedPropertyPayload({ actor, payload });
   const property = await Property.create(data);
+  await syncPropertyScore(property);
   await createPropertyActivityNotification({
     property,
     actor,
@@ -914,6 +964,7 @@ export const updateManagedProperty = async ({ propertyId, actor, payload }) => {
   const data = await buildManagedPropertyPayload({ actor, payload, existingProperty: property });
   Object.assign(property, data);
   await property.save();
+  await syncPropertyScore(property);
 
   await createPropertyActivityNotification({
     property,
@@ -935,6 +986,7 @@ export const duplicateManagedProperty = async ({ propertyId, actor, payload }) =
   await ensurePropertyManagementAccess(property, actor);
   const data = await buildManagedPropertyPayload({ actor, payload: { ...property.toObject(), ...payload }, existingProperty: property, duplicate: true });
   const duplicate = await Property.create(data);
+  await syncPropertyScore(duplicate);
   return mapPropertyListItem(duplicate.toObject());
 };
 
@@ -972,6 +1024,7 @@ export const updatePropertyWorkflow = async ({ propertyId, actor, payload }) => 
     property.reservedAt = null;
   }
   await property.save();
+  await syncPropertyScore(property);
   if (previousStatus !== property.status || previousPublicationStatus !== property.publicationStatus) {
     await createPropertyWorkflowNotifications({ property, actor, previousStatus, previousPublicationStatus });
   }
@@ -984,6 +1037,8 @@ export const addPropertyToFavorites = async ({ propertyId, userId }) => {
   if (!favorite) {
     await PropertyFavorite.create({ propertyId, userId });
     await Property.updateOne({ _id: propertyId }, { $inc: { favoriteCount: 1 } });
+    const scoredFavoriteProperty = await Property.findById(propertyId);
+    await syncPropertyScore(scoredFavoriteProperty);
     await createFavoriteNotification({ userId, property, action: "added" });
   }
   const refreshed = await Property.findById(propertyId).lean();
@@ -995,6 +1050,8 @@ export const removePropertyFromFavorites = async ({ propertyId, userId }) => {
   const favorite = await PropertyFavorite.findOneAndDelete({ propertyId, userId }).lean();
   if (favorite) {
     await Property.updateOne({ _id: propertyId }, { $inc: { favoriteCount: -1 } });
+    const scoredFavoriteProperty = await Property.findById(propertyId);
+    await syncPropertyScore(scoredFavoriteProperty);
     await createFavoriteNotification({ userId, property, action: "removed" });
   }
   const refreshed = await Property.findById(propertyId).lean();
@@ -1030,6 +1087,7 @@ export const reserveProperty = async ({ propertyId, user }) => {
   property.reservedByUserId = user.id;
   property.reservedAt = new Date();
   await property.save();
+  await syncPropertyScore(property);
 
   await Booking.findOneAndUpdate(
     {
@@ -1084,6 +1142,7 @@ export const releasePropertyReservation = async ({ propertyId, actor }) => {
   property.reservedByUserId = null;
   property.reservedAt = null;
   await property.save();
+  await syncPropertyScore(property);
 
   if (reservedByUserId) {
     await Booking.updateMany(
@@ -1132,7 +1191,9 @@ export const getPropertyFavorites = async ({ userId, filters }) => {
 };
 
 export const markPropertyAsViewed = async ({ propertyId, userId, source }) => {
-  await ensurePropertyExists(propertyId);
+  const property = await ensurePropertyExists(propertyId);
+  property.viewCount = (property.viewCount || 0) + 1;
+  await syncPropertyScore(property);
   const view = await PropertyView.findOneAndUpdate({ propertyId, userId }, { $set: { viewedAt: new Date(), source } }, { new: true, upsert: true }).lean();
   return view;
 };
@@ -1151,7 +1212,3 @@ export const getPropertyHistory = async ({ userId, filters }) => {
   const favoriteIds = await loadFavoriteIdsForUser(userId, propertyIds);
   return { items: views.map((view) => { const property = propertyMap.get(String(view.propertyId)); if (!property) return null; return { viewedAt: view.viewedAt, source: view.source, property: mapPropertyListItem(property, favoriteIds) }; }).filter(Boolean), pagination: buildPagination({ page, limit, total, itemsLength: views.length }) };
 };
-
-
-
-

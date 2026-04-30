@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { requireAuth } from "../../core/middleware/auth.middleware.js";
 import { validate } from "../../core/middleware/validate.middleware.js";
 import { asyncHandler } from "../../core/utils/async-handler.js";
@@ -6,6 +6,7 @@ import {
   agencyAssetParamsSchema,
   agencyDirectoryAgentsQuerySchema,
   agencyDirectoryQuerySchema,
+  agencyScoreCollectionSchema,
   agencyIdParamsSchema,
   createAgencyMemberSchema,
   createCalendarEventSchema,
@@ -13,6 +14,7 @@ import {
   createRoleTemplateSchema,
   duplicateRoleTemplateSchema,
   listCalendarEventsSchema,
+  topAgenciesSchema,
   updateAgencyMemberSchema,
   updateAgencyProfileSchema,
   updateCalendarEventSchema,
@@ -33,15 +35,19 @@ import {
   getAgencyCalendarEvents,
   getAgencyDashboardSummary,
   getAgencyExpenses,
+  getAgencyScoreHandler,
   getAgencyMembers,
   getAgencyRoles,
   getAgencies,
+  getTopAgenciesHandler,
   patchAgencyCalendarEvent,
   patchAgencyExpense,
   patchAgencyMember,
   patchAgencyProfile,
   patchAgencyRole,
   postAgencyAsset,
+  postAgenciesScoreRecalculationHandler,
+  postAgencyScoreRecalculationHandler,
   postAgencyCalendarEvent,
   postAgencyExpense,
   postAgencyMember,
@@ -53,8 +59,12 @@ export const agencyRouter = Router();
 
 agencyRouter.get("/", asyncHandler(getAgencies));
 agencyRouter.use(asyncHandler(requireAuth));
+agencyRouter.get("/top", validate(topAgenciesSchema), asyncHandler(getTopAgenciesHandler));
+agencyRouter.post("/recalculate-scores", validate(agencyScoreCollectionSchema), asyncHandler(postAgenciesScoreRecalculationHandler));
 agencyRouter.get("/discovery", validate(agencyDirectoryQuerySchema), asyncHandler(getAgencyDirectory));
 agencyRouter.get("/:agencyId/discovery/agents", validate(agencyDirectoryAgentsQuerySchema), asyncHandler(getAgencyDirectoryAgents));
+agencyRouter.get("/:agencyId/score", validate(agencyIdParamsSchema), asyncHandler(getAgencyScoreHandler));
+agencyRouter.post("/:agencyId/recalculate-score", validate(agencyIdParamsSchema), asyncHandler(postAgencyScoreRecalculationHandler));
 agencyRouter.get("/:agencyId", validate(agencyIdParamsSchema), asyncHandler(getAgencyById));
 agencyRouter.delete("/:agencyId", validate(agencyIdParamsSchema), asyncHandler(deleteAgencyHandler));
 agencyRouter.get("/:agencyId/dashboard/summary", validate(agencyIdParamsSchema), asyncHandler(getAgencyDashboardSummary));

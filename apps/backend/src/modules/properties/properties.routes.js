@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { requireAuth } from "../../core/middleware/auth.middleware.js";
 import { asyncHandler } from "../../core/utils/async-handler.js";
 import { validate } from "../../core/middleware/validate.middleware.js";
@@ -15,11 +15,14 @@ import {
   getProperties,
   getPropertiesInBounds,
   getPropertyHistoryHandler,
+  getPropertyScoreHandler,
   patchManagedPropertyHandler,
   patchPropertyWorkflowHandler,
   postManagedPropertyAssetHandler,
   postManagedPropertyHandler,
   postPropertyFavoriteHandler,
+  postPropertiesScoreRecalculationHandler,
+  postPropertyScoreRecalculationHandler,
   postPropertyReservationHandler,
   postPropertyReservationReleaseHandler,
   postPropertyViewHandler
@@ -35,6 +38,7 @@ import {
   propertyHistoryCreateSchema,
   propertyIdParamsSchema,
   propertyPublicIdentifierSchema,
+  propertyScoreCollectionSchema,
   propertyWorkflowSchema,
   updateManagedPropertySchema
 } from "./properties.validation.js";
@@ -47,6 +51,7 @@ propertyRouter.get("/search/bounds", validate(boundedPropertiesSchema), asyncHan
 propertyRouter.get("/", asyncHandler(getProperties));
 propertyRouter.get("/public/:identifier", validate(propertyPublicIdentifierSchema), asyncHandler(getPublicPropertyDetailHandler));
 propertyRouter.use(asyncHandler(requireAuth));
+propertyRouter.post("/recalculate-scores", validate(propertyScoreCollectionSchema), asyncHandler(postPropertiesScoreRecalculationHandler));
 propertyRouter.get("/publications/feed", validate(propertyCollectionSchema), asyncHandler(getPropertyPublicationsHandler));
 propertyRouter.get("/management/mine", validate(managedPropertiesSchema), asyncHandler(getManagedPropertiesHandler));
 propertyRouter.get("/management/view/:identifier", validate(propertyPublicIdentifierSchema), asyncHandler(getManagedPropertyDetailHandler));
@@ -58,6 +63,8 @@ propertyRouter.delete("/management/:propertyId", validate(propertyIdParamsSchema
 propertyRouter.get("/favorites/me", validate(propertyCollectionSchema), asyncHandler(getFavoritePropertiesHandler));
 propertyRouter.get("/history/me", validate(propertyCollectionSchema), asyncHandler(getPropertyHistoryHandler));
 propertyRouter.patch("/:propertyId/workflow", validate(propertyWorkflowSchema), asyncHandler(patchPropertyWorkflowHandler));
+propertyRouter.get("/:propertyId/score", validate(propertyIdParamsSchema), asyncHandler(getPropertyScoreHandler));
+propertyRouter.post("/:propertyId/recalculate-score", validate(propertyIdParamsSchema), asyncHandler(postPropertyScoreRecalculationHandler));
 propertyRouter.post("/:propertyId/favorite", validate(propertyIdParamsSchema), asyncHandler(postPropertyFavoriteHandler));
 propertyRouter.delete("/:propertyId/favorite", validate(propertyIdParamsSchema), asyncHandler(deletePropertyFavoriteHandler));
 propertyRouter.post("/:propertyId/reserve", validate(propertyIdParamsSchema), asyncHandler(postPropertyReservationHandler));

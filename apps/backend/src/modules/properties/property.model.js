@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+﻿import mongoose from "mongoose";
 import { pointSchema } from "../shared/schemas/location.schema.js";
 
 const propertyMediaSchema = new mongoose.Schema(
@@ -28,6 +28,18 @@ const propertyThreeDSourceSchema = new mongoose.Schema(
       enum: ["uploaded_media", "media", "cover"],
       default: "media"
     }
+  },
+  { _id: false }
+);
+
+const propertyScoreDetailsSchema = new mongoose.Schema(
+  {
+    priceScore: { type: Number, default: 0, min: 0, max: 100 },
+    locationScore: { type: Number, default: 0, min: 0, max: 100 },
+    photoScore: { type: Number, default: 0, min: 0, max: 100 },
+    historyScore: { type: Number, default: 0, min: 0, max: 100 },
+    recommendations: { type: [String], default: [] },
+    calculatedAt: { type: Date, default: null }
   },
   { _id: false }
 );
@@ -91,7 +103,9 @@ const propertySchema = new mongoose.Schema(
     reservedAt: { type: Date, default: null },
     viewCount: { type: Number, default: 0 },
     favoriteCount: { type: Number, default: 0 },
-    averageRating: { type: Number, default: 0 }
+    averageRating: { type: Number, default: 0 },
+    score: { type: Number, default: 0, min: 0, max: 100 },
+    scoreDetails: { type: propertyScoreDetailsSchema, default: () => ({}) }
   },
   { timestamps: true }
 );
@@ -102,5 +116,6 @@ propertySchema.index({ price: 1 });
 propertySchema.index({ bedrooms: 1, bathrooms: 1 });
 propertySchema.index({ agencyId: 1, agentId: 1 });
 propertySchema.index({ createdAt: -1 });
+propertySchema.index({ score: -1 });
 
 export const Property = mongoose.model("Property", propertySchema);

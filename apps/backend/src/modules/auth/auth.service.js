@@ -1,4 +1,4 @@
-import crypto from "crypto";
+﻿import crypto from "crypto";
 import { signAccessToken } from "../../core/utils/jwt.js";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
@@ -228,6 +228,8 @@ const formatAuthUser = async (user) => {
     agencyId: user.agencyId || null,
     permissionId: permissionState.permissionId,
     permissions: permissionState.permissions,
+    score: user.score || 0,
+    scoreDetails: user.scoreDetails || null,
     preferences: user.preferences || {},
     socialProviders: buildPublicSocialProviders(user.socialProviders || []),
     twoFactor: buildPublicTwoFactor(user.twoFactor || {})

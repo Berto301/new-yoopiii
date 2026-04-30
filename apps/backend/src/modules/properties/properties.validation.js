@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i, "Invalid id");
 
@@ -208,4 +208,10 @@ export const propertyAssetUploadSchema = z.object({
   query: z.object({
     mediaType: propertyUploadMediaTypeSchema
   })
+});
+
+export const propertyScoreCollectionSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({}).default({}),
+  query: z.object({}).default({})
 });

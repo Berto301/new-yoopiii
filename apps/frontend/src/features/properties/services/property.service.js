@@ -1,4 +1,4 @@
-import { apiClient } from "../../../lib/api/client.js";
+﻿import { apiClient } from "../../../lib/api/client.js";
 
 export const getManagedProperties = async (params = {}) => {
   const response = await apiClient.get("/properties/management/mine", { params });
@@ -100,5 +100,20 @@ export const releasePropertyReservation = async (propertyId) => {
 
 export const updatePropertyWorkflow = async ({ propertyId, payload }) => {
   const response = await apiClient.patch(`/properties/${propertyId}/workflow`, payload);
+  return response.data.data;
+};
+
+export const getPropertyScore = async (propertyId) => {
+  const response = await apiClient.get(`/properties/${propertyId}/score`);
+  return response.data.data;
+};
+
+export const recalculatePropertyScore = async (propertyId) => {
+  const response = await apiClient.post(`/properties/${propertyId}/recalculate-score`);
+  return response.data.data;
+};
+
+export const recalculatePropertyScores = async () => {
+  const response = await apiClient.post("/properties/recalculate-scores");
   return response.data.data;
 };

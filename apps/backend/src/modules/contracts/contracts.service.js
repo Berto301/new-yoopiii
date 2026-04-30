@@ -1,10 +1,11 @@
-import fs from "node:fs/promises";
+﻿import fs from "node:fs/promises";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 import { Agency } from "../agencies/agency.model.js";
 import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { DataFile } from "../files/data-file.model.js";
 import { createNotifications } from "../notifications/notifications.service.js";
+import { recalculateAgencyScore, recalculateAgentScore } from "../scoring/scoring.service.js";
 import { OwnerTenant } from "../owner/models/owner-tenant.model.js";
 import { Property } from "../properties/property.model.js";
 import { User } from "../users/user.model.js";
@@ -70,11 +71,20 @@ const resolveComparableId = (value) => {
 
 const normalizePropertyLabel = (property) => {
   const surface = property.area ? `${Number(property.area).toLocaleString("fr-FR")} m2` : "surface non renseignee";
-  return `${property.title} • ${property.address} • ${surface}`;
+  return `${property.title} â€¢ ${property.address} â€¢ ${surface}`;
 };
 
 const buildNotificationRecipients = (values) =>
   [...new Set(values.filter(Boolean).map((value) => String(value)))];
+const syncContractScores = async (contract) => {
+  const agentId = contract?.responsibleAgentUserId || (contract?.managerRole === "independent_agent" ? contract?.managerUserId : null) || contract?.agent?.id;
+  const tasks = [];
+
+  if (agentId) tasks.push(recalculateAgentScore(agentId));
+  if (contract?.agencyId) tasks.push(recalculateAgencyScore(contract.agencyId));
+
+  await Promise.all(tasks.map((task) => task.catch(() => null)));
+};
 
 export const isContractCurrentlyActive = (contract) => {
   if (!contract || !MANAGEABLE_CONTRACT_STATUSES.has(contract.status)) {
@@ -847,6 +857,7 @@ export const createManagementContract = async ({ actor, payload }) => {
 
   const detailedContract = await ensureContractAccess({ contractId: contract._id, actor });
   await createContractNotifications({ contract: detailedContract, actor, action: "created" });
+  await syncContractScores(detailedContract);
 
   return getManagementContractById({ contractId: contract._id, actor });
 };
@@ -869,6 +880,7 @@ export const updateManagementContract = async ({ contractId, actor, payload }) =
 
   const detailedContract = await ensureContractAccess({ contractId, actor });
   await createContractNotifications({ contract: detailedContract, actor, action: "updated" });
+  await syncContractScores(detailedContract);
 
   return getManagementContractById({ contractId, actor });
 };
@@ -898,6 +910,7 @@ export const deleteManagementContract = async ({ contractId, actor }) => {
   await ManagementContract.deleteOne({ _id: contractId });
 
   await createContractNotifications({ contract, actor, action: "deleted" });
+  await syncContractScores(contract);
 
   return { success: true, contractId };
 };

@@ -1,6 +1,16 @@
-import mongoose from "mongoose";
+﻿import mongoose from "mongoose";
 import { pointSchema } from "../shared/schemas/location.schema.js";
 
+const agencyScoreDetailsSchema = new mongoose.Schema(
+  {
+    agentsScore: { type: Number, default: 0, min: 0, max: 100 },
+    managedPropertiesScore: { type: Number, default: 0, min: 0, max: 100 },
+    closedDealsScore: { type: Number, default: 0, min: 0, max: 100 },
+    recommendations: { type: [String], default: [] },
+    calculatedAt: { type: Date, default: null }
+  },
+  { _id: false }
+);
 const agencySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -23,11 +33,14 @@ const agencySchema = new mongoose.Schema(
       type: String,
       enum: ["free", "starter", "growth", "enterprise"],
       default: "free"
-    }
+    },
+    score: { type: Number, default: 0, min: 0, max: 100 },
+    scoreDetails: { type: agencyScoreDetailsSchema, default: () => ({}) }
   },
   { timestamps: true }
 );
 
 agencySchema.index({ location: "2dsphere" });
+agencySchema.index({ score: -1 });
 
 export const Agency = mongoose.model("Agency", agencySchema);

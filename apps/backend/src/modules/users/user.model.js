@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+﻿import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { pointSchema } from "../shared/schemas/location.schema.js";
 
@@ -16,6 +16,17 @@ const socialProviderSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const agentScoreDetailsSchema = new mongoose.Schema(
+  {
+    ratingScore: { type: Number, default: 0, min: 0, max: 100 },
+    propertyScore: { type: Number, default: 0, min: 0, max: 100 },
+    contractScore: { type: Number, default: 0, min: 0, max: 100 },
+    clientRelationScore: { type: Number, default: 0, min: 0, max: 100 },
+    recommendations: { type: [String], default: [] },
+    calculatedAt: { type: Date, default: null }
+  },
+  { _id: false }
+);
 const userSchema = new mongoose.Schema(
   {
     firstName: { type: String, required: true, trim: true },
@@ -150,7 +161,9 @@ const userSchema = new mongoose.Schema(
         lockedUntil: { type: Date, default: null }
       }
     },
-    lastLoginAt: { type: Date, default: null }
+    lastLoginAt: { type: Date, default: null },
+    score: { type: Number, default: 0, min: 0, max: 100 },
+    scoreDetails: { type: agentScoreDetailsSchema, default: () => ({}) }
   },
   {
     timestamps: true
@@ -158,6 +171,7 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ location: "2dsphere" });
+userSchema.index({ role: 1, score: -1 });
 userSchema.index(
   { "socialProviders.provider": 1, "socialProviders.providerId": 1 },
   {

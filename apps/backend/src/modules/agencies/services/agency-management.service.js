@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+﻿import fs from "node:fs/promises";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
@@ -522,7 +522,7 @@ export const deleteAgencyExpense = async ({ agencyId, expenseId, actorUserId, pe
 };
 
 export const getAgencyStatsOverview = async ({ agencyId, userId, permission }) => {
-  await ensureAgencyAccess({ agencyId, userId, permission });
+  const { agency } = await ensureAgencyAccess({ agencyId, userId, permission });
 
   const agencyObjectId = toObjectId(agencyId);
   const now = new Date();
@@ -575,6 +575,8 @@ export const getAgencyStatsOverview = async ({ agencyId, userId, permission }) =
 
   return {
     agencyId,
+    score: agency.score || 0,
+    scoreDetails: agency.scoreDetails || null,
     activeAgents,
     totalMembers,
     activeProperties,

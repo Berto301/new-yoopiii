@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../../../components/profile/Avatar.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
+import { ScoreBadge } from "../../../components/ui/ScoreBadge.jsx";
 import { useAgencyDashboard } from "../../agency/hooks/useAgencyDashboard.js";
 import { DashboardEmptyState, DashboardHero, DashboardLoadingState, DashboardPanel, DashboardStatsGrid } from "../components/DashboardBlocks.jsx";
 import { formatCompactNumber, formatCurrency, formatDateTime, getConversationCounterpart, getDisplayName, sortByNewest } from "../dashboard.utils.js";
@@ -58,6 +59,11 @@ export const AgencyDashboardOverview = () => {
       helpText: "Rendez-vous a venir issus des conversations de suivi."
     },
     {
+      label: "Score agence",
+      value: `${Math.round(summary?.score || 0)}/100`,
+      helpText: "Indice global base sur agents, biens et conclusions."
+    },
+    {
       label: "Agents actifs",
       value: formatCompactNumber(summary?.activeAgents ?? 0),
       helpText: "Equipe active mobilisee dans le pilotage quotidien."
@@ -99,7 +105,10 @@ export const AgencyDashboardOverview = () => {
                     <p className="mt-1 text-sm text-stone-400">{property.address}</p>
                   </div>
                   <div className="text-sm md:text-right">
-                    <p className="uppercase tracking-[0.18em] text-amber-100">{property.publicationStatus}</p>
+                    <div className="flex justify-start md:justify-end">
+                      <ScoreBadge score={property.score || 0} showScore />
+                    </div>
+                    <p className="mt-2 uppercase tracking-[0.18em] text-amber-100">{property.publicationStatus}</p>
                     <p className="mt-1 text-stone-500">Maj {formatDateTime(property.updatedAt || property.createdAt)}</p>
                   </div>
                 </div>
@@ -149,7 +158,7 @@ export const AgencyDashboardOverview = () => {
                       <p className="font-semibold text-white">{property.agentName || "Equipe agence"}</p>
                       <p className="mt-1 text-sm text-stone-400">{property.title}</p>
                     </div>
-                    <span className="text-xs uppercase tracking-[0.18em] text-stone-500">{property.status}</span>
+                    <ScoreBadge score={property.score || 0} showScore />
                   </div>
                   <p className="mt-3 text-xs uppercase tracking-[0.18em] text-stone-500">{formatDateTime(property.updatedAt || property.createdAt)}</p>
                 </div>

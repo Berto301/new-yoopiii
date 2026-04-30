@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+﻿import fs from "node:fs/promises";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 import { DataFile } from "../files/data-file.model.js";
@@ -97,7 +97,9 @@ const sanitizeUser = async (user) => ({
     isEnabled: Boolean(user.twoFactor?.isEnabled),
     method: user.twoFactor?.method || "authenticator"
   },
-  location: user.location || null
+  location: user.location || null,
+  score: user.score || 0,
+  scoreDetails: user.scoreDetails || null
 });
 
 const deleteFileIfExists = async (storagePath) => {

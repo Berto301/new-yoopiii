@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { GoogleMap, MarkerF } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
 import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
 import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
+import { ScoreBadge } from "../../components/ui/ScoreBadge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { BaseListBox } from "../../components/form/BaseListBox.jsx";
@@ -158,6 +159,7 @@ const PublicationCard = ({
             {property.isUnderMaintenance ? (
               <Badge className="border-amber-400/30 bg-amber-500/15 text-amber-100">En maintenance</Badge>
             ) : null}
+            <ScoreBadge score={property.score || 0} showScore />
             {property.distanceFromReferenceKm != null ? (
               <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">
                 {property.distanceFromReferenceKm} km
@@ -171,6 +173,7 @@ const PublicationCard = ({
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-2xl font-semibold text-white">{property.title}</h3>
               {hasPropertyThreeDLink(property) ? <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">3D</Badge> : null}
+              <ScoreBadge score={property.score || 0} showScore />
             </div>
             <p className="mt-2 text-sm leading-6 text-stone-300">{property.description}</p>
           </div>

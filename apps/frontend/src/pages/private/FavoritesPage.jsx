@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
 import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
+import { ScoreBadge } from "../../components/ui/ScoreBadge.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
@@ -94,6 +95,7 @@ export const FavoritesPage = () => {
                     <Badge className={getStatusClassName(property)}>{property.status || "publie"}</Badge>
                     {property.purpose ? <Badge className="border-white/10 bg-black/30 text-white">{property.purpose}</Badge> : null}
                     {property.type ? <Badge className="border-white/10 bg-white/10 text-stone-100">{property.type}</Badge> : null}
+                    <ScoreBadge score={property.score || 0} showScore />
                   </div>
                   <div className="absolute bottom-5 left-5 right-5">
                     <p className="text-xs uppercase tracking-[0.24em] text-stone-300">Adresse complete</p>
@@ -107,6 +109,7 @@ export const FavoritesPage = () => {
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="break-words text-2xl font-semibold text-white">{property.title}</h2>
                         {hasPropertyThreeDLink(property) ? <Badge className="border-sky-500/30 bg-sky-500/10 text-sky-100">Visite 3D</Badge> : null}
+                        <ScoreBadge score={property.score || 0} showScore />
                       </div>
                       <p className="max-w-3xl break-words text-sm leading-6 text-stone-300">{property.description || "Aucune description detaillee n'est disponible pour ce bien."}</p>
                     </div>
