@@ -348,7 +348,7 @@ export const AgenciesAgentsPage = () => {
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <ScoreBadge score={agent.score || 0} showScore />
-                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-100">
+                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-white">
                             {formatRating(agent.clientRating)}
                           </span>
                         </div>

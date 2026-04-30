@@ -21,11 +21,11 @@ const MATCH_STATUS_OPTIONS = [
 
 const scoreToneClassName = (score) => {
   if (score >= 85) {
-    return "border-emerald-400/30 bg-emerald-500/10 text-emerald-100";
+    return "border-emerald-400/30 bg-emerald-500/10 !text-white";
   }
 
   if (score >= 70) {
-    return "border-sky-400/30 bg-sky-500/10 text-sky-100";
+    return "border-sky-400/30 bg-sky-500/10 !text-white";
   }
 
   return "border-amber-400/30 bg-amber-500/10 text-amber-100";
@@ -33,7 +33,7 @@ const scoreToneClassName = (score) => {
 
 const matchCheckBadgeClassName = (isMatched) =>
   isMatched
-    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+    ? "border-emerald-400/30 bg-emerald-500/10 !text-white"
     : "border-white/10 bg-white/5 text-stone-300";
 
 export const ModalMatchingUser = ({
@@ -181,7 +181,7 @@ export const ModalMatchingUser = ({
                 >
                   <div className="grid gap-0 lg:grid-cols-[1fr_auto]">
                     <div className="p-5 lg:p-6">
-                      <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
+                      <div className="flex flex-col gap-5  xl:items-start">
                         <div className="flex items-start gap-4">
                           <Avatar
                             src={user?.avatar}
@@ -214,7 +214,7 @@ export const ModalMatchingUser = ({
                           </div>
                         </div>
 
-                        <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
                           <div className="rounded-[1.35rem] border border-white/10 bg-black/20 px-4 py-4">
                             <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Objectif</p>
                             <p className="mt-2 text-sm font-medium text-white">{summary.purposeLabel}</p>

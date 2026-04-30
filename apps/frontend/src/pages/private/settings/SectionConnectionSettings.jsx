@@ -144,7 +144,7 @@ export const SectionConnectionSettings = ({
                   <p className="mt-1 text-sm text-stone-400">{linkedProvider?.email || t("settings", "connection.social.notConnected", "Non connecte")}</p>
                 </div>
                 <Badge className={isLinked
-                  ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+                  ? "border-emerald-400/30 bg-emerald-500/10 text-white"
                   : "border-stone-400/30 bg-stone-500/10 text-stone-100"}
                 >
                   {isLinked
@@ -186,7 +186,7 @@ export const SectionConnectionSettings = ({
             </p>
           </div>
           <Badge className={isTwoFactorEnabled
-            ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+            ? "border-emerald-400/30 bg-emerald-500/10 text-white"
             : "border-stone-400/30 bg-stone-500/10 text-stone-100"}
           >
             {isTwoFactorEnabled

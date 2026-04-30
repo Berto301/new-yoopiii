@@ -151,7 +151,7 @@ export const DashboardLayout = () => {
                       to={item.to}
                       className={({ isActive }) =>
                         isActive
-                          ? "flex items-center gap-3 rounded-2xl border border-brand-500/30 bg-brand-500/15 px-4 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)]"
+                          ? "flex items-center gap-3 rounded-2xl border border-brand-500/30 bg-brand-500/15 px-4 py-3 text-sm font-medium text-white transition-all duration-200" 
                           : "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm text-stone-300 transition hover:bg-white/5 hover:text-white"
                       }
                     >

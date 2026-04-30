@@ -33,7 +33,7 @@ const getPropertySpecs = (property) => [
 const getStatusBadgeClassName = (status) => {
   switch (status) {
     case "confirmed":
-      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
+      return "border-emerald-500/30 bg-emerald-500/10 text-white";
     case "cancelled":
       return "border-rose-500/30 bg-rose-500/10 text-rose-100";
     case "completed":

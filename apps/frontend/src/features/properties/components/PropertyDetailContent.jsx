@@ -12,19 +12,19 @@ const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
 const getStatusClassName = (status) => {
   if (status === "published") {
-    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
+    return "border-emerald-500/30 bg-emerald-500/10 text-white";
   }
 
   if (status === "reserved") {
-    return "border-amber-500/30 bg-amber-500/10 text-amber-100";
+    return "border-amber-500/30 bg-amber-500/10 text-white";
   }
 
   if (status === "sold") {
-    return "border-sky-500/30 bg-sky-500/10 text-sky-100";
+    return "border-sky-500/30 bg-sky-500/10 text-white";
   }
 
   if (status === "rented") {
-    return "border-violet-500/30 bg-violet-500/10 text-violet-100";
+    return "border-violet-500/30 bg-violet-500/10 text-white";
   }
 
   return "border-white/10 bg-white/5 text-stone-200";

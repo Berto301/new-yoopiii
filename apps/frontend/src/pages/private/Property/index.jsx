@@ -33,7 +33,7 @@ const formatOwnerType = (ownerType, t) => {
 
 const getPublicationBadgeClassName = (publicationStatus) => {
   if (publicationStatus === "approved") {
-    return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
+    return "border-emerald-400/30 bg-emerald-400/10 text-white";
   }
 
   if (publicationStatus === "rejected") {
@@ -45,7 +45,7 @@ const getPublicationBadgeClassName = (publicationStatus) => {
 
 const getStatusBadgeClassName = (status) => {
   if (status === "published") {
-    return "border-emerald-400/25 bg-emerald-400/10 text-emerald-100";
+    return "border-emerald-400/25 bg-emerald-400/10 text-white";
   }
 
   if (status === "reserved") {
