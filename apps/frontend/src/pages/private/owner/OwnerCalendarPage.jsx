@@ -19,7 +19,7 @@ const localeMap = { fr, en: enUS };
 
 const getStatusTone = (status) => {
   if (status === "closed_won") {
-    return "border-emerald-400/30 bg-emerald-500/10 text-white";
+    return "border-emerald-400/30 bg-emerald-500/10 text-emerald-100";
   }
 
   if (status === "cancelled") {

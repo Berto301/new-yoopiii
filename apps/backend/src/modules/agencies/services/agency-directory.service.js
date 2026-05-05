@@ -1,6 +1,7 @@
 ﻿import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../../core/errors/app-error.js";
 import { Property } from "../../properties/property.model.js";
+import { AgentReview } from "../../users/models/agent-review.model.js";
 import { Agency } from "../agency.model.js";
 import { AgencyMember } from "../models/agency-member.model.js";
 
@@ -42,7 +43,7 @@ const buildAgentStatsMap = async (agentIds, agencyId = null) => {
     agentId: { $in: agentIds },
     ...(agencyId ? { agencyId } : {})
   })
-    .select("agentId title status purpose publicationStatus averageRating score scoreDetails updatedAt")
+    .select("agentId title status purpose publicationStatus score scoreDetails updatedAt")
     .sort({ updatedAt: -1, createdAt: -1 })
     .lean();
 
@@ -52,8 +53,6 @@ const buildAgentStatsMap = async (agentIds, agencyId = null) => {
     const key = String(property.agentId);
     const existing = statsMap.get(key) || {
       recentProperties: [],
-      ratingTotal: 0,
-      ratedPropertiesCount: 0,
       managedPropertiesCount: 0
     };
 
@@ -63,15 +62,29 @@ const buildAgentStatsMap = async (agentIds, agencyId = null) => {
       existing.recentProperties.push(mapRecentProperty(property));
     }
 
-    if (typeof property.averageRating === "number" && property.averageRating > 0) {
-      existing.ratingTotal += property.averageRating;
-      existing.ratedPropertiesCount += 1;
-    }
-
     statsMap.set(key, existing);
   });
 
   return statsMap;
+};
+
+const buildAgentReviewStatsMap = async (agentIds) => {
+  if (!agentIds.length) {
+    return new Map();
+  }
+
+  const reviews = await AgentReview.find({ agentId: { $in: agentIds } }).select("agentId score").lean();
+  const reviewStatsMap = new Map();
+
+  reviews.forEach((review) => {
+    const key = String(review.agentId);
+    const existing = reviewStatsMap.get(key) || { totalScore: 0, reviewsCount: 0 };
+    existing.totalScore += Number(review.score || 0);
+    existing.reviewsCount += 1;
+    reviewStatsMap.set(key, existing);
+  });
+
+  return reviewStatsMap;
 };
 
 export const listAgencyDirectoryAgencies = async ({ filters }) => {
@@ -172,7 +185,10 @@ export const listAgencyDirectoryAgents = async ({ agencyId, filters }) => {
     });
 
   const agentIds = searchableMembers.map((member) => member.userId._id);
-  const statsMap = await buildAgentStatsMap(agentIds, agencyId);
+  const [statsMap, reviewStatsMap] = await Promise.all([
+    buildAgentStatsMap(agentIds, agencyId),
+    buildAgentReviewStatsMap(agentIds)
+  ]);
 
   return {
     agency: {
@@ -184,10 +200,10 @@ export const listAgencyDirectoryAgents = async ({ agencyId, filters }) => {
       const user = member.userId;
       const stats = statsMap.get(String(user._id)) || {
         recentProperties: [],
-        ratingTotal: 0,
-        ratedPropertiesCount: 0,
         managedPropertiesCount: 0
       };
+      const reviewStats = reviewStatsMap.get(String(user._id)) || { totalScore: 0, reviewsCount: 0 };
+      const averageScore = reviewStats.reviewsCount ? reviewStats.totalScore / reviewStats.reviewsCount : 0;
 
       return {
         id: String(member._id),
@@ -204,7 +220,8 @@ export const listAgencyDirectoryAgents = async ({ agencyId, filters }) => {
         scoreDetails: user.scoreDetails || null,
         agencyId: String(agency._id),
         agencyName: agency.name,
-        clientRating: stats.ratedPropertiesCount ? Number((stats.ratingTotal / stats.ratedPropertiesCount).toFixed(1)) : 0,
+        clientRating: reviewStats.reviewsCount ? Number((averageScore / 20).toFixed(1)) : 0,
+        clientRatingCount: reviewStats.reviewsCount,
         managedPropertiesCount: stats.managedPropertiesCount,
         recentProperties: stats.recentProperties
       };

@@ -1,9 +1,9 @@
-import { cn } from "../../lib/utils/cn.js";
+﻿import { cn } from "../../lib/utils/cn.js";
 
 const variants = {
-  primary: "bg-brand-500 text-white hover:bg-brand-700",
-  secondary: "border border-white/15 bg-white/5 text-white hover:border-white/30",
-  ghost: "bg-transparent text-stone-200 hover:bg-white/5"
+  primary: "bg-[var(--color-brand-500)] text-[var(--on-brand)] hover:bg-[var(--color-brand-700)]",
+  secondary: "border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--foreground)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-soft)]",
+  ghost: "bg-transparent text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
 };
 
 export const Button = ({ className, variant = "primary", as: Component = "button", ...props }) => (

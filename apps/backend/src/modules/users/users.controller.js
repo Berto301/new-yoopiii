@@ -1,6 +1,6 @@
 ﻿import { StatusCodes } from "http-status-codes";
 import { listDiscoverableAgents } from "./agent-directory.service.js";
-import { getAgentScore, listTopAgents, recalculateAgentScore, recalculateAllAgentScores, submitAgentReview } from "../scoring/scoring.service.js";
+import { getAgentScore, getMyAgentReview, listTopAgents, recalculateAgentScore, recalculateAllAgentScores, submitAgentReview } from "../scoring/scoring.service.js";
 import { changeMyPassword, getUserProfileById, listUsers, updateMyPreferences, updateMyProfile, uploadMyProfileAvatar } from "./users.service.js";
 
 export const getUsers = async (_req, res) => {
@@ -99,6 +99,14 @@ export const getTopAgentsHandler = async (req, res) => {
   res.status(StatusCodes.OK).json({ success: true, data });
 };
 
+export const getMyAgentReviewHandler = async (req, res) => {
+  const data = await getMyAgentReview({
+    agentId: req.validated.params.agentId,
+    userId: req.user.id
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
 export const postAgentReviewHandler = async (req, res) => {
   const data = await submitAgentReview({
     agentId: req.validated.params.agentId,
@@ -108,3 +116,5 @@ export const postAgentReviewHandler = async (req, res) => {
 
   res.status(StatusCodes.CREATED).json({ success: true, data });
 };
+
+

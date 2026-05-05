@@ -1,4 +1,4 @@
-import { cn } from "../../lib/utils/cn.js";
+﻿import { cn } from "../../lib/utils/cn.js";
 
 const iconClassName = "h-5 w-5 shrink-0";
 
@@ -27,3 +27,6 @@ export const TenantsIcon = createIcon(<><path d="M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0
 export const MaintenanceIcon = createIcon(<><path d="m14.5 5.5 4 4" /><path d="m13 7 4 4" /><path d="m4 20 4.5-1 9-9-3.5-3.5-9 9L4 20Z" /></>);
 export const InstallIcon = createIcon(<><path d="M12 3v11" /><path d="m7.5 10.5 4.5 4.5 4.5-4.5" /><path d="M5 20h14" /></>);
 export const MoreIcon = createIcon(<><path d="M5 12h.01" /><path d="M12 12h.01" /><path d="M19 12h.01" /></>);
+
+export const CrmIcon = createIcon(<><path d="M4 6.5h7" /><path d="M4 12h10" /><path d="M4 17.5h6" /><rect x="14" y="4" width="6" height="5" rx="1.2" /><rect x="14" y="10" width="6" height="5" rx="1.2" /><rect x="14" y="16" width="6" height="4" rx="1.2" /></>);
+

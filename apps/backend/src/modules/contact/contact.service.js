@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+﻿import nodemailer from "nodemailer";
 import { StatusCodes } from "http-status-codes";
 import { env } from "../../config/env.js";
 import { AppError } from "../../core/errors/app-error.js";
@@ -24,9 +24,9 @@ export const sendContactMessage = async ({ payload }) => {
   ensureMailConfiguration();
 
   const transporter = buildTransporter();
-  const safeSubject = payload.subject.trim();
-  const safeMessage = payload.message.trim();
-  const safeFullName = payload.fullName.trim();
+  const safeSubject = (payload.subject || payload.objet || "").trim();
+  const safeMessage = (payload.message || payload.detail || "").trim();
+  const safeFullName = (payload.fullName || "Newsletter Yopii").trim();
   const safeEmail = payload.email.trim().toLowerCase();
 
   await transporter.sendMail({
@@ -37,7 +37,7 @@ export const sendContactMessage = async ({ payload }) => {
     text: [
       `Nom: ${safeFullName}`,
       `Email: ${safeEmail}`,
-      `Sujet: ${safeSubject}`,
+      `Objet: ${safeSubject}`,
       "",
       safeMessage
     ].join("\n"),
@@ -46,7 +46,7 @@ export const sendContactMessage = async ({ payload }) => {
         <h2>Nouveau message de contact Yopii</h2>
         <p><strong>Nom:</strong> ${safeFullName}</p>
         <p><strong>Email:</strong> ${safeEmail}</p>
-        <p><strong>Sujet:</strong> ${safeSubject}</p>
+        <p><strong>Objet:</strong> ${safeSubject}</p>
         <p><strong>Message:</strong></p>
         <p>${safeMessage.replace(/\n/g, "<br />")}</p>
       </div>
@@ -57,3 +57,4 @@ export const sendContactMessage = async ({ payload }) => {
     delivered: true
   };
 };
+

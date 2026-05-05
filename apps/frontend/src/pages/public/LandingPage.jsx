@@ -13,26 +13,26 @@ import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
 const HERO_IMAGE = "/assets/hero-bg.jpg";
 const DEFAULT_MAP_CENTER = { lat: -19.872006, lng: 47.03961 };
 const PROPERTY_FILTER_OPTIONS = [
-  { value: "", label: "Type" },
-  { value: "apartment", label: "Appartement" },
-  { value: "house", label: "Maison / Villa" },
-  { value: "commercial", label: "Commercial / Shop" },
-  { value: "office", label: "Building / Office" },
-  { value: "warehouse", label: "Garage / Warehouse" },
-  { value: "land", label: "Terrain" }
+  { value: "", labelKey: "filters.type", fallback: "Type" },
+  { value: "apartment", labelKey: "propertyTypes.apartment", fallback: "Appartement" },
+  { value: "house", labelKey: "propertyTypes.house", fallback: "Maison / Villa" },
+  { value: "commercial", labelKey: "propertyTypes.commercial", fallback: "Commercial" },
+  { value: "office", labelKey: "propertyTypes.office", fallback: "Bureau" },
+  { value: "warehouse", labelKey: "propertyTypes.warehouse", fallback: "Entrepot" },
+  { value: "land", labelKey: "propertyTypes.land", fallback: "Terrain" }
 ];
 const PROPERTY_TYPES = [
-  { id: "appartement", label: "Appartement", category: "property", keywords: ["appartement", "apartment"] },
-  { id: "villa", label: "Villa", category: "property", keywords: ["villa"] },
-  { id: "building", label: "Building", category: "property", keywords: ["building", "immeuble"] },
-  { id: "shop", label: "Shop", category: "property", keywords: ["shop", "boutique", "commerce", "commercial local"] },
-  { id: "garage", label: "Garage", category: "property", keywords: ["garage"] },
-  { id: "terrain-residentiel", label: "Terrain residentiel", category: "terrain", keywords: ["terrain residentiel", "residential land"] },
-  { id: "terrain-commercial", label: "Terrain commercial", category: "terrain", keywords: ["terrain commercial", "commercial land"] },
-  { id: "terrain-agricole", label: "Terrain agricole", category: "terrain", keywords: ["terrain agricole", "farm land", "agricultural land"] },
-  { id: "lotissement", label: "Lotissement", category: "terrain", keywords: ["lotissement", "lot"] },
-  { id: "parcelle-angle", label: "Parcelle angle", category: "terrain", keywords: ["parcelle angle", "corner lot"] },
-  { id: "terrain-investissement", label: "Terrain d'investissement", category: "terrain", keywords: ["terrain d'investissement", "terrain investissement", "investment land"] }
+  { id: "appartement", labelKey: "propertyTypes.apartment", fallback: "Appartement", category: "property", keywords: ["appartement", "apartment"] },
+  { id: "villa", labelKey: "propertyTypes.villa", fallback: "Villa", category: "property", keywords: ["villa"] },
+  { id: "building", labelKey: "propertyTypes.building", fallback: "Immeuble", category: "property", keywords: ["building", "immeuble"] },
+  { id: "shop", labelKey: "propertyTypes.shop", fallback: "Boutique", category: "property", keywords: ["shop", "boutique", "commerce", "commercial local"] },
+  { id: "garage", labelKey: "propertyTypes.garage", fallback: "Garage", category: "property", keywords: ["garage"] },
+  { id: "terrain-residentiel", labelKey: "propertyTypes.residentialLand", fallback: "Terrain residentiel", category: "terrain", keywords: ["terrain residentiel", "residential land"] },
+  { id: "terrain-commercial", labelKey: "propertyTypes.commercialLand", fallback: "Terrain commercial", category: "terrain", keywords: ["terrain commercial", "commercial land"] },
+  { id: "terrain-agricole", labelKey: "propertyTypes.agriculturalLand", fallback: "Terrain agricole", category: "terrain", keywords: ["terrain agricole", "farm land", "agricultural land"] },
+  { id: "lotissement", labelKey: "propertyTypes.subdivision", fallback: "Lotissement", category: "terrain", keywords: ["lotissement", "lot"] },
+  { id: "parcelle-angle", labelKey: "propertyTypes.cornerPlot", fallback: "Parcelle angle", category: "terrain", keywords: ["parcelle angle", "corner lot"] },
+  { id: "terrain-investissement", labelKey: "propertyTypes.investmentLand", fallback: "Terrain d'investissement", category: "terrain", keywords: ["terrain d'investissement", "terrain investissement", "investment land"] }
 ];
 
 const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
@@ -119,7 +119,7 @@ const LandingSkeleton = () => (
   </section>
 );
 
-const HeroSearchBar = ({ navigate }) => {
+const HeroSearchBar = ({ navigate, t }) => {
   const [keyword, setKeyword] = useState("");
   const [type, setType] = useState("");
   const [location, setLocation] = useState("");
@@ -149,7 +149,7 @@ const HeroSearchBar = ({ navigate }) => {
         <input
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
-          placeholder="Keywords"
+          placeholder={t("landing", "hero.keywords", "Mots-cles")}
           className="h-12 rounded-xl border border-white/50 bg-white px-4 text-sm text-stone-950 outline-none transition focus:border-stone-950/20"
         />
         <select
@@ -158,17 +158,17 @@ const HeroSearchBar = ({ navigate }) => {
           className="h-12 rounded-xl border border-white/50 bg-white px-4 text-sm text-stone-950 outline-none transition focus:border-stone-950/20"
         >
           {PROPERTY_FILTER_OPTIONS.map((item) => (
-            <option key={item.value || "all"} value={item.value}>{item.label}</option>
+            <option key={item.value || "all"} value={item.value}>{t("landing", item.labelKey, item.fallback)}</option>
           ))}
         </select>
         <input
           value={location}
           onChange={(event) => setLocation(event.target.value)}
-          placeholder="Location"
+          placeholder={t("landing", "hero.location", "Localisation")}
           className="h-12 rounded-xl border border-white/50 bg-white px-4 text-sm text-stone-950 outline-none transition focus:border-stone-950/20"
         />
-        <Button type="button" className="h-12 rounded-xl bg-stone-950 px-6 text-white hover:bg-stone-800" onClick={handleSearch}>
-          Search
+        <Button type="button" className="h-12 rounded-xl bg-[var(--foreground)] px-6 text-[var(--background)] hover:opacity-90" onClick={handleSearch}>
+          {t("landing", "hero.search", "Rechercher")}
         </Button>
       </div>
     </div>
@@ -185,37 +185,37 @@ const TypeCard = ({ label, countLabel }) => (
   </Card>
 );
 
-const PropertyCard = ({ property, onView }) => (
+const PropertyCard = ({ property, onView, t }) => (
   <article className="overflow-hidden rounded-[1.75rem] border border-[rgba(157,93,67,0.12)] bg-white shadow-[0_18px_40px_rgba(45,30,23,0.1)] transition hover:-translate-y-1">
     <div className="relative h-56 overflow-hidden">
       <img src={property.coverImage ? resolveAssetUrl(property.coverImage) : HERO_IMAGE} alt={property.title} className="h-full w-full object-cover" />
-      <span className="absolute left-4 top-4 rounded-full bg-brand-500 px-3 py-1 text-xs font-medium text-white">{property.purpose || "For Sell"}</span>
+      <span className="absolute left-4 top-4 rounded-full bg-brand-500 px-3 py-1 text-xs font-medium text-white">{property.purpose || t("landing", "propertyCard.purposeFallback", "Publie")}</span>
     </div>
     <div className="space-y-4 p-5">
       <div className="flex items-center justify-between gap-3">
-        <span className="rounded-full bg-[#f4e1d7] px-3 py-1 text-xs font-medium text-brand-500">{property.type || "Property"}</span>
+        <span className="rounded-full bg-[#f4e1d7] px-3 py-1 text-xs font-medium text-brand-500">{property.type || t("landing", "propertyCard.typeFallback", "Bien")}</span>
         <span className="text-sm font-medium text-brand-500">{formatPrice(property.price, property.currency)}</span>
       </div>
       <div>
         <h3 className="text-xl font-semibold text-stone-950">{property.title}</h3>
         <p className="mt-2 flex items-center gap-2 text-sm text-stone-500">
           <PinIcon />
-          <span>{property.address || "Antsirabe, Madagascar"}</span>
+          <span>{property.address || t("landing", "propertyCard.addressFallback", "Adresse non renseignee")}</span>
         </p>
       </div>
       <div className="grid grid-cols-3 gap-3 border-t border-stone-200 pt-4 text-xs text-stone-500">
-        <span className="flex items-center gap-1.5"><BedIcon /> {property.bedrooms || 3} Beds</span>
-        <span className="flex items-center gap-1.5"><BathIcon /> {property.bathrooms || 3} Baths</span>
+        <span className="flex items-center gap-1.5"><BedIcon /> {property.bedrooms || 3} {t("landing", "propertyCard.beds", "chambres")}</span>
+        <span className="flex items-center gap-1.5"><BathIcon /> {property.bathrooms || 3} {t("landing", "propertyCard.baths", "bains")}</span>
         <span className="flex items-center gap-1.5"><AreaIcon /> {property.area || 1000} m2</span>
       </div>
       <Button type="button" className="w-full bg-brand-500 text-white hover:bg-brand-700" onClick={onView}>
-        Voir le detail
+        {t("landing", "published.viewDetail", "Voir detail")}
       </Button>
     </div>
   </article>
 );
 
-const AgentCard = ({ agent }) => {
+const AgentCard = ({ agent, t }) => {
   const [imageFailed, setImageFailed] = useState(false);
   const avatarSrc = imageFailed ? "" : resolveAvatarUrl(agent?.avatar, "");
 
@@ -235,8 +235,8 @@ const AgentCard = ({ agent }) => {
       </div>
       <div className="space-y-2 p-4 text-center">
         <h3 className="text-lg font-semibold text-stone-950">{agent.fullName}</h3>
-        <p className="text-sm text-stone-500">{agent.agencyName || "Agent Yopii"}</p>
-        <p className="text-xs uppercase tracking-[0.18em] text-brand-500">{agent.managedPropertiesCount || 0} biens geres</p>
+        <p className="text-sm text-stone-500">{agent.agencyName || t("landing", "agentsSection.agentFallback", "Agent Yopii")}</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-brand-500">{agent.managedPropertiesCount || 0} {t("landing", "agentsSection.managedProperties", "biens geres")}</p>
       </div>
     </Card>
   );
@@ -301,7 +301,7 @@ const PublishedMapPanel = ({ properties, navigate, t }) => {
                 <p className="text-xl font-semibold text-stone-950">{selectedProperty.title}</p>
                 <p className="mt-1 text-sm text-stone-500">{selectedProperty.address || t("landing", "published.addressMissing", "Adresse non renseignee")}</p>
               </div>
-              <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-medium text-white">{selectedProperty.type || "Property"}</span>
+              <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-medium text-white">{selectedProperty.type || t("landing", "propertyCard.typeFallback", "Bien")}</span>
             </div>
             <p className="text-lg font-semibold text-brand-500">{formatPrice(selectedProperty.price, selectedProperty.currency)}</p>
             <p className="text-sm leading-7 text-stone-500">{selectedProperty.description || t("landing", "published.descriptionMissing", "Description indisponible.")}</p>
@@ -331,7 +331,7 @@ const PublishedMapPanel = ({ properties, navigate, t }) => {
   );
 };
 
-const TestimonialBlock = ({ featuredAgency, summary }) => (
+const TestimonialBlock = ({ featuredAgency, summary, t }) => (
   <section className="grid gap-8 lg:grid-cols-[0.42fr_0.58fr] lg:items-center">
     <div className="mx-auto h-40 w-40 overflow-hidden rounded-full border-4 border-brand-500 bg-[#f4e1d7] shadow-[0_16px_35px_rgba(45,30,23,0.12)]">
       {featuredAgency?.logo ? (
@@ -341,15 +341,15 @@ const TestimonialBlock = ({ featuredAgency, summary }) => (
       )}
     </div>
     <div className="space-y-4">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-500">Our Clients Say!</p>
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-500">{t("landing", "testimonial.eyebrow", "Ils nous font confiance")}</p>
       <h2 className="text-3xl font-bold text-stone-950 md:text-4xl">{featuredAgency?.name || "Yopii"}</h2>
       <p className="max-w-2xl text-base leading-8 text-stone-500">
-        Yopii connecte vitrine publique, biens publies, agences actives et agents disponibles dans une experience immobiliere claire, moderne et rassurante.
+        {t("landing", "testimonial.description", "Yopii connecte vitrine publique, biens publies, agences actives et agents disponibles dans une experience immobiliere claire, moderne et rassurante.")}
       </p>
       <div className="flex flex-wrap gap-3">
-        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.propertiesCount || 0} biens</span>
-        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.agenciesCount || 0} agences</span>
-        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.agentsCount || 0} agents</span>
+        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.propertiesCount || 0} {t("landing", "hero.metrics.properties", "Biens")}</span>
+        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.agenciesCount || 0} {t("landing", "hero.metrics.agencies", "Agences")}</span>
+        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.agentsCount || 0} {t("landing", "hero.metrics.agents", "Agents")}</span>
       </div>
     </div>
   </section>
@@ -372,6 +372,12 @@ export const LandingPage = () => {
   const featuredAgents = useMemo(() => (landingData?.agents || []).slice(0, 4), [landingData?.agents]);
   const typeCounts = useMemo(() => getTypeCounts(mapProperties), [mapProperties]);
   const typeItems = PROPERTY_TYPES.filter((item) => item.category === activeTypeTab);
+  const aboutHighlights = [
+    t("landing", "about.highlights.modernHome", "Habitats modernes"),
+    t("landing", "about.highlights.affordablePrice", "Prix lisibles"),
+    t("landing", "about.highlights.rightPapers", "Dossiers verifies"),
+    t("landing", "about.highlights.verifiedAgents", "Agents verifies")
+  ];
 
   if (landingQuery.isLoading) {
     return <LandingSkeleton />;
@@ -381,8 +387,8 @@ export const LandingPage = () => {
     return (
       <section className="mx-auto max-w-7xl px-6 py-16">
         <Card className="rounded-[2rem] border-[rgba(157,93,67,0.12)] bg-white text-stone-600">
-          <h1 className="text-3xl font-bold text-stone-950">Landing indisponible</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7">Les donnees n'ont pas pu etre chargees pour le moment. Reessayez dans quelques instants.</p>
+          <h1 className="text-3xl font-bold text-stone-950">{t("landing", "errors.title", "Landing indisponible")}</h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7">{t("landing", "errors.description", "Les donnees n'ont pas pu etre chargees pour le moment. Reessayez dans quelques instants.")}</p>
         </Card>
       </section>
     );
@@ -398,30 +404,30 @@ export const LandingPage = () => {
           <div className="space-y-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-500">{t("landing", "hero.badge", "Yopii Real Estate")}</p>
             <h1 className="max-w-2xl text-5xl font-bold leading-[1.04] text-stone-950 md:text-6xl">
-              {t("landing", "hero.mockTitle", "Find A Perfect Home or Terrain To Live With Your Family")}
+              {t("landing", "hero.mockTitle", "Trouvez la maison ou le terrain ideal pour votre projet")}
             </h1>
             <p className="max-w-lg text-base leading-8 text-stone-500">
-              {t("landing", "hero.mockDescription", "The shorted distance between paradise and the place you call home.")}
+              {t("landing", "hero.mockDescription", "Une vitrine claire pour explorer, comparer et contacter les bons professionnels.")}
             </p>
             <div className="flex flex-wrap gap-3">
               <Button as={Link} to={currentUser ? "/properties" : "/login"} className="bg-brand-500 px-8 text-white hover:bg-brand-700">
-                {currentUser?.role === "proprietaire" ? "Ouvrir mon espace" : "Get Started"}
+                {currentUser?.role === "proprietaire" ? t("landing", "hero.openSpace", "Ouvrir mon espace") : t("landing", "hero.getStarted", "Commencer")}
               </Button>
               <Button as={Link} to="/properties" variant="secondary" className="border-brand-500/20 text-brand-500 hover:border-brand-500/40">
-                Explorer les biens
+                {t("landing", "hero.explore", "Explorer les biens")}
               </Button>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(45,30,23,0.08)]">
-                <p className="text-sm text-stone-500">Properties</p>
+                <p className="text-sm text-stone-500">{t("landing", "hero.metrics.properties", "Biens")}</p>
                 <p className="mt-2 text-2xl font-bold text-stone-950">{summary.propertiesCount || 0}</p>
               </div>
               <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(45,30,23,0.08)]">
-                <p className="text-sm text-stone-500">Agencies</p>
+                <p className="text-sm text-stone-500">{t("landing", "hero.metrics.agencies", "Agences")}</p>
                 <p className="mt-2 text-2xl font-bold text-stone-950">{summary.agenciesCount || 0}</p>
               </div>
               <div className="rounded-[1.4rem] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(45,30,23,0.08)]">
-                <p className="text-sm text-stone-500">Published</p>
+                <p className="text-sm text-stone-500">{t("landing", "published.eyebrow", "Publies")}</p>
                 <p className="mt-2 text-2xl font-bold text-stone-950">{mapProperties.length}</p>
               </div>
             </div>
@@ -436,7 +442,7 @@ export const LandingPage = () => {
         </div>
 
         <div className="mt-10">
-          <HeroSearchBar navigate={navigate} />
+          <HeroSearchBar navigate={navigate} t={t} />
         </div>
       </section>
 
@@ -457,7 +463,7 @@ export const LandingPage = () => {
                 }}
                 onClick={() => setActiveTypeTab("property")}
               >
-                Property Types
+                {t("landing", "types.property", "Types de biens")}
               </button>
               <button
                 type="button"
@@ -469,12 +475,12 @@ export const LandingPage = () => {
                 }}
                 onClick={() => setActiveTypeTab("terrain")}
               >
-                Terrain Types
+                {t("landing", "types.terrain", "Types de terrains")}
               </button>
             </div>
             <div className="mt-10 grid gap-6 md:grid-cols-2">
               {typeItems.map((item) => (
-                <TypeCard key={item.id} label={item.label} countLabel={`${typeCounts[item.id] || 0} publies`} />
+                <TypeCard key={item.id} label={t("landing", item.labelKey, item.fallback)} countLabel={`${typeCounts[item.id] || 0} ${t("landing", "types.published", "publies")}`} />
               ))}
             </div>
           </div>
@@ -493,17 +499,16 @@ export const LandingPage = () => {
           </div>
           <div className="space-y-5">
             <SectionHeading
-              eyebrow="About Us"
-              title="First Place To Find The Perfect Property and Terrain"
-              description="Yopii met en avant les biens, les terrains, les agents et les agences dans une vitrine claire, premium et facile a parcourir depuis le web ou le mobile."
+              eyebrow={t("landing", "about.eyebrow", "A propos")}
+              title={t("landing", "about.title", "Le premier endroit pour trouver le bon bien ou terrain")}
+              description={t("landing", "about.description", "Yopii met en avant les biens, les terrains, les agents et les agences dans une vitrine claire, premium et facile a parcourir depuis le web ou le mobile.")}
             />
             <ul className="grid gap-3 text-sm text-stone-600 md:grid-cols-2">
-              <li className="flex items-center gap-2"><span className="text-brand-500">✓</span> Modern Home</li>
-              <li className="flex items-center gap-2"><span className="text-brand-500">✓</span> Affordable Price</li>
-              <li className="flex items-center gap-2"><span className="text-brand-500">✓</span> Right Papers</li>
-              <li className="flex items-center gap-2"><span className="text-brand-500">✓</span> Verified Agents</li>
+              {aboutHighlights.map((highlight) => (
+                <li key={highlight} className="flex items-center gap-2"><span className="text-brand-500">OK</span> {highlight}</li>
+              ))}
             </ul>
-            <Button as={Link} to="/properties" className="bg-brand-500 text-white hover:bg-brand-700">Read More</Button>
+            <Button as={Link} to="/properties" className="bg-brand-500 text-white hover:bg-brand-700">{t("landing", "about.readMore", "En savoir plus")}</Button>
           </div>
         </div>
       </section>
@@ -511,46 +516,46 @@ export const LandingPage = () => {
       <section id="properties" className="mx-auto max-w-7xl px-6 py-14">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <SectionHeading
-            eyebrow="Property List"
-            title="Choose your favorite house and add this in your cart."
-            description="Une selection de biens recents publies sur Yopii avec leur visuel principal, leur localisation et leurs caracteristiques essentielles."
+            eyebrow={t("landing", "propertyList.eyebrow", "Liste des biens")}
+            title={t("landing", "propertyList.title", "Choisissez vos biens favoris et ouvrez leur fiche detail.")}
+            description={t("landing", "propertyList.description", "Une selection de biens recents publies sur Yopii avec leur visuel principal, leur localisation et leurs caracteristiques essentielles.")}
           />
           <div className="flex flex-wrap gap-3">
-            <span className="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white">Featured</span>
-            <span className="rounded-md border border-brand-300/60 px-4 py-2 text-sm text-stone-500">For Sell</span>
-            <span className="rounded-md border border-brand-300/60 px-4 py-2 text-sm text-stone-500">Allocate</span>
+            <span className="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white">{t("landing", "propertyList.filters.featured", "Selection")}</span>
+            <span className="rounded-md border border-brand-300/60 px-4 py-2 text-sm text-stone-500">{t("landing", "propertyList.filters.sale", "Vente")}</span>
+            <span className="rounded-md border border-brand-300/60 px-4 py-2 text-sm text-stone-500">{t("landing", "propertyList.filters.rent", "Location")}</span>
           </div>
         </div>
 
         <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {recentProperties.map((property) => (
-            <PropertyCard key={property.id} property={property} onView={() => navigate(`/properties/${property.slug || property.id}`)} />
+            <PropertyCard key={property.id} property={property} t={t} onView={() => navigate(`/properties/${property.slug || property.id}`)} />
           ))}
         </div>
 
         <div className="mt-10 flex justify-center">
           <Button as={Link} to="/properties" className="bg-brand-500 px-8 text-white hover:bg-brand-700">
-            Browse More Property
+            {t("landing", "propertyList.browseMore", "Voir plus de biens")}
           </Button>
         </div>
       </section>
 
       <section id="agents" className="mx-auto max-w-7xl px-6 py-16">
         <SectionHeading
-          eyebrow="Property and Terrain Agent"
-          title="Let's contact an Agent with our Platform."
-          description="Retrouvez quelques profils actifs relies a l'ecosysteme Yopii pour prolonger l'experience de la vitrine vers la prise de contact."
+          eyebrow={t("landing", "agentsSection.eyebrow", "Agents biens et terrains")}
+          title={t("landing", "agentsSection.title", "Contactez un agent depuis la plateforme.")}
+          description={t("landing", "agentsSection.description", "Retrouvez quelques profils actifs relies a l'ecosysteme Yopii pour prolonger l'experience de la vitrine vers la prise de contact.")}
           align="center"
         />
         <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {featuredAgents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
+            <AgentCard key={agent.id} agent={agent} t={t} />
           ))}
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-16">
-        <TestimonialBlock featuredAgency={featuredAgency} summary={summary} />
+        <TestimonialBlock featuredAgency={featuredAgency} summary={summary} t={t} />
       </section>
     </div>
   );

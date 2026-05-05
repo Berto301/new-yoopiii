@@ -22,7 +22,40 @@
     "featuredAgency": "Featured agency",
     "status": "Status",
     "properties": "Properties",
-    "agents": "Agents"
+    "agents": "Agents",
+    "getStarted": "Get started",
+    "explore": "Explore properties",
+    "search": "Search",
+    "keywords": "Keywords",
+    "location": "Location"
+  },
+  "filters": {
+    "type": "Type"
+  },
+  "propertyTypes": {
+    "apartment": "Apartment",
+    "house": "House / Villa",
+    "commercial": "Commercial",
+    "office": "Office",
+    "warehouse": "Warehouse",
+    "land": "Land",
+    "villa": "Villa",
+    "building": "Building",
+    "shop": "Shop",
+    "garage": "Garage",
+    "residentialLand": "Residential land",
+    "commercialLand": "Commercial land",
+    "agriculturalLand": "Agricultural land",
+    "subdivision": "Subdivision",
+    "cornerPlot": "Corner plot",
+    "investmentLand": "Investment land"
+  },
+  "propertyCard": {
+    "purposeFallback": "Published",
+    "typeFallback": "Property",
+    "addressFallback": "Address not provided",
+    "beds": "beds",
+    "baths": "baths"
   },
   "benefits": {
     "eyebrow": "Why Yopii",
@@ -108,5 +141,48 @@
     "tenants": "Tenants",
     "activeFiles": "active files",
     "propertyMissing": "Property not provided"
+  },
+  "types": {
+    "property": "Property types",
+    "terrain": "Land types",
+    "published": "published"
+  },
+  "about": {
+    "eyebrow": "About us",
+    "title": "The first place to find the right property or land",
+    "description": "Yopii highlights properties, land, agents, and agencies in a clear premium showcase that is easy to browse from web or mobile.",
+    "readMore": "Read more",
+    "highlights": {
+      "modernHome": "Modern homes",
+      "affordablePrice": "Clear pricing",
+      "rightPapers": "Verified files",
+      "verifiedAgents": "Verified agents"
+    }
+  },
+  "propertyList": {
+    "eyebrow": "Property list",
+    "title": "Choose your favorite properties and open their detail page.",
+    "description": "A selection of recently published properties on Yopii with their main visual, location, and key features.",
+    "browseMore": "Browse more properties",
+    "filters": {
+      "featured": "Featured",
+      "sale": "For sale",
+      "rent": "For rent"
+    }
+  },
+  "agentsSection": {
+    "eyebrow": "Property and land agents",
+    "title": "Contact an agent from the platform.",
+    "description": "Find active profiles connected to the Yopii ecosystem and continue from the showcase to direct contact.",
+    "agentFallback": "Yopii agent",
+    "managedProperties": "managed properties"
+  },
+  "testimonial": {
+    "eyebrow": "Trusted by our users",
+    "description": "Yopii connects the public showcase, published properties, active agencies, and available agents in a clear, modern, reassuring real estate experience."
+  },
+  "errors": {
+    "title": "Landing unavailable",
+    "description": "The data could not be loaded right now. Try again in a few moments."
   }
 }

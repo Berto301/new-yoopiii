@@ -1,5 +1,6 @@
 ﻿import { Property } from "../properties/property.model.js";
 import { AgencyMember } from "../agencies/models/agency-member.model.js";
+import { AgentReview } from "./models/agent-review.model.js";
 import { User } from "./user.model.js";
 
 const ROLE_LABELS = {
@@ -39,7 +40,7 @@ const buildAgentStatsMap = async (agentIds) => {
   }
 
   const properties = await Property.find({ agentId: { $in: agentIds } })
-    .select("agentId title status purpose publicationStatus averageRating score scoreDetails updatedAt")
+    .select("agentId title status purpose publicationStatus score scoreDetails updatedAt")
     .sort({ updatedAt: -1, createdAt: -1 })
     .lean();
 
@@ -49,8 +50,6 @@ const buildAgentStatsMap = async (agentIds) => {
     const key = String(property.agentId);
     const existing = statsMap.get(key) || {
       recentProperties: [],
-      ratingTotal: 0,
-      ratedPropertiesCount: 0,
       managedPropertiesCount: 0
     };
 
@@ -60,15 +59,29 @@ const buildAgentStatsMap = async (agentIds) => {
       existing.recentProperties.push(mapRecentProperty(property));
     }
 
-    if (typeof property.averageRating === "number" && property.averageRating > 0) {
-      existing.ratingTotal += property.averageRating;
-      existing.ratedPropertiesCount += 1;
-    }
-
     statsMap.set(key, existing);
   });
 
   return statsMap;
+};
+
+const buildAgentReviewStatsMap = async (agentIds) => {
+  if (!agentIds.length) {
+    return new Map();
+  }
+
+  const reviews = await AgentReview.find({ agentId: { $in: agentIds } }).select("agentId score").lean();
+  const reviewStatsMap = new Map();
+
+  reviews.forEach((review) => {
+    const key = String(review.agentId);
+    const existing = reviewStatsMap.get(key) || { totalScore: 0, reviewsCount: 0 };
+    existing.totalScore += Number(review.score || 0);
+    existing.reviewsCount += 1;
+    reviewStatsMap.set(key, existing);
+  });
+
+  return reviewStatsMap;
 };
 
 export const listDiscoverableAgents = async ({ filters }) => {
@@ -151,7 +164,10 @@ export const listDiscoverableAgents = async ({ filters }) => {
     .sort((left, right) => (right.score || 0) - (left.score || 0) || normalizeText(`${left.firstName} ${left.lastName}`).localeCompare(normalizeText(`${right.firstName} ${right.lastName}`)));
 
   const agentIds = combinedAgents.map((agent) => agent.userId);
-  const statsMap = await buildAgentStatsMap(agentIds);
+  const [statsMap, reviewStatsMap] = await Promise.all([
+    buildAgentStatsMap(agentIds),
+    buildAgentReviewStatsMap(agentIds)
+  ]);
   const page = filters.page || 1;
   const limit = filters.limit || 20;
   const start = (page - 1) * limit;
@@ -161,14 +177,15 @@ export const listDiscoverableAgents = async ({ filters }) => {
     items: paginatedAgents.map((agent) => {
       const stats = statsMap.get(agent.userId) || {
         recentProperties: [],
-        ratingTotal: 0,
-        ratedPropertiesCount: 0,
         managedPropertiesCount: 0
       };
+      const reviewStats = reviewStatsMap.get(agent.userId) || { totalScore: 0, reviewsCount: 0 };
+      const averageScore = reviewStats.reviewsCount ? reviewStats.totalScore / reviewStats.reviewsCount : 0;
 
       return {
         ...agent,
-        clientRating: stats.ratedPropertiesCount ? Number((stats.ratingTotal / stats.ratedPropertiesCount).toFixed(1)) : 0,
+        clientRating: reviewStats.reviewsCount ? Number((averageScore / 20).toFixed(1)) : 0,
+        clientRatingCount: reviewStats.reviewsCount,
         managedPropertiesCount: stats.managedPropertiesCount,
         recentProperties: stats.recentProperties
       };

@@ -15,6 +15,7 @@ import { createConversation } from "../../features/chat/services/chat.service.js
 import { SMART_MATCHING_PROPERTY_TYPE_OPTIONS } from "../../features/matching/matching.constants.js";
 import { buildDefaultPublicationFilters } from "../../features/matching/matching.utils.js";
 import { ModalViewDetail } from "../../features/properties/components/ModalViewDetail.jsx";
+import { ModalShowBien } from "./Property/ModalShowBien.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
 import { hasPropertyThreeDLink } from "../../features/properties/property-3d.js";
 import { SettingsTabButton } from "./settings/SettingsTabButton.jsx";
@@ -31,7 +32,7 @@ const getStatusBadgeClassName = (property) => {
     return "border-amber-500/30 bg-amber-500/10 text-amber-100";
   }
 
-  return "border-emerald-500/30 bg-emerald-500/10 text-white";
+  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
 };
 
 const buildOwnerInitials = (name) =>
@@ -125,6 +126,7 @@ const PublicationCard = ({
   onDiscuss,
   onOpenOwnerConversation,
   onOpenDetail,
+  onOpenDirection,
   t
 }) => {
   const mediaPreview = property.media?.slice(0, 3) || [];
@@ -269,6 +271,12 @@ const PublicationCard = ({
               {t("private", "publications.actions.viewDetail", "Voir detail")}
             </Button>
 
+            {canFavoriteProperties ? (
+              <Button type="button" variant="secondary" onClick={() => onOpenDirection(property)}>
+                {t("private", "direction.open", "Voir direction")}
+              </Button>
+            ) : null}
+
             <Button
               type="button"
               variant={property.isFavorite ? "secondary" : "primary"}
@@ -325,6 +333,7 @@ export const PublicationsPage = () => {
   const [activeTab, setActiveTab] = useState("list");
   const [selectedMarkerId, setSelectedMarkerId] = useState("");
   const [detailModalIdentifier, setDetailModalIdentifier] = useState("");
+  const [directionProperty, setDirectionProperty] = useState(null);
   const [referenceCenter, setReferenceCenter] = useState(DEFAULT_SEARCH_CENTER);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS);
   const [hasAppliedUserDefaultFilters, setHasAppliedUserDefaultFilters] = useState(false);
@@ -529,6 +538,14 @@ export const PublicationsPage = () => {
     }
 
     setDetailModalIdentifier(property.slug || property.id);
+  };
+
+  const handleOpenDirection = (property) => {
+    if (user?.role !== "user") {
+      return;
+    }
+
+    setDirectionProperty(property);
   };
 
   if (propertyPublicationsQuery.isLoading) {
@@ -744,6 +761,11 @@ export const PublicationsPage = () => {
                           <Button type="button" variant="secondary" onClick={() => handleOpenConversation(selectedProperty)}>
                             {t("private", "publications.actions.discuss", "Discuter")}
                           </Button>
+                          {user?.role === "user" ? (
+                            <Button type="button" variant="ghost" onClick={() => handleOpenDirection(selectedProperty)}>
+                              {t("private", "direction.open", "Voir direction")}
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -767,6 +789,7 @@ export const PublicationsPage = () => {
                   onDiscuss={handleOpenConversation}
                   onOpenOwnerConversation={handleOpenOwnerConversation}
                   onOpenDetail={handleOpenDetail}
+                  onOpenDirection={handleOpenDirection}
                   t={t}
                 />
               ))}
@@ -794,8 +817,17 @@ export const PublicationsPage = () => {
         propertyIdentifier={detailModalIdentifier}
         onClose={() => setDetailModalIdentifier("")}
       />
+
+      <ModalShowBien
+        open={Boolean(directionProperty)}
+        property={directionProperty}
+        user={user}
+        onClose={() => setDirectionProperty(null)}
+      />
     </section>
   );
 };
 
 export default PublicationsPage;
+
+

@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "../../../components/ui/Button.jsx";
 import { ModalLayout } from "../../../components/layout/modals/ModalLayout.jsx";
 import { getPublicPropertyDetail } from "../services/property.service.js";
 import { PropertyDetailContent, buildPropertyDetailMediaItems } from "./PropertyDetailContent.jsx";
+import { selectCurrentUser } from "../../../app/store/session.store.js";
+import { ModalShowBien } from "../../../pages/private/Property/ModalShowBien.jsx";
 
 export const ModalViewDetail = ({
   open,
@@ -16,7 +19,9 @@ export const ModalViewDetail = ({
     enabled: open && Boolean(propertyIdentifier)
   });
   const property = detailQuery.data || null;
+  const currentUser = useSelector(selectCurrentUser);
   const [selectedImageUrl, setSelectedImageUrl] = useState("");
+  const [directionProperty, setDirectionProperty] = useState(null);
 
   useEffect(() => {
     if (!property) {
@@ -57,8 +62,17 @@ export const ModalViewDetail = ({
           selectedImageUrl={selectedImageUrl}
           onSelectImage={setSelectedImageUrl}
           showBrowseButton={false}
+          showDirectionButton={currentUser?.role === "user"}
+          onOpenDirection={setDirectionProperty}
         />
       )}
+      <ModalShowBien
+        open={Boolean(directionProperty)}
+        property={directionProperty}
+        user={currentUser}
+        onClose={() => setDirectionProperty(null)}
+      />
     </ModalLayout>
   );
 };
+

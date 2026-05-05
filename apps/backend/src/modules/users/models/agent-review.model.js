@@ -5,7 +5,13 @@ const agentReviewSchema = new mongoose.Schema(
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     score: { type: Number, required: true, min: 0, max: 100 },
-    description: { type: String, default: "", trim: true, maxlength: 1000 }
+    description: { type: String, default: "", trim: true, maxlength: 1000 },
+    criteria: {
+      responsiveness: { type: Number, default: null, min: 0, max: 100 },
+      professionalism: { type: Number, default: null, min: 0, max: 100 },
+      followUpQuality: { type: Number, default: null, min: 0, max: 100 },
+      clientRelation: { type: Number, default: null, min: 0, max: 100 }
+    }
   },
   { timestamps: true }
 );
@@ -14,3 +20,4 @@ agentReviewSchema.index({ agentId: 1, userId: 1 }, { unique: true });
 agentReviewSchema.index({ agentId: 1, createdAt: -1 });
 
 export const AgentReview = mongoose.model("AgentReview", agentReviewSchema);
+

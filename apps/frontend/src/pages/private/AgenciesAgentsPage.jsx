@@ -11,10 +11,10 @@ import { Card } from "../../components/ui/Card.jsx";
 import { Input } from "../../components/ui/Input.jsx";
 import { createConversation } from "../../features/chat/services/chat.service.js";
 import { AGENCY_SCORE_CRITERIA, AGENT_SCORE_CRITERIA, ScoreDetailsPanel } from "../../features/scoring/ScoreDetailsPanel.jsx";
-import { getAgencyDirectory, getAgencyDirectoryAgents, getDiscoverableAgents, rateAgent } from "../../features/directory/services/directory.service.js";
+import { getAgencyDirectory, getAgencyDirectoryAgents, getDiscoverableAgents, getMyAgentRating, rateAgent } from "../../features/directory/services/directory.service.js";
 import { useNotification } from "../../hooks/useNotification.js";
 import { SettingsTabButton } from "./settings/SettingsTabButton.jsx";
-import ModalScoreAgent from "./ModalScoreAgent.jsx";
+import ModalRateAgent from "./ModalRateAgent.jsx";
 
 const tabs = [
   { id: "agency", label: "Agence" },
@@ -66,7 +66,7 @@ const statusLabels = {
 
 const getPersonName = (person) => [person?.firstName, person?.lastName].filter(Boolean).join(" ").trim() || person?.email || "Profil";
 
-const formatRating = (value) => (value > 0 ? `${value.toFixed(1)}/5` : "Non notee");
+const formatRating = (value, count = 0) => (value > 0 ? `${value.toFixed(1)}/5${count ? ` (${count})` : ""}` : "Non notee");
 
 const AgentProperties = ({ properties = [] }) => {
   if (!properties.length) {
@@ -142,11 +142,17 @@ export const AgenciesAgentsPage = () => {
     enabled: currentUser?.role === "user"
   });
 
+  const agentRatingQuery = useQuery({
+    queryKey: ["agent-rating-me", agentToRate?.userId],
+    queryFn: () => getMyAgentRating(agentToRate.userId),
+    enabled: Boolean(agentToRate?.userId && currentUser?.role === "user")
+  });
 
   const rateAgentMutation = useMutation({
     mutationFn: ({ agent, payload }) => rateAgent({ agentId: agent.userId, payload }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       showSuccess("Note agent enregistree. Le score intelligent a ete recalcule.");
+      queryClient.invalidateQueries({ queryKey: ["agent-rating-me", variables?.agent?.userId] });
       setAgentToRate(null);
       queryClient.invalidateQueries({ queryKey: ["discoverable-agents"] });
       queryClient.invalidateQueries({ queryKey: ["agency-directory-agents"] });
@@ -348,8 +354,8 @@ export const AgenciesAgentsPage = () => {
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <ScoreBadge score={agent.score || 0} showScore />
-                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-white">
-                            {formatRating(agent.clientRating)}
+                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-100">
+                            {formatRating(agent.clientRating, agent.clientRatingCount)}
                           </span>
                         </div>
                       </div>
@@ -468,7 +474,7 @@ export const AgenciesAgentsPage = () => {
                   />
 
                   <div className="grid gap-3 text-sm text-stone-300 md:grid-cols-2">
-                    <p>Note client: <span className="text-white">{formatRating(agent.clientRating)}</span></p>
+                    <p>Note client: <span className="text-white">{formatRating(agent.clientRating, agent.clientRatingCount)}</span></p>
                     <p>Biens geres: <span className="text-white">{agent.managedPropertiesCount}</span></p>
                     <p className="md:col-span-2">Email: <span className="text-white">{agent.email}</span></p>
                   </div>
@@ -495,9 +501,11 @@ export const AgenciesAgentsPage = () => {
         </div>
       )}
       </section>
-      <ModalScoreAgent
+      <ModalRateAgent
         open={Boolean(agentToRate)}
         agent={agentToRate}
+        existingReview={agentRatingQuery.data?.review || null}
+        isLoading={agentRatingQuery.isLoading}
         onClose={() => setAgentToRate(null)}
         isSaving={rateAgentMutation.isPending}
         onSubmit={(payload) => rateAgentMutation.mutate({ agent: agentToRate, payload })}
@@ -507,3 +515,5 @@ export const AgenciesAgentsPage = () => {
 };
 
 export default AgenciesAgentsPage;
+
+

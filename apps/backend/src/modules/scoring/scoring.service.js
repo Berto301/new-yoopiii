@@ -480,7 +480,8 @@ export const submitAgentReview = async ({ agentId, userId, payload }) => {
     {
       $set: {
         score: roundScore(payload.score),
-        description: payload.description || ""
+        description: payload.description || "",
+        criteria: payload.criteria || {}
       }
     },
     { new: true, upsert: true, setDefaultsOnInsert: true }
@@ -503,12 +504,32 @@ export const submitAgentReview = async ({ agentId, userId, payload }) => {
       userId: String(review.userId),
       score: review.score,
       description: review.description || "",
+      criteria: review.criteria || {},
       updatedAt: review.updatedAt
     },
     agentScore: score
   };
 };
 
+export const getMyAgentReview = async ({ agentId, userId }) => {
+  await ensureAgent(agentId);
+
+  const review = await AgentReview.findOne({ agentId, userId }).lean();
+
+  return {
+    review: review
+      ? {
+          id: String(review._id),
+          agentId: String(review.agentId),
+          userId: String(review.userId),
+          score: review.score,
+          description: review.description || "",
+          criteria: review.criteria || {},
+          updatedAt: review.updatedAt
+        }
+      : null
+  };
+};
 export const listTopAgents = async ({ limit = 10 } = {}) => {
   const agents = await User.find({ role: { $in: AGENT_ROLES }, status: "active" })
     .select("firstName lastName email avatar role agencyId score scoreDetails")
@@ -710,3 +731,5 @@ export const listTopAgencies = async ({ limit = 10 } = {}) => {
     }))
   };
 };
+
+

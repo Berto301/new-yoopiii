@@ -44,17 +44,18 @@
       "notifications": "Notifications",
       "settings": "Settings",
       "propertyManagement": "Property management",
-      "contracts": "My contracts"
+      "contracts": "My contracts",
+      "crmMetadata": "CRM metadata"
     }
   },
   "footer": {
     "eyebrow": "Contact",
     "title": "Let's talk about your real estate project.",
     "description": "A premium real estate platform to discover, publish, and manage properties, land, and client contact flows.",
-    "contactTitle": "Get In Touch",
-    "linksTitle": "Quick Links",
+    "contactTitle": "Contact",
+    "linksTitle": "Quick links",
     "newsletterTitle": "Newsletter",
-    "newsletterDescription": "Send your recommendation",
+    "newsletterDescription": "Send a recommendation, request, or real estate need.",
     "home": "Home",
     "contact": "Contact",
     "fullName": "Full name",
@@ -69,6 +70,17 @@
     "submitting": "Sending...",
     "helper": "The message is sent directly to the contact email configured on the backend.",
     "copyright": "Copyright {year} Yopii. All rights reserved.",
-    "tagline": "Synchronized real estate experience, public showcase, and real-time management."
+    "tagline": "Synchronized real estate experience, public showcase, and real-time management.",
+    "newsletterObject": "Subject",
+    "newsletterObjectPlaceholder": "Subject of your message",
+    "newsletterDetail": "Details",
+    "newsletterDetailPlaceholder": "Your message, need, recommendation, or question...",
+    "newsletterSuccess": "Thanks, your newsletter message has been sent.",
+    "newsletterError": "Unable to send the newsletter form.",
+    "newsletterErrors": {
+      "object": "Add a clear subject.",
+      "email": "Add a valid email.",
+      "detail": "Add details with at least 10 characters."
+    }
   }
 }

@@ -9,7 +9,7 @@ export const RadioGroup = ({
   error
 }) => (
   <div className="space-y-2">
-    {label ? <span className="text-sm font-medium text-stone-200">{label}</span> : null}
+    {label ? <span className="text-sm font-medium text-[var(--foreground)]">{label}</span> : null}
     <div className="grid gap-3 sm:grid-cols-2">
       {options.map((option) => {
         const isSelected = value === option.value;
@@ -22,13 +22,13 @@ export const RadioGroup = ({
             onClick={() => onChange?.(option.value)}
             className={cn(
               "rounded-2xl border px-4 py-3 text-left transition",
-              isSelected ? "border-brand-500/70 bg-brand-500/10 text-white" : "border-white/10 bg-stone-900/60 text-stone-300",
+              isSelected ? "border-brand-500/70 bg-[var(--surface-accent)] text-[var(--foreground)]" : "border-[var(--border)] bg-[var(--input-bg)] text-[var(--muted)]",
               disabled && "cursor-not-allowed opacity-70",
               error && "border-red-400/60"
             )}
           >
             <span className="block text-sm font-medium">{option.label}</span>
-            {option.description ? <span className="mt-1 block text-xs leading-5 text-stone-400">{option.description}</span> : null}
+            {option.description ? <span className="mt-1 block text-xs leading-5 text-[var(--muted)]">{option.description}</span> : null}
           </button>
         );
       })}

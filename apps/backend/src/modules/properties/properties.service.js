@@ -356,9 +356,10 @@ const createPropertyActivityNotification = async ({ property, actor, type, title
         title,
         body,
         data: {
-          propertyId: property._id,
-          slug: property.slug,
-          actorId: actor.id,
+        propertyId: property._id,
+        propertyTitle: property.title,
+        slug: property.slug,
+        actorId: actor.id,
           managementContractId: property.managementContractId || null
         },
         channel: "in_app"
@@ -961,6 +962,7 @@ export const updateManagedProperty = async ({ propertyId, actor, payload }) => {
   await ensurePropertyManagementAccess(property, actor, "edit");
   const previousStatus = property.status;
   const previousPublicationStatus = property.publicationStatus;
+  const previousAgentId = String(property.agentId || "");
   const data = await buildManagedPropertyPayload({ actor, payload, existingProperty: property });
   Object.assign(property, data);
   await property.save();
@@ -976,6 +978,16 @@ export const updateManagedProperty = async ({ propertyId, actor, payload }) => {
 
   if (previousStatus !== property.status || previousPublicationStatus !== property.publicationStatus) {
     await createPropertyWorkflowNotifications({ property, actor, previousStatus, previousPublicationStatus, eventType: "property_updated" });
+  }
+
+  if (previousAgentId && previousAgentId !== String(property.agentId || "")) {
+    await createPropertyActivityNotification({
+      property,
+      actor,
+      type: "crm.agent.changed",
+      title: `Agent responsable modifie: ${property.title}`,
+      body: `L'agent responsable du bien ${property.title} a ete mis a jour.`,
+    });
   }
 
   return mapPropertyListItem(property.toObject());

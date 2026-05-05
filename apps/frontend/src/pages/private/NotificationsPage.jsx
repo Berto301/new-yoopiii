@@ -48,6 +48,58 @@ const SummaryCard = ({ label, value, description, toneClassName }) => (
   </Card>
 );
 
+const getCrmStageLabel = (t, stage) => t("private", `crm.stages.${stage}`, stage || "-");
+
+const resolveNotificationDisplay = (notification, t) => {
+  const data = notification.data || {};
+  const propertyTitle = data.propertyTitle || notification.title?.replace(/^Pipeline CRM:\s*/i, "") || t("private", "notifications.crm.propertyFallback", "ce bien");
+  const typeLabel = t("private", `notifications.types.${notification.type}`, notification.type);
+
+  if (notification.type?.startsWith("crm.pipeline")) {
+    const state = notification.type.split(".").pop();
+    const previousStage = getCrmStageLabel(t, data.previousStage);
+    const nextStage = getCrmStageLabel(t, data.pipelineStage);
+
+    return {
+      typeLabel,
+      title: t("private", `notifications.crm.pipeline.${state}.title`, "Pipeline CRM: {property}")
+        .replace("{property}", propertyTitle),
+      body: t("private", `notifications.crm.pipeline.${state}.body`, "{property} passe de {from} a {to}.")
+        .replace("{property}", propertyTitle)
+        .replace("{from}", previousStage)
+        .replace("{to}", nextStage)
+    };
+  }
+
+  if (notification.type === "crm.metadata.updated") {
+    const changes = Array.isArray(data.changes) ? data.changes.join(", ") : "";
+    return {
+      typeLabel,
+      title: t("private", "notifications.crm.metadataUpdated.title", "Metadonnee CRM mise a jour: {property}")
+        .replace("{property}", propertyTitle),
+      body: t("private", "notifications.crm.metadataUpdated.body", "Les informations CRM de {property} ont ete mises a jour: {changes}.")
+        .replace("{property}", propertyTitle)
+        .replace("{changes}", changes)
+    };
+  }
+
+  if (notification.type === "crm.agent.changed") {
+    return {
+      typeLabel,
+      title: t("private", "notifications.crm.agentChanged.title", "Agent responsable modifie: {property}")
+        .replace("{property}", propertyTitle),
+      body: t("private", "notifications.crm.agentChanged.body", "L'agent responsable du bien {property} a ete mis a jour.")
+        .replace("{property}", propertyTitle)
+    };
+  }
+
+  return {
+    typeLabel,
+    title: notification.title,
+    body: notification.body
+  };
+};
+
 export const NotificationsPage = () => {
   const { t } = useUserPreferences();
   const navigate = useNavigate();
@@ -155,6 +207,7 @@ export const NotificationsPage = () => {
         {notifications.map((notification) => {
           const contactName = getContactLabel(notification);
           const tone = getNotificationTone(notification);
+          const display = resolveNotificationDisplay(notification, t);
 
           return (
             <Card key={notification._id} className={`overflow-hidden p-0 ${tone.card}`}>
@@ -175,16 +228,16 @@ export const NotificationsPage = () => {
                         <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge className={tone.badge}>{notification.isRead ? t("private", "notifications.status.read", "Lue") : t("private", "notifications.status.unread", "Non lue")}</Badge>
-                            <Badge className="border-white/10 bg-white/5 text-stone-200">{notification.type}</Badge>
+                            <Badge className="border-white/10 bg-white/5 text-stone-200">{display.typeLabel}</Badge>
                           </div>
-                          <h3 className="break-words text-xl font-semibold text-white">{notification.title}</h3>
+                          <h3 className="break-words text-xl font-semibold text-white">{display.title}</h3>
                         </div>
                         <p className="text-left text-xs uppercase tracking-[0.2em] text-stone-500 lg:text-right">
                           {dayjs(notification.createdAt).format("DD/MM/YYYY HH:mm")}
                         </p>
                       </div>
 
-                      <p className="max-w-4xl break-words text-sm leading-7 text-stone-300">{notification.body}</p>
+                      <p className="max-w-4xl break-words text-sm leading-7 text-stone-300">{display.body}</p>
 
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div className="rounded-[1.35rem] border border-white/10 bg-black/20 px-4 py-4">

@@ -1,4 +1,4 @@
-﻿import { useMemo } from "react";
+﻿import { useMemo, useState } from "react";
 import { formatMoney } from "../../app/preferences/user-preferences.utils.js";
 import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { Avatar } from "../../components/profile/Avatar.jsx";
@@ -10,6 +10,7 @@ import { Card } from "../../components/ui/Card.jsx";
 import { usePropertyWorkspace } from "../../features/properties/hooks/usePropertyWorkspace.js";
 import { hasPropertyThreeDLink } from "../../features/properties/property-3d.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
+import { ModalShowBien } from "./Property/ModalShowBien.jsx";
 
 const formatPrice = (value, currency = "USD") => formatMoney(value, currency);
 
@@ -27,12 +28,13 @@ const getStatusClassName = (property) => {
     return "border-amber-500/30 bg-amber-500/10 text-amber-100";
   }
 
-  return "border-emerald-500/30 bg-emerald-500/10 text-white";
+  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
 };
 
 export const FavoritesPage = () => {
   const { t } = useUserPreferences();
-  const { favoritePropertiesQuery, favoriteMutation } = usePropertyWorkspace();
+  const { user, favoritePropertiesQuery, favoriteMutation } = usePropertyWorkspace();
+  const [directionProperty, setDirectionProperty] = useState(null);
   const items = favoritePropertiesQuery.data?.items || [];
 
   const metrics = useMemo(() => {
@@ -49,7 +51,8 @@ export const FavoritesPage = () => {
   }, [items, t]);
 
   return (
-    <section className="space-y-8">
+    <>
+      <section className="space-y-8">
       <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.2),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.18),transparent_30%),linear-gradient(180deg,rgba(28,25,23,0.96),rgba(12,10,9,0.98))] p-6 shadow-[0_32px_90px_rgba(15,23,42,0.3)] lg:p-8">
         <div className="grid gap-8 xl:grid-cols-[1.3fr_0.9fr] xl:items-end">
           <SectionTitle
@@ -166,6 +169,17 @@ export const FavoritesPage = () => {
                       <span className="rounded-full border border-white/10 px-3 py-2">{property.favoriteCount || 0} favoris</span>
                     </div>
 
+                    {user?.role === "user" ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="px-5 py-3"
+                        onClick={() => setDirectionProperty(property)}
+                      >
+                        {t("private", "direction.open", "Voir direction")}
+                      </Button>
+                    ) : null}
+
                     <Button
                       variant="secondary"
                       className="px-5 py-3"
@@ -191,8 +205,17 @@ export const FavoritesPage = () => {
           </Card>
         ) : null}
       </div>
-    </section>
+      </section>
+      <ModalShowBien
+        open={Boolean(directionProperty)}
+        property={directionProperty}
+        user={user}
+        onClose={() => setDirectionProperty(null)}
+      />
+    </>
   );
 };
 
 export default FavoritesPage;
+
+

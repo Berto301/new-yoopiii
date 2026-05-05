@@ -6,6 +6,7 @@ import {
   changeMyPasswordHandler,
   getDiscoverableAgents,
   getAgentScoreHandler,
+  getMyAgentReviewHandler,
   getTopAgentsHandler,
   getMyProfile,
   getUserById,
@@ -29,6 +30,7 @@ userRouter.post("/agents/recalculate-scores", validate(agentScoreCollectionSchem
 userRouter.get("/agents/discovery", validate(discoverAgentsSchema), asyncHandler(getDiscoverableAgents));
 userRouter.get("/agents/:agentId/score", validate(agentIdParamsSchema), asyncHandler(getAgentScoreHandler));
 userRouter.post("/agents/:agentId/recalculate-score", validate(agentIdParamsSchema), asyncHandler(postAgentScoreRecalculationHandler));
+userRouter.get("/agents/:agentId/ratings/me", validate(agentIdParamsSchema), asyncHandler(getMyAgentReviewHandler));
 userRouter.post("/agents/:agentId/ratings", validate(agentReviewSchema), asyncHandler(postAgentReviewHandler));
 userRouter.get("/me", asyncHandler(getMyProfile));
 userRouter.post("/me/avatar", uploadProfileAvatar, asyncHandler(uploadMyAvatarHandler));
@@ -36,3 +38,4 @@ userRouter.patch("/me/profile", validate(updateMyProfileSchema), asyncHandler(pa
 userRouter.patch("/me/preferences", validate(updateMyPreferencesSchema), asyncHandler(patchMyPreferences));
 userRouter.patch("/me/password", validate(changePasswordSchema), asyncHandler(changeMyPasswordHandler));
 userRouter.get("/:userId", validate(userIdParamsSchema), asyncHandler(getUserById));
+

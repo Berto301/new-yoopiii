@@ -40,15 +40,15 @@ export const ModalLayout = ({
             leaveFrom="opacity-100 translate-y-0 scale-100"
             leaveTo="opacity-0 translate-y-4 scale-95"
           >
-            <Dialog.Panel data-ui="modal-panel" className={`w-full max-w-3xl rounded-[2rem] border border-white/10 bg-stone-950/95 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)] ${panelClassName}`.trim()}>
-              <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
-                <Dialog.Title className="text-2xl font-semibold text-white">{title}</Dialog.Title>
+            <Dialog.Panel data-ui="modal-panel" className={`w-full max-w-3xl rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 text-[var(--foreground)] shadow-[0_30px_120px_rgba(0,0,0,0.28)] ${panelClassName}`.trim()}>
+              <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
+                <Dialog.Title className="text-2xl font-semibold text-[var(--foreground)]">{title}</Dialog.Title>
               </div>
 
               <div className="py-6">{children}</div>
 
               {footerContent ?? (
-                <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-4 sm:flex-row sm:justify-end">
+                <div className="flex flex-col-reverse gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:justify-end">
                   <Button type="button" variant="secondary" className="px-5 py-3" onClick={onClose}>
                     {cancelLabel}
                   </Button>

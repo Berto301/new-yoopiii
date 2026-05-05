@@ -1,4 +1,5 @@
 ﻿import { Link } from "react-router-dom";
+import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { formatMoney } from "../../../app/preferences/user-preferences.utils.js";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { ScoreBadge } from "../../../components/ui/ScoreBadge.jsx";
@@ -56,8 +57,11 @@ export const PropertyDetailContent = ({
   onSelectImage,
   showBrowseButton = false,
   browseHref = "/login",
-  browseLabel = "Voir les autres biens"
+  browseLabel = "Voir les autres biens",
+  showDirectionButton = false,
+  onOpenDirection
 }) => {
+  const { t } = useUserPreferences();
   const mediaItems = buildPropertyDetailMediaItems(property);
   const selectedImage = selectedImageUrl || mediaItems[0]?.url || "";
   const specificationItems = [
@@ -207,9 +211,14 @@ export const PropertyDetailContent = ({
                   {browseLabel}
                 </Button>
               ) : null}
+              {showDirectionButton ? (
+                <Button type="button" variant="secondary" onClick={() => onOpenDirection?.(property)}>
+                  {t("private", "direction.open", "Voir direction")}
+                </Button>
+              ) : null}
               {hasThreeDLink ? (
                 <Button as="a" href={property.threeDUrl} target="_blank" rel="noreferrer" variant="secondary">
-                  Ouvrir la visite 3D
+                  {t("private", "properties.card.open3d", "Ouvrir la visite 3D")}
                 </Button>
               ) : null}
             </div>
@@ -219,3 +228,4 @@ export const PropertyDetailContent = ({
     </div>
   );
 };
+

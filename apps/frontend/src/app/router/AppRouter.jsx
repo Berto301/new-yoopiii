@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+﻿import { Routes, Route, Navigate } from "react-router-dom";
 import { PrivateRoute } from "../guards/PrivateRoute.jsx";
 import { RoleRoute } from "../guards/RoleRoute.jsx";
 import { PERMISSION_IDS } from "../../helpers/constants.js";
@@ -30,6 +30,7 @@ import { AgencyCalendarPage } from "../../pages/dashboards/AgencyCalendarPage.js
 import { AgencyExpensesPage } from "../../pages/dashboards/AgencyExpensesPage.jsx";
 import { AgencyMembersPage } from "../../pages/dashboards/AgencyMembersPage.jsx";
 import { AgentScoringPage } from "../../pages/dashboards/AgentScoringPage.jsx";
+import { CrmMetadataPage } from "../../pages/dashboards/CrmMetadataPage.jsx";
 import { OwnerDashboardPage } from "../../pages/private/owner/OwnerDashboardPage.jsx";
 import { OwnerContractsPage } from "../../pages/private/owner/OwnerContractsPage.jsx";
 import { OwnerRentsPage } from "../../pages/private/owner/OwnerRentsPage.jsx";
@@ -95,6 +96,10 @@ export const AppRouter = () => (
           <Route path="/dashboard/properties" element={<PropertyManagementPage />} />
         </Route>
 
+        <Route element={<RoleRoute allowedRoles={["agency", "agency_agent", "independent_agent"]} />}>
+          <Route path="/dashboard/crm-metadata" element={<CrmMetadataPage />} />
+        </Route>
+
         <Route element={<RoleRoute allowedRoles={["independent_agent"]} />}>
           <Route path="/dashboard/agent" element={<AgentDashboardPage />} />
           <Route path="/dashboard/agent/scoring" element={<AgentScoringPage />} />
@@ -114,3 +119,4 @@ export const AppRouter = () => (
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );
+

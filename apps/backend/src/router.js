@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import { healthRouter } from "./modules/health/health.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { userRouter } from "./modules/users/users.routes.js";
@@ -12,6 +12,7 @@ import { expenseRouter } from "./modules/expenses/expenses.routes.js";
 import { contractRouter } from "./modules/contracts/contracts.routes.js";
 import { landingRouter } from "./modules/landing/landing.routes.js";
 import { contactRouter } from "./modules/contact/contact.routes.js";
+import { crmRouter } from "./modules/crm/crm.routes.js";
 
 export const router = Router();
 
@@ -28,3 +29,5 @@ router.use("/expenses", expenseRouter);
 router.use("/contracts", contractRouter);
 router.use("/landing", landingRouter);
 router.use("/contact", contactRouter);
+router.use("/crm", crmRouter);
+

@@ -4,11 +4,11 @@ import { cn } from "../../lib/utils/cn.js";
 
 const menuItemClassName = ({ active, disabled }) => cn(
   "flex w-full items-center rounded-xl px-3 py-2 text-left text-sm transition",
-  active ? "bg-brand-500/15 text-white" : "text-stone-200",
+  active ? "bg-[var(--surface-accent)] text-[var(--foreground)]" : "text-[var(--foreground)]",
   disabled && "cursor-not-allowed opacity-50"
 );
 
-const menuButtonClassName = "inline-flex h-[50px] w-[50px] items-center justify-center rounded-full border border-white/10 bg-stone-900/70 text-white transition hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:cursor-not-allowed disabled:opacity-60";
+const menuButtonClassName = "inline-flex h-[50px] w-[50px] items-center justify-center rounded-full border border-[var(--border)] bg-[var(--input-bg)] text-[var(--foreground)] transition hover:border-[var(--border-strong)] focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:cursor-not-allowed disabled:opacity-60";
 
 export const Menu = ({
   icon,
@@ -38,7 +38,7 @@ export const Menu = ({
     >
       <HeadlessMenu.Items
         className={cn(
-          "absolute bottom-full z-20 mb-2 w-56 rounded-2xl border border-white/10 bg-stone-950/95 p-2 shadow-xl focus:outline-none",
+          "absolute bottom-full z-20 mb-2 w-56 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-xl focus:outline-none",
           align === "right" ? "right-0" : "left-0",
           itemsClassName
         )}

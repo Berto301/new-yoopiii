@@ -237,7 +237,7 @@ export const ContractsPage = () => {
                       <p className="text-lg font-semibold text-white">{contract.reference}</p>
                       <p className="mt-1 text-sm capitalize text-stone-400">{contract.contractType}</p>
                     </div>
-                    <Badge className={contract.isActive ? "border-emerald-400/30 bg-emerald-500/10 text-white" : "border-white/10 bg-white/5 text-stone-200"}>
+                    <Badge className={contract.isActive ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : "border-white/10 bg-white/5 text-stone-200"}>
                       {contract.statusLabel}
                     </Badge>
                   </div>

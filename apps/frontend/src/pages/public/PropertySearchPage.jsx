@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
+import { useSelector } from "react-redux";
 import { GoogleMap, MarkerF } from "@react-google-maps/api";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -9,6 +10,8 @@ import { Card } from "../../components/ui/Card.jsx";
 import { getPropertyPublications } from "../../features/properties/services/property.service.js";
 import { useSharedGoogleMapsLoader } from "../../lib/utils/google-maps.js";
 import { resolveAssetUrl } from "../../lib/utils/asset-url.js";
+import { selectCurrentUser } from "../../app/store/session.store.js";
+import { ModalShowBien } from "../private/Property/ModalShowBien.jsx";
 
 const DEFAULT_MAP_CENTER = { lat: -19.872006, lng: 47.03961 };
 
@@ -55,7 +58,7 @@ const PropertySearchSkeleton = () => (
   </section>
 );
 
-const PropertyCard = ({ property, onOpen }) => (
+const PropertyCard = ({ property, onOpen, onOpenDirection, canShowDirection }) => (
   <article className="overflow-hidden rounded-[1.75rem] border border-[rgba(157,93,67,0.12)] bg-white shadow-[0_18px_40px_rgba(45,30,23,0.1)] transition hover:-translate-y-1">
     <div className="relative h-56 overflow-hidden">
       <img
@@ -84,15 +87,24 @@ const PropertyCard = ({ property, onOpen }) => (
         <span className="flex items-center gap-1.5"><BathIcon /> {property.bathrooms ?? 3} Baths</span>
         <span className="flex items-center gap-1.5"><AreaIcon /> {property.area || 1000} m2</span>
       </div>
-      <Button type="button" className="w-full bg-brand-500 text-white hover:bg-brand-700" onClick={onOpen}>
-        Voir le detail
-      </Button>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Button type="button" className="w-full bg-brand-500 text-white hover:bg-brand-700" onClick={onOpen}>
+          Voir le detail
+        </Button>
+        {canShowDirection ? (
+          <Button type="button" variant="secondary" className="w-full" onClick={onOpenDirection}>
+            Voir direction
+          </Button>
+        ) : null}
+      </div>
     </div>
   </article>
 );
 
 export const PropertySearchPage = () => {
   const navigate = useNavigate();
+  const currentUser = useSelector(selectCurrentUser);
+  const [directionProperty, setDirectionProperty] = useState(null);
   const [searchParams] = useSearchParams();
   const { googleMapsApiKey, isLoaded: isMapsLoaded, loadError } = useSharedGoogleMapsLoader();
   const publicationFilters = useMemo(
@@ -187,6 +199,8 @@ export const PropertySearchPage = () => {
 
                   navigate(`/properties/${property.slug || property.id}`);
                 }}
+                canShowDirection={currentUser?.role === "user"}
+                onOpenDirection={() => setDirectionProperty(property)}
               />
             ))
           ) : (
@@ -270,6 +284,11 @@ export const PropertySearchPage = () => {
                   >
                     Voir le detail
                   </Button>
+                  {currentUser?.role === "user" ? (
+                    <Button type="button" variant="secondary" onClick={() => setDirectionProperty(selectedProperty)}>
+                      Voir direction
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             ) : (
@@ -280,6 +299,13 @@ export const PropertySearchPage = () => {
           </div>
         </Card>
       </div>
+      <ModalShowBien
+        open={Boolean(directionProperty)}
+        property={directionProperty}
+        user={currentUser}
+        onClose={() => setDirectionProperty(null)}
+      />
     </section>
   );
 };
+

@@ -43,3 +43,8 @@ export const rateAgent = async ({ agentId, payload }) => {
   const response = await apiClient.post(`/users/agents/${agentId}/ratings`, payload);
   return response.data.data;
 };
+
+export const getMyAgentRating = async (agentId) => {
+  const response = await apiClient.get(`/users/agents/${agentId}/ratings/me`);
+  return response.data.data;
+};

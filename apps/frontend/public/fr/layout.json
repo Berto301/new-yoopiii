@@ -44,17 +44,18 @@
       "notifications": "Notifications",
       "settings": "Parametres",
       "propertyManagement": "Gestion biens",
-      "contracts": "Mes contrats"
+      "contracts": "Mes contrats",
+      "crmMetadata": "Metadonnees CRM"
     }
   },
   "footer": {
     "eyebrow": "Contact",
     "title": "Parlons de votre projet immobilier.",
     "description": "Plateforme immobiliere pour trouver, publier et gerer biens, terrains et prises de contact dans un univers plus premium.",
-    "contactTitle": "Get In Touch",
-    "linksTitle": "Quick Links",
+    "contactTitle": "Contact",
+    "linksTitle": "Liens rapides",
     "newsletterTitle": "Newsletter",
-    "newsletterDescription": "Send your recommendation",
+    "newsletterDescription": "Envoyez une recommandation, une demande ou un besoin immobilier.",
     "home": "Accueil",
     "contact": "Contact",
     "fullName": "Nom complet",
@@ -69,6 +70,17 @@
     "submitting": "Envoi...",
     "helper": "Le message est envoye directement vers l'email de contact configure sur le backend.",
     "copyright": "Copyright {year} Yopii. Tous droits reserves.",
-    "tagline": "Experience immobiliere synchronisee, vitrine publique et gestion temps reel."
+    "tagline": "Experience immobiliere synchronisee, vitrine publique et gestion temps reel.",
+    "newsletterObject": "Objet",
+    "newsletterObjectPlaceholder": "Sujet de votre message",
+    "newsletterDetail": "Detail",
+    "newsletterDetailPlaceholder": "Votre message, besoin, recommandation ou question...",
+    "newsletterSuccess": "Merci, votre message newsletter a bien ete envoye.",
+    "newsletterError": "Impossible d'envoyer le formulaire newsletter.",
+    "newsletterErrors": {
+      "object": "Ajoutez un objet clair.",
+      "email": "Ajoutez un email valide.",
+      "detail": "Ajoutez un detail d'au moins 10 caracteres."
+    }
   }
 }

@@ -1,4 +1,83 @@
 {
+  "notifications": {
+    "eyebrow": "Notifications",
+    "title": "Notification center",
+    "description": "Track important interactions, unread alerts, and the right commercial context.",
+    "loadingDescription": "System messages, visit confirmations, new listings, and commercial activity.",
+    "loading": "Loading notifications...",
+    "error": "Unable to load notifications.",
+    "centralized": "centralized notifications",
+    "unreadPending": "unread to handle",
+    "summary": {
+      "total": "Total",
+      "unread": "Unread",
+      "today": "Today",
+      "contacts": "Direct contacts",
+      "totalDescription": "Overall volume of activity in your space.",
+      "unreadDescription": "Notifications that still deserve action or review.",
+      "todayDescription": "Activity received today.",
+      "contactsDescription": "Notifications that can open a conversation directly."
+    },
+    "recentEyebrow": "Recent feed",
+    "recentTitle": "Alerts, activity, and commercial follow-up",
+    "recentDescription": "Each card highlights context, date, read status, and available actions.",
+    "status": {
+      "read": "Read",
+      "unread": "Unread",
+      "handled": "Visually handled",
+      "actionRequired": "Recommended action"
+    },
+    "types": {
+      "crm.pipeline.updated": "CRM pipeline",
+      "crm.pipeline.negotiation": "CRM negotiation",
+      "crm.pipeline.won": "CRM won",
+      "crm.pipeline.lost": "CRM lost",
+      "crm.metadata.updated": "CRM metadata",
+      "crm.agent.changed": "CRM agent"
+    },
+    "crm": {
+      "propertyFallback": "this property",
+      "pipeline": {
+        "updated": {
+          "title": "CRM pipeline: {property}",
+          "body": "{property} moved from {from} to {to}."
+        },
+        "negotiation": {
+          "title": "Negotiation opened: {property}",
+          "body": "{property} moved from {from} to {to}. Commercial follow-up is recommended."
+        },
+        "won": {
+          "title": "Opportunity won: {property}",
+          "body": "{property} moved from {from} to {to}. Remember to finalize administrative actions."
+        },
+        "lost": {
+          "title": "Opportunity lost: {property}",
+          "body": "{property} moved from {from} to {to}. Review the reason to improve the next follow-up."
+        }
+      },
+      "metadataUpdated": {
+        "title": "CRM metadata updated: {property}",
+        "body": "CRM information for {property} was updated: {changes}."
+      },
+      "agentChanged": {
+        "title": "Responsible agent changed: {property}",
+        "body": "The responsible agent for {property} was updated."
+      }
+    },
+    "labels": {
+      "contact": "Contact",
+      "channel": "Channel",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "actionsDescription": "Open the conversation directly or mark this notification as handled.",
+    "contactFallback": "this person",
+    "contact": "Contact {name}",
+    "alreadyRead": "Already read",
+    "markRead": "Mark as read",
+    "emptyTitle": "No notifications yet.",
+    "emptyDescription": "Important activity, commercial follow-up, and system alerts will appear here."
+  },
   "messages": {
     "eyebrow": "Messaging",
     "title": "Private discussions",
@@ -117,7 +196,8 @@
       "linkedAgency": "Current agency",
       "linkedOwner": "Owner",
       "linkedProperty": "Linked property",
-      "linkedAgent": "Agent"
+      "linkedAgent": "Agent",
+      "open3d": "Open 3D tour"
     }
   },
   "owner": {
@@ -443,6 +523,133 @@
       },
       "edit": "Edit",
       "delete": "Delete"
+    }
+  },
+  "direction": {
+    "open": "View directions",
+    "title": "View directions",
+    "close": "Close",
+    "openGoogleMaps": "Open in Google Maps",
+    "eyebrow": "Property route",
+    "propertyFallback": "Selected property",
+    "description": "View the route from your current position to the property, with a clear estimate and direct access to Google Maps.",
+    "geoLoading": "Locating",
+    "geoReady": "Position active",
+    "durationFallback": "Google Maps estimate unavailable",
+    "mapTitle": "Map and route",
+    "mapDescription": "Custom markers: you and the property.",
+    "travelMode": "Mode",
+    "mapLoading": "Loading Google Map...",
+    "userMarker": "You",
+    "permissionTitle": "Position unavailable",
+    "routeTitle": "Route unavailable",
+    "propertyDetails": "Property details",
+    "addressMissing": "Address not provided",
+    "agentMissing": "Unassigned",
+    "modes": {
+      "driving": "Driving",
+      "walking": "Walking",
+      "transit": "Transit"
+    },
+    "stats": {
+      "distance": "Estimated distance",
+      "duration": "Estimated time",
+      "mode": "Travel mode",
+      "position": "Your position",
+      "destination": "Destination",
+      "agent": "Agent"
+    },
+    "errors": {
+      "unsupported": "Geolocation is not supported by this browser.",
+      "permission": "Allow geolocation to calculate the route from your current position.",
+      "position": "Unable to retrieve your current position.",
+      "route": "Unable to calculate the route with these options.",
+      "noDestination": "No GPS coordinates are available for this property.",
+      "missingKey": "Add `VITE_GOOGLE_MAPS_API_KEY` or `GOOGLE_MAPS_API_KEY` to enable the map.",
+      "maps": "Google Maps could not be loaded right now."
+    }
+  },
+  "agentRating": {
+    "createTitle": "Rate the agent",
+    "editTitle": "Edit your rating",
+    "submit": "Submit rating",
+    "update": "Update",
+    "close": "Close",
+    "global": "Global score",
+    "help": "Score out of 100, editable by each user.",
+    "loading": "Loading your existing rating...",
+    "comment": "Optional comment",
+    "placeholder": "Describe your experience: responsiveness, advice, follow-up, clarity...",
+    "criteria": {
+      "responsiveness": "Responsiveness",
+      "professionalism": "Professionalism",
+      "followUpQuality": "Follow-up quality",
+      "clientRelation": "Client relationship"
+    }
+  },
+  "crm": {
+    "eyebrow": "CRM metadata",
+    "title": "Property commercial data and pipeline",
+    "description": "Centralize metadata linked to properties, agents, and commercial stages, then move the pipeline with drag and drop.",
+    "summary": {
+      "total": "Total",
+      "negotiation": "Negotiation",
+      "won": "Won"
+    },
+    "tabs": {
+      "list": "List",
+      "pipeline": "Pipeline"
+    },
+    "stages": {
+      "new": "New",
+      "qualified": "Qualified",
+      "visited": "Visit completed",
+      "proposal_sent": "Proposal sent",
+      "negotiation": "Negotiation",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "priorities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "labels": {
+      "property": "Related property",
+      "addressMissing": "Address not provided",
+      "agent": "Responsible agent",
+      "priority": "Priority",
+      "updatedAt": "Updated",
+      "dataUsed": "Data used",
+      "nextActionMissing": "Next action to define"
+    },
+    "dataUsed": {
+      "price": "Price",
+      "location": "Location",
+      "photos": "Photos",
+      "history": "History",
+      "smartScore": "Smart score",
+      "threeD": "3D tour",
+      "favorites": "Favorites",
+      "views": "Views"
+    },
+    "actions": {
+      "goPipeline": "Go to Pipeline"
+    },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Property, agent, data...",
+      "stage": "Stage",
+      "allStages": "All"
+    },
+    "loading": "Loading CRM metadata...",
+    "error": "Unable to load CRM metadata.",
+    "empty": "No CRM metadata available for these filters.",
+    "success": {
+      "pipeline": "Pipeline stage updated."
+    },
+    "errors": {
+      "update": "Unable to update the CRM stage."
     }
   }
 }

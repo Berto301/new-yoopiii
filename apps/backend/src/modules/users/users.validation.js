@@ -136,13 +136,22 @@ export const topAgentsSchema = z.object({
   })
 });
 
+const agentReviewCriteriaSchema = z.object({
+  responsiveness: z.coerce.number().min(0).max(100).optional().nullable(),
+  professionalism: z.coerce.number().min(0).max(100).optional().nullable(),
+  followUpQuality: z.coerce.number().min(0).max(100).optional().nullable(),
+  clientRelation: z.coerce.number().min(0).max(100).optional().nullable()
+}).optional().default({});
 export const agentReviewSchema = z.object({
   body: z.object({
     score: z.coerce.number().min(0).max(100),
-    description: z.string().trim().max(1000).optional().or(z.literal(""))
+    description: z.string().trim().max(1000).optional().or(z.literal("")),
+    criteria: agentReviewCriteriaSchema
   }),
   params: z.object({
     agentId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid agent id")
   }),
   query: z.object({}).default({})
 });
+
+

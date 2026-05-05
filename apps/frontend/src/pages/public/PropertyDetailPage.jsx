@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
 import { GoogleMap, MarkerF } from "@react-google-maps/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
@@ -7,6 +8,8 @@ import { Card } from "../../components/ui/Card.jsx";
 import { getPublicPropertyDetail } from "../../features/properties/services/property.service.js";
 import { PropertyDetailContent, buildPropertyDetailMediaItems } from "../../features/properties/components/PropertyDetailContent.jsx";
 import { useSharedGoogleMapsLoader } from "../../lib/utils/google-maps.js";
+import { selectCurrentUser } from "../../app/store/session.store.js";
+import { ModalShowBien } from "../private/Property/ModalShowBien.jsx";
 
 const DEFAULT_MAP_CENTER = { lat: -19.872006, lng: 47.03961 };
 
@@ -30,6 +33,8 @@ const PropertyDetailSkeleton = () => (
 export const PropertyDetailPage = () => {
   const { id } = useParams();
   const { googleMapsApiKey, isLoaded: isMapsLoaded, loadError } = useSharedGoogleMapsLoader();
+  const currentUser = useSelector(selectCurrentUser);
+  const [directionProperty, setDirectionProperty] = useState(null);
   const detailQuery = useQuery({
     queryKey: ["public-property-detail", id],
     queryFn: () => getPublicPropertyDetail(id),
@@ -85,6 +90,8 @@ export const PropertyDetailPage = () => {
         onSelectImage={setSelectedImageUrl}
         showBrowseButton
         browseHref="/login"
+        showDirectionButton={currentUser?.role === "user"}
+        onOpenDirection={setDirectionProperty}
       />
 
       <Card className="rounded-[2rem] border-[rgba(157,93,67,0.12)] bg-white p-0 shadow-[0_20px_45px_rgba(45,30,23,0.1)]">
@@ -134,8 +141,15 @@ export const PropertyDetailPage = () => {
           </div>
         </div>
       </Card>
+      <ModalShowBien
+        open={Boolean(directionProperty)}
+        property={directionProperty}
+        user={currentUser}
+        onClose={() => setDirectionProperty(null)}
+      />
     </section>
   );
 };
 
 export default PropertyDetailPage;
+

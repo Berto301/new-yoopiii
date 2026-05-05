@@ -154,7 +154,7 @@ export const ModalManageExpense = ({
             <span className="text-sm font-medium text-stone-200">{t("private", "owner.expenses.fields.type", "Type")}</span>
             <div className="flex min-h-[46px] items-center">
               <Badge className={selectedType === "actif"
-                ? "border-emerald-400/30 bg-emerald-500/10 text-white"
+                ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
                 : "border-rose-400/30 bg-rose-500/10 text-rose-100"}
               >
                 {selectedType === "actif"

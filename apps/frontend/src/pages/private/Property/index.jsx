@@ -33,7 +33,7 @@ const formatOwnerType = (ownerType, t) => {
 
 const getPublicationBadgeClassName = (publicationStatus) => {
   if (publicationStatus === "approved") {
-    return "border-emerald-400/30 bg-emerald-400/10 text-white";
+    return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
   }
 
   if (publicationStatus === "rejected") {
@@ -45,7 +45,7 @@ const getPublicationBadgeClassName = (publicationStatus) => {
 
 const getStatusBadgeClassName = (status) => {
   if (status === "published") {
-    return "border-emerald-400/25 bg-emerald-400/10 text-white";
+    return "border-emerald-400/25 bg-emerald-400/10 text-emerald-100";
   }
 
   if (status === "reserved") {
@@ -112,7 +112,7 @@ const PropertyCard = ({
           ) : (
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.35),transparent_30%),linear-gradient(135deg,rgba(41,37,36,1),rgba(28,25,23,0.92),rgba(12,10,9,1))]" />
           )}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,10,9,0.12),rgba(12,10,9,0.82))]" />
+          <div className="absolute inset-0 " />
 
           <div className="relative flex h-full min-h-[260px] flex-col justify-between p-5 lg:p-6">
             <div className="flex flex-wrap gap-2">

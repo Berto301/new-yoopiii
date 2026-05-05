@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePwa } from "../../app/pwa/PwaProvider.jsx";
@@ -14,6 +14,7 @@ import {
   BookingIcon,
   CalendarIcon,
   ContractsIcon,
+  CrmIcon,
   DashboardIcon,
   ExpensesIcon,
   FavoritesIcon,
@@ -68,6 +69,7 @@ const buildSidebarItems = (user, t) => {
 
   if (isManagementRole) {
     baseItems.splice(1, 0, { to: "/dashboard/properties", label: t("layout", "dashboard.shared.propertyManagement", "Gestion biens"), permission: PERMISSION_IDS.UI_ROUTE_PROPERTIES, icon: PropertyIcon });
+    baseItems.splice(2, 0, { to: "/dashboard/crm-metadata", label: t("layout", "dashboard.shared.crmMetadata", "Metadonnees CRM"), permission: null, icon: CrmIcon });
   }
 
   if (role === "agency" || role === "independent_agent") {
@@ -223,3 +225,4 @@ export const DashboardLayout = () => {
     </div>
   );
 };
+

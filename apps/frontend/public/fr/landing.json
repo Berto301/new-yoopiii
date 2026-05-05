@@ -3,8 +3,8 @@
     "badge": "Real estate intelligence",
     "title": "Pilotez vos biens, vos loyers et vos equipes depuis une seule plateforme immobiliere.",
     "description": "Yopii centralise la publication des biens, la gestion locative, les contrats, la maintenance et la coordination entre proprietaires, agences, agents et locataires.",
-    "mockTitle": "Find A Perfect Home or Terrain To Live With Your Family",
-    "mockDescription": "The shorted distance between paradise and the place you call home.",
+    "mockTitle": "Trouvez la maison ou le terrain ideal pour votre projet",
+    "mockDescription": "Une vitrine claire pour explorer, comparer et contacter les bons professionnels.",
     "openSpace": "Ouvrir mon espace",
     "login": "Decouvrir Yopii",
     "contact": "Parler a l'equipe",
@@ -22,7 +22,40 @@
     "featuredAgency": "Agence mise en avant",
     "status": "Statut",
     "properties": "Biens",
-    "agents": "Agents"
+    "agents": "Agents",
+    "getStarted": "Commencer",
+    "explore": "Explorer les biens",
+    "search": "Rechercher",
+    "keywords": "Mots-cles",
+    "location": "Localisation"
+  },
+  "filters": {
+    "type": "Type"
+  },
+  "propertyTypes": {
+    "apartment": "Appartement",
+    "house": "Maison / Villa",
+    "commercial": "Commercial",
+    "office": "Bureau",
+    "warehouse": "Entrepot",
+    "land": "Terrain",
+    "villa": "Villa",
+    "building": "Immeuble",
+    "shop": "Boutique",
+    "garage": "Garage",
+    "residentialLand": "Terrain residentiel",
+    "commercialLand": "Terrain commercial",
+    "agriculturalLand": "Terrain agricole",
+    "subdivision": "Lotissement",
+    "cornerPlot": "Parcelle angle",
+    "investmentLand": "Terrain d'investissement"
+  },
+  "propertyCard": {
+    "purposeFallback": "Publie",
+    "typeFallback": "Bien",
+    "addressFallback": "Adresse non renseignee",
+    "beds": "chambres",
+    "baths": "bains"
   },
   "benefits": {
     "eyebrow": "Pourquoi Yopii",
@@ -108,5 +141,48 @@
     "tenants": "Locataires",
     "activeFiles": "fiches actives",
     "propertyMissing": "Bien non renseigne"
+  },
+  "types": {
+    "property": "Types de biens",
+    "terrain": "Types de terrains",
+    "published": "publies"
+  },
+  "about": {
+    "eyebrow": "A propos",
+    "title": "Le premier endroit pour trouver le bon bien ou terrain",
+    "description": "Yopii met en avant les biens, les terrains, les agents et les agences dans une vitrine claire, premium et facile a parcourir depuis le web ou le mobile.",
+    "readMore": "En savoir plus",
+    "highlights": {
+      "modernHome": "Habitats modernes",
+      "affordablePrice": "Prix lisibles",
+      "rightPapers": "Dossiers verifies",
+      "verifiedAgents": "Agents verifies"
+    }
+  },
+  "propertyList": {
+    "eyebrow": "Liste des biens",
+    "title": "Choisissez vos biens favoris et ouvrez leur fiche detail.",
+    "description": "Une selection de biens recents publies sur Yopii avec leur visuel principal, leur localisation et leurs caracteristiques essentielles.",
+    "browseMore": "Voir plus de biens",
+    "filters": {
+      "featured": "Selection",
+      "sale": "Vente",
+      "rent": "Location"
+    }
+  },
+  "agentsSection": {
+    "eyebrow": "Agents biens et terrains",
+    "title": "Contactez un agent depuis la plateforme.",
+    "description": "Retrouvez quelques profils actifs relies a l'ecosysteme Yopii pour prolonger l'experience de la vitrine vers la prise de contact.",
+    "agentFallback": "Agent Yopii",
+    "managedProperties": "biens geres"
+  },
+  "testimonial": {
+    "eyebrow": "Ils nous font confiance",
+    "description": "Yopii connecte vitrine publique, biens publies, agences actives et agents disponibles dans une experience immobiliere claire, moderne et rassurante."
+  },
+  "errors": {
+    "title": "Landing indisponible",
+    "description": "Les donnees n'ont pas pu etre chargees pour le moment. Reessayez dans quelques instants."
   }
 }

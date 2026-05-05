@@ -154,6 +154,43 @@
       "handled": "Traitee visuellement",
       "actionRequired": "Action recommandee"
     },
+    "types": {
+      "crm.pipeline.updated": "Pipeline CRM",
+      "crm.pipeline.negotiation": "Negociation CRM",
+      "crm.pipeline.won": "CRM gagne",
+      "crm.pipeline.lost": "CRM perdu",
+      "crm.metadata.updated": "Metadonnee CRM",
+      "crm.agent.changed": "Agent CRM"
+    },
+    "crm": {
+      "propertyFallback": "ce bien",
+      "pipeline": {
+        "updated": {
+          "title": "Pipeline CRM: {property}",
+          "body": "{property} passe de {from} a {to}."
+        },
+        "negotiation": {
+          "title": "Negociation ouverte: {property}",
+          "body": "{property} passe de {from} a {to}. Un suivi commercial est recommande."
+        },
+        "won": {
+          "title": "Opportunite gagnee: {property}",
+          "body": "{property} passe de {from} a {to}. Pensez a finaliser les actions administratives."
+        },
+        "lost": {
+          "title": "Opportunite perdue: {property}",
+          "body": "{property} passe de {from} a {to}. Analysez la raison pour ameliorer le prochain suivi."
+        }
+      },
+      "metadataUpdated": {
+        "title": "Metadonnee CRM mise a jour: {property}",
+        "body": "Les informations CRM de {property} ont ete mises a jour: {changes}."
+      },
+      "agentChanged": {
+        "title": "Agent responsable modifie: {property}",
+        "body": "L'agent responsable du bien {property} a ete mis a jour."
+      }
+    },
     "labels": {
       "contact": "Contact",
       "channel": "Canal",
@@ -286,7 +323,8 @@
       "linkedAgency": "Agence courante",
       "linkedOwner": "Proprietaire",
       "linkedProperty": "Bien associe",
-      "linkedAgent": "Agent"
+      "linkedAgent": "Agent",
+      "open3d": "Ouvrir la visite 3D"
     }
   },
   "owner": {
@@ -612,6 +650,183 @@
       },
       "edit": "Modifier",
       "delete": "Supprimer"
+    }
+  },
+  "direction": {
+    "open": "Voir direction",
+    "title": "Voir direction",
+    "close": "Fermer",
+    "openGoogleMaps": "Ouvrir dans Google Maps",
+    "eyebrow": "Itineraire du bien",
+    "propertyFallback": "Bien selectionne",
+    "description": "Visualisez votre trajet depuis votre position actuelle jusqu'au bien, avec une estimation claire et un acces direct a Google Maps.",
+    "geoLoading": "Position en cours",
+    "geoReady": "Position active",
+    "durationFallback": "Estimation via Google Maps indisponible",
+    "mapTitle": "Carte et trajet",
+    "mapDescription": "Markers personnalises: vous et le bien.",
+    "travelMode": "Mode",
+    "mapLoading": "Chargement de la carte Google...",
+    "userMarker": "Vous",
+    "permissionTitle": "Position non disponible",
+    "routeTitle": "Itineraire indisponible",
+    "propertyDetails": "Details du bien",
+    "addressMissing": "Adresse non renseignee",
+    "agentMissing": "Non attribue",
+    "modes": {
+      "driving": "Voiture",
+      "walking": "A pied",
+      "transit": "Transport"
+    },
+    "stats": {
+      "distance": "Distance estimee",
+      "duration": "Temps estime",
+      "mode": "Deplacement",
+      "position": "Votre position",
+      "destination": "Destination",
+      "agent": "Agent"
+    },
+    "errors": {
+      "unsupported": "La geolocalisation n'est pas prise en charge par ce navigateur.",
+      "permission": "Autorisez la geolocalisation pour calculer l'itineraire depuis votre position actuelle.",
+      "position": "Impossible de recuperer votre position actuelle.",
+      "route": "Impossible de calculer l'itineraire avec ces options.",
+      "noDestination": "Aucune coordonnee GPS n'est disponible pour ce bien.",
+      "missingKey": "Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte.",
+      "maps": "Impossible de charger Google Maps pour le moment."
+    }
+  },
+  "matching": {
+    "title": "Matching intelligent",
+    "close": "Fermer",
+    "eyebrow": "Prospection assistee",
+    "heading": "Utilisateurs potentiellement interesses par ce bien",
+    "description": "Le scoring actuel repose sur des regles explicites et maintenables. La structure est prete pour accueillir plus tard une couche IA sans casser l'experience existante.",
+    "property": "Bien",
+    "selectedProperty": "Bien selectionne",
+    "addressMissing": "Adresse non renseignee",
+    "filteredCandidates": "Candidats filtres",
+    "activeProfiles": "Profils actifs avec matching intelligent active.",
+    "search": "Recherche",
+    "searchPlaceholder": "Nom ou email",
+    "minimumScore": "Score minimum",
+    "matchType": "Type de match",
+    "loading": "Chargement des profils a analyser...",
+    "error": "Impossible de charger les profils pour le matching.",
+    "emptyTitle": "Aucun utilisateur ne correspond aux filtres actuels.",
+    "emptyDescription": "Essayez d'abaisser le score minimum ou d'enlever le filtre de type de match.",
+    "emailMissing": "Email non renseigne",
+    "criteria": "Criteres de matching",
+    "action": "Action",
+    "actionTitle": "Conversation contextualisee",
+    "actionDescription": "Ouvrez directement une conversation contextualisee avec ce bien pour lancer l'echange.",
+    "discuss": "Discuter",
+    "filters": {
+      "all": "Tous les profils",
+      "strong": "Matches forts",
+      "partial": "Matches partiels"
+    },
+    "badges": {
+      "purposeOk": "Objectif compatible",
+      "purposeNo": "Objectif different",
+      "typeOk": "Type compatible",
+      "typeNo": "Type hors cible",
+      "budgetOk": "Budget compatible",
+      "budgetNo": "Budget depasse",
+      "noDistance": "Sans distance calculee"
+    },
+    "summary": {
+      "purpose": "Objectif",
+      "budget": "Budget reel",
+      "types": "Types recherches",
+      "allTypes": "Tous types",
+      "radius": "Rayon",
+      "location": "Localisation",
+      "enabled": "Activee",
+      "disabled": "Inactive"
+    }
+  },
+  "agentRating": {
+    "createTitle": "Noter l'agent",
+    "editTitle": "Modifier votre note",
+    "submit": "Envoyer la note",
+    "update": "Mettre a jour",
+    "close": "Fermer",
+    "global": "Note globale",
+    "help": "Note sur 100, modifiable par chaque utilisateur.",
+    "loading": "Chargement de votre note existante...",
+    "comment": "Commentaire optionnel",
+    "placeholder": "Expliquez votre experience: reactivite, conseil, suivi, clarte des informations...",
+    "criteria": {
+      "responsiveness": "Reactivite",
+      "professionalism": "Professionnalisme",
+      "followUpQuality": "Qualite du suivi",
+      "clientRelation": "Relation client"
+    }
+  },
+  "crm": {
+    "eyebrow": "Metadonnees CRM",
+    "title": "Pipeline et donnees commerciales des biens",
+    "description": "Centralisez les metadonnees liees aux biens, agents et etapes commerciales, puis faites evoluer le pipeline par drag and drop.",
+    "summary": {
+      "total": "Total",
+      "negotiation": "Negociation",
+      "won": "Gagne"
+    },
+    "tabs": {
+      "list": "Liste",
+      "pipeline": "Pipeline"
+    },
+    "stages": {
+      "new": "Nouveau",
+      "qualified": "Qualifie",
+      "visited": "Visite effectuee",
+      "proposal_sent": "Proposition envoyee",
+      "negotiation": "Negociation",
+      "won": "Gagne",
+      "lost": "Perdu"
+    },
+    "priorities": {
+      "low": "Basse",
+      "medium": "Moyenne",
+      "high": "Haute"
+    },
+    "labels": {
+      "property": "Bien concerne",
+      "addressMissing": "Adresse non renseignee",
+      "agent": "Agent responsable",
+      "priority": "Priorite",
+      "updatedAt": "Mise a jour",
+      "dataUsed": "Donnees utilisees",
+      "nextActionMissing": "Prochaine action a definir"
+    },
+    "dataUsed": {
+      "price": "Prix",
+      "location": "Localisation",
+      "photos": "Photos",
+      "history": "Historique",
+      "smartScore": "Score intelligent",
+      "threeD": "Visite 3D",
+      "favorites": "Favoris",
+      "views": "Vues"
+    },
+    "actions": {
+      "goPipeline": "Aller dans Pipeline"
+    },
+    "filters": {
+      "search": "Recherche",
+      "searchPlaceholder": "Bien, agent, donnee...",
+      "stage": "Etape",
+      "allStages": "Toutes"
+    },
+    "loading": "Chargement des metadonnees CRM...",
+    "error": "Impossible de charger les metadonnees CRM.",
+    "empty": "Aucune metadonnee CRM disponible pour ces filtres.",
+    "success": {
+      "pipeline": "Etape pipeline mise a jour."
+    },
+    "errors": {
+      "update": "Impossible de mettre a jour l'etape CRM."
     }
   }
 }
