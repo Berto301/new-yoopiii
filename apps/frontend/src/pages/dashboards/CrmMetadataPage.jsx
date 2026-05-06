@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from "react";
-import Board from "react-trello";
+import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
@@ -113,8 +113,8 @@ const MetadataCard = ({ item, onGoPipeline, t, locale }) => (
   </Card>
 );
 
-const PipelineCard = ({ item, t }) => (
-  <article className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--card)] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.12)]">
+const PipelineCard = ({ item, t, isDragging = false }) => (
+  <article className={`rounded-[1.4rem] border border-[var(--border)] bg-[var(--card)] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.12)] transition ${isDragging ? "scale-[1.02] border-brand-500/50 shadow-[0_24px_55px_rgba(157,93,67,0.22)]" : ""}`}>
     {item.property.coverImage ? (
       <img src={resolveAssetUrl(item.property.coverImage)} alt={item.property.title} className="h-28 w-full rounded-[1rem] object-cover" />
     ) : null}
@@ -131,14 +131,6 @@ const PipelineCard = ({ item, t }) => (
     </div>
   </article>
 );
-
-const TrelloPipelineCard = ({ metadata }) => {
-  if (!metadata?.item) {
-    return null;
-  }
-
-  return <PipelineCard item={metadata.item} t={metadata.t} />;
-};
 
 export const CrmMetadataPage = () => {
   const { t, locale } = useUserPreferences();
@@ -191,43 +183,18 @@ export const CrmMetadataPage = () => {
     return groups;
   }, [items, stages]);
 
-  const boardData = useMemo(() => ({
-    lanes: stages.map((stage) => ({
-      id: stage.value,
-      title: getStageLabel(t, stage.value, stage.label),
-      label: `${groupedItems[stage.value]?.length || 0}`,
-      style: {
-        background: "var(--surface-soft)",
-        border: "1px solid var(--border)",
-        borderRadius: "1.6rem",
-        color: "var(--foreground)",
-        minHeight: 540,
-        width: 280
-      },
-      titleStyle: {
-        color: "var(--foreground)",
-        fontSize: 14,
-        fontWeight: 700
-      },
-      labelStyle: {
-        color: "var(--muted)",
-        fontSize: 12
-      },
-      cards: (groupedItems[stage.value] || []).map((item) => ({
-        id: item.id,
-        title: item.property.title,
-        description: item.nextAction || "",
-        metadata: { item, t }
-      }))
-    }))
-  }), [groupedItems, stages, t]);
+  const handleDragEnd = (result) => {
+    const { destination, draggableId, source } = result;
 
-  const handleCardMoveAcrossLanes = (fromLaneId, toLaneId, cardId) => {
-    if (!cardId || fromLaneId === toLaneId) {
+    if (!destination || !draggableId) {
       return;
     }
 
-    updateStageMutation.mutate({ metadataId: cardId, pipelineStage: toLaneId });
+    if (source.droppableId === destination.droppableId) {
+      return;
+    }
+
+    updateStageMutation.mutate({ metadataId: draggableId, pipelineStage: destination.droppableId });
   };
 
   return (
@@ -284,16 +251,47 @@ export const CrmMetadataPage = () => {
         </div>
       ) : (
         <div className="overflow-x-auto pb-3">
-          <div className="min-w-[1180px] rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-3">
-            <Board
-              data={boardData}
-              draggable
-              laneDraggable={false}
-              components={{ Card: TrelloPipelineCard }}
-              onCardMoveAcrossLanes={handleCardMoveAcrossLanes}
-              style={{ background: "transparent", height: "auto" }}
-            />
-          </div>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="grid min-w-[1180px] grid-cols-7 gap-4">
+              {stages.map((stage) => {
+                const stageItems = groupedItems[stage.value] || [];
+
+                return (
+                  <Droppable key={stage.value} droppableId={stage.value}>
+                    {(provided, snapshot) => (
+                      <section
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[540px] rounded-[1.6rem] border border-[var(--border)] bg-[var(--surface-soft)] p-3 transition ${snapshot.isDraggingOver ? "border-brand-500/50 bg-[var(--surface-accent)] ring-2 ring-brand-500/15" : ""}`}
+                      >
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                          <Badge className={STAGE_TONES[stage.value] || "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--foreground)]"}>{getStageLabel(t, stage.value, stage.label)}</Badge>
+                          <span className="text-xs text-[var(--muted)]">{stageItems.length}</span>
+                        </div>
+                        <div className="space-y-3">
+                          {stageItems.map((item, index) => (
+                            <Draggable key={item.id} draggableId={String(item.id)} index={index}>
+                              {(dragProvided, dragSnapshot) => (
+                                <div
+                                  ref={dragProvided.innerRef}
+                                  {...dragProvided.draggableProps}
+                                  {...dragProvided.dragHandleProps}
+                                  className="outline-none"
+                                >
+                                  <PipelineCard item={item} t={t} isDragging={dragSnapshot.isDragging} />
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      </section>
+                    )}
+                  </Droppable>
+                );
+              })}
+            </div>
+          </DragDropContext>
         </div>
       )}
     </section>
