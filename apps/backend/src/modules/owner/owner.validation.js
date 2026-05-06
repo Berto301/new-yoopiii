@@ -73,6 +73,32 @@ export const ownerTenantParamsSchema = z.object({
   query: z.object({}).optional().default({})
 });
 
+export const ownerPropertyParamsSchema = z.object({
+  params: z.object({
+    propertyId: objectIdSchema
+  }),
+  body: z.object({}).optional().default({}),
+  query: z.object({}).optional().default({})
+});
+
+export const ownerPropertyPaymentParamsSchema = z.object({
+  params: z.object({
+    propertyId: objectIdSchema,
+    paymentId: objectIdSchema
+  }),
+  body: z.object({}).optional().default({}),
+  query: z.object({}).optional().default({})
+});
+
+export const ownerPropertyFeedbackParamsSchema = z.object({
+  params: z.object({
+    propertyId: objectIdSchema,
+    feedbackId: objectIdSchema
+  }),
+  body: z.object({}).optional().default({}),
+  query: z.object({}).optional().default({})
+});
+
 export const createOwnerTenantSchema = z.object({
   body: tenantBodySchema,
   params: z.object({}).optional().default({}),

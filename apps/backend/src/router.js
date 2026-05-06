@@ -13,6 +13,7 @@ import { contractRouter } from "./modules/contracts/contracts.routes.js";
 import { landingRouter } from "./modules/landing/landing.routes.js";
 import { contactRouter } from "./modules/contact/contact.routes.js";
 import { crmRouter } from "./modules/crm/crm.routes.js";
+import { userAssetRouter } from "./modules/user-assets/user-assets.routes.js";
 
 export const router = Router();
 
@@ -30,4 +31,5 @@ router.use("/contracts", contractRouter);
 router.use("/landing", landingRouter);
 router.use("/contact", contactRouter);
 router.use("/crm", crmRouter);
+router.use("/user-assets", userAssetRouter);
 

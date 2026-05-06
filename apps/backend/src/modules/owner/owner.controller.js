@@ -4,8 +4,11 @@ import {
   createOwnerMaintenanceTicket,
   deleteOwnerTenant,
   deleteOwnerMaintenanceTicket,
+  generateOwnerPropertyReceipt,
   getOwnerDashboard,
+  getOwnerPropertyTenantWorkspace,
   getOwnerWorkspace,
+  markOwnerPropertyFeedbackHandled,
   updateOwnerTenant,
   updateOwnerMaintenanceTicket
 } from "./owner.service.js";
@@ -101,6 +104,35 @@ export const deleteOwnerMaintenanceHandler = async (req, res) => {
   const data = await deleteOwnerMaintenanceTicket({
     ownerId: req.user.id,
     ticketId: req.validated.params.ticketId
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const getOwnerPropertyTenantWorkspaceHandler = async (req, res) => {
+  const data = await getOwnerPropertyTenantWorkspace({
+    ownerId: req.user.id,
+    propertyId: req.validated.params.propertyId
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const generateOwnerPropertyReceiptHandler = async (req, res) => {
+  const data = await generateOwnerPropertyReceipt({
+    ownerId: req.user.id,
+    propertyId: req.validated.params.propertyId,
+    paymentId: req.validated.params.paymentId
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const markOwnerPropertyFeedbackHandledHandler = async (req, res) => {
+  const data = await markOwnerPropertyFeedbackHandled({
+    ownerId: req.user.id,
+    propertyId: req.validated.params.propertyId,
+    feedbackId: req.validated.params.feedbackId
   });
 
   res.status(StatusCodes.OK).json({ success: true, data });

@@ -10,6 +10,7 @@ import { OwnerMaintenanceTicket } from "./models/owner-maintenance-ticket.model.
 import { OwnerProperty } from "./models/owner-property.model.js";
 import { OwnerRentPayment } from "./models/owner-rent-payment.model.js";
 import { OwnerTenant } from "./models/owner-tenant.model.js";
+import { UserPropertyFeedback } from "../user-assets/models/user-property-feedback.model.js";
 
 const OWNER_NOTIFICATION_SOURCE = "owner_workspace_seed";
 
@@ -234,6 +235,63 @@ const buildMaintenanceNotificationPayload = ({ ownerId, type, title, body, ticke
     managedPropertyId: managedPropertyId ? String(managedPropertyId) : null
   }
 });
+
+const buildOwnerNotificationPayload = ({ userId, type, title, body, data = {} }) => ({
+  userId,
+  type,
+  title,
+  body,
+  channel: "in_app",
+  data
+});
+
+const mapTenantUser = (user) => user
+  ? {
+      id: String(user._id || user),
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      fullName: [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.email || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      avatar: user.avatar || null
+    }
+  : null;
+
+const mapRentPaymentForProperty = (payment) => ({
+  id: String(payment._id),
+  tenantId: payment.tenantId?._id ? String(payment.tenantId._id) : payment.tenantId ? String(payment.tenantId) : null,
+  tenant: payment.tenantId?.fullName || "Locataire",
+  dueDate: payment.dueDate,
+  dueDateLabel: formatDate(payment.dueDate),
+  amount: Number(payment.amount || 0),
+  amountLabel: formatCurrency(payment.amount, payment.currency || "USD"),
+  currency: payment.currency || "USD",
+  status: payment.status,
+  receiptNumber: payment.receiptNumber || ""
+});
+
+const mapOwnerPropertyFeedback = (feedback) => ({
+  id: String(feedback._id),
+  subject: feedback.subject || "",
+  message: feedback.message || "",
+  rating: Number(feedback.rating || 0),
+  status: feedback.status || "new",
+  createdAt: feedback.createdAt,
+  createdAtLabel: formatDate(feedback.createdAt),
+  tenantId: feedback.tenantId?._id ? String(feedback.tenantId._id) : feedback.tenantId ? String(feedback.tenantId) : null,
+  user: mapTenantUser(feedback.userId)
+});
+
+const calculateTenantScore = ({ payments }) => {
+  if (!payments.length) {
+    return 75;
+  }
+
+  const paidCount = payments.filter((payment) => payment.status === "paid").length;
+  const lateCount = payments.filter((payment) => payment.status === "late").length;
+  const score = Math.round(70 + (paidCount / payments.length) * 30 - lateCount * 8);
+  return Math.max(0, Math.min(100, score));
+};
 
 const createMaintenanceNotification = async ({ ownerId, action, ticket }) => {
   const propertyLabel = resolveMaintenancePropertyLabel(ticket);
@@ -835,5 +893,181 @@ export const deleteOwnerMaintenanceTicket = async ({ ownerId, ticketId }) => {
   await createMaintenanceNotification({ ownerId, action: "deleted", ticket });
 
   return { success: true, ticketId };
+};
+
+export const getOwnerPropertyTenantWorkspace = async ({ ownerId, propertyId }) => {
+  const property = await Property.findOne({ _id: propertyId, ownerUserId: ownerId })
+    .select("title slug address purpose status price currency area rooms bedrooms bathrooms coverImage media score")
+    .lean();
+
+  if (!property) {
+    throw new AppError("Bien introuvable pour ce proprietaire", StatusCodes.NOT_FOUND);
+  }
+
+  const [tenants, contracts, maintenance, feedbacks] = await Promise.all([
+    OwnerTenant.find({ ownerId, managedPropertyId: propertyId })
+      .populate("linkedUserId", "firstName lastName email phone avatar")
+      .populate("managementContractId", "reference status startDate endDate financial paymentTracking")
+      .sort({ createdAt: -1 })
+      .lean(),
+    ManagementContract.find({ ownerUserId: ownerId, propertyId })
+      .select("reference status startDate endDate financial paymentTracking tenants documents")
+      .sort({ updatedAt: -1 })
+      .lean(),
+    OwnerMaintenanceTicket.find({ ownerId, managedPropertyId: propertyId }).sort({ updatedAt: -1 }).lean(),
+    UserPropertyFeedback.find({ ownerId, propertyId })
+      .populate("userId", "firstName lastName email phone avatar")
+      .sort({ createdAt: -1 })
+      .lean()
+  ]);
+
+  const tenantIds = tenants.map((tenant) => tenant._id);
+  const payments = tenantIds.length
+    ? await OwnerRentPayment.find({ ownerId, tenantId: { $in: tenantIds } })
+        .populate("tenantId", "fullName")
+        .sort({ dueDate: -1 })
+        .lean()
+    : [];
+
+  const paidPayments = payments.filter((payment) => payment.status === "paid");
+  const latePayments = payments.filter((payment) => payment.status === "late");
+  const monthlyRevenue = paidPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const paymentsByTenant = new Map();
+  payments.forEach((payment) => {
+    const tenantKey = payment.tenantId?._id ? String(payment.tenantId._id) : String(payment.tenantId || "");
+    if (!paymentsByTenant.has(tenantKey)) paymentsByTenant.set(tenantKey, []);
+    paymentsByTenant.get(tenantKey).push(payment);
+  });
+
+  return {
+    property: {
+      id: String(property._id),
+      title: property.title,
+      slug: property.slug,
+      address: property.address,
+      purpose: property.purpose,
+      status: property.status,
+      price: Number(property.price || 0),
+      currency: property.currency || "USD",
+      area: Number(property.area || 0),
+      rooms: Number(property.rooms || 0),
+      bedrooms: Number(property.bedrooms || 0),
+      bathrooms: Number(property.bathrooms || 0),
+      coverImage: property.coverImage || null,
+      media: property.media || [],
+      score: Number(property.score || 0)
+    },
+    dashboard: {
+      totalRents: payments.length,
+      paidRents: paidPayments.length,
+      lateRents: latePayments.length,
+      monthlyRevenue,
+      monthlyRevenueLabel: formatCurrency(monthlyRevenue, property.currency || "USD"),
+      alerts: [
+        ...latePayments.slice(0, 4).map((payment) => ({
+          id: `late-${payment._id}`,
+          title: "Loyer en retard",
+          detail: `${payment.tenantId?.fullName || "Locataire"} - ${formatCurrency(payment.amount, payment.currency || property.currency || "USD")}`,
+          tone: "alert"
+        })),
+        ...maintenance.filter((ticket) => ticket.status !== "closed").slice(0, 3).map((ticket) => ({
+          id: `maintenance-${ticket._id}`,
+          title: ticket.title,
+          detail: maintenanceStatusLabelMap[ticket.status] || ticket.status,
+          tone: "info"
+        }))
+      ]
+    },
+    tenants: tenants.map((tenant) => {
+      const tenantPayments = paymentsByTenant.get(String(tenant._id)) || [];
+      return {
+        ...mapOwnerTenant(tenant),
+        linkedUser: mapTenantUser(tenant.linkedUserId),
+        score: calculateTenantScore({ payments: tenantPayments }),
+        payments: tenantPayments.map(mapRentPaymentForProperty),
+        contractDetail: tenant.managementContractId ? {
+          id: String(tenant.managementContractId._id),
+          reference: tenant.managementContractId.reference,
+          status: tenant.managementContractId.status,
+          startDateLabel: formatDate(tenant.managementContractId.startDate),
+          endDateLabel: formatDate(tenant.managementContractId.endDate)
+        } : null
+      };
+    }),
+    receipts: payments.map(mapRentPaymentForProperty),
+    contracts: contracts.map((contract) => ({
+      id: String(contract._id),
+      reference: contract.reference,
+      status: contract.status,
+      startDateLabel: formatDate(contract.startDate),
+      endDateLabel: formatDate(contract.endDate),
+      amountLabel: formatCurrency(contract.financial?.rentAmount || 0, contract.financial?.currency || property.currency || "USD"),
+      documentUrl: contract.documents?.contractFile || ""
+    })),
+    feedbacks: feedbacks.map(mapOwnerPropertyFeedback)
+  };
+};
+
+export const generateOwnerPropertyReceipt = async ({ ownerId, propertyId, paymentId }) => {
+  await getOwnerPropertyTenantWorkspace({ ownerId, propertyId });
+
+  const payment = await OwnerRentPayment.findOne({ _id: paymentId, ownerId })
+    .populate("tenantId", "fullName linkedUserId")
+    .lean();
+
+  if (!payment) {
+    throw new AppError("Paiement introuvable", StatusCodes.NOT_FOUND);
+  }
+
+  const receiptNumber = payment.receiptNumber || `Q-${new Date().getFullYear()}-${String(payment._id).slice(-6).toUpperCase()}`;
+  const updatedPayment = await OwnerRentPayment.findByIdAndUpdate(
+    payment._id,
+    { $set: { receiptNumber } },
+    { new: true }
+  )
+    .populate("tenantId", "fullName linkedUserId")
+    .lean();
+
+  if (updatedPayment?.tenantId?.linkedUserId) {
+    await createNotifications([
+      buildOwnerNotificationPayload({
+        userId: updatedPayment.tenantId.linkedUserId,
+        type: "owner.receipt.generated",
+        title: "Quittance generee",
+        body: `La quittance ${receiptNumber} est disponible.`,
+        data: { propertyId, paymentId, receiptNumber }
+      })
+    ]);
+  }
+
+  return mapRentPaymentForProperty(updatedPayment);
+};
+
+export const markOwnerPropertyFeedbackHandled = async ({ ownerId, propertyId, feedbackId }) => {
+  const feedback = await UserPropertyFeedback.findOneAndUpdate(
+    { _id: feedbackId, ownerId, propertyId },
+    { $set: { status: "handled", handledAt: new Date() } },
+    { new: true }
+  )
+    .populate("userId", "firstName lastName email phone avatar")
+    .lean();
+
+  if (!feedback) {
+    throw new AppError("Feedback introuvable", StatusCodes.NOT_FOUND);
+  }
+
+  if (feedback.userId?._id) {
+    await createNotifications([
+      buildOwnerNotificationPayload({
+        userId: feedback.userId._id,
+        type: "owner.feedback.handled",
+        title: "Feedback traite",
+        body: "Votre feedback lie au bien a ete marque comme traite.",
+        data: { propertyId, feedbackId }
+      })
+    ]);
+  }
+
+  return mapOwnerPropertyFeedback(feedback);
 };
 

@@ -154,6 +154,19 @@ body[data-theme="dark"] {
   color: var(--foreground);
 }
 
+body[data-theme="light"] [class*="bg-gradient"],
+body[data-theme="light"] [class*="linear-gradient"],
+body[data-theme="light"] [class*="radial-gradient"],
+body[data-theme="light"] [class*="conic-gradient"] {
+  background-image: none;
+}
+
+body[data-theme="light"] [class*="bg-gradient"][class*="from-"],
+body[data-theme="light"] [class*="linear-gradient"][class*="rgba"],
+body[data-theme="light"] [class*="radial-gradient"][class*="rgba"] {
+  background-color: var(--surface);
+}
+
 body[data-theme="light"] [class*="bg-stone-950"],
 body[data-theme="light"] [class*="bg-stone-900"],
 body[data-theme="light"] [class*="bg-black/"],

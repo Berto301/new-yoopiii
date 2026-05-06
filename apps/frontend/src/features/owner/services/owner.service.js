@@ -45,6 +45,21 @@ export const getOwnerProperties = async () => {
   return response.data.data;
 };
 
+export const getOwnerPropertyTenancy = async (propertyId) => {
+  const response = await apiClient.get(`/owner/properties/${propertyId}/tenancy`);
+  return response.data.data;
+};
+
+export const generateOwnerPropertyReceipt = async ({ propertyId, paymentId }) => {
+  const response = await apiClient.post(`/owner/properties/${propertyId}/receipts/${paymentId}/generate`);
+  return response.data.data;
+};
+
+export const markOwnerPropertyFeedbackHandled = async ({ propertyId, feedbackId }) => {
+  const response = await apiClient.patch(`/owner/properties/${propertyId}/feedbacks/${feedbackId}/handled`);
+  return response.data.data;
+};
+
 export const getOwnerMaintenance = async () => {
   const response = await apiClient.get("/owner/maintenance");
   return response.data.data;
