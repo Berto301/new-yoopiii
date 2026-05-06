@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button.jsx";
 import { Card } from "../../components/ui/Card.jsx";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { getPublicPropertyDetail } from "../../features/properties/services/property.service.js";
 import { PropertyDetailContent, buildPropertyDetailMediaItems } from "../../features/properties/components/PropertyDetailContent.jsx";
 import { useSharedGoogleMapsLoader } from "../../lib/utils/google-maps.js";
@@ -32,6 +33,7 @@ const PropertyDetailSkeleton = () => (
 
 export const PropertyDetailPage = () => {
   const { id } = useParams();
+  const { t } = useUserPreferences();
   const { googleMapsApiKey, isLoaded: isMapsLoaded, loadError } = useSharedGoogleMapsLoader();
   const currentUser = useSelector(selectCurrentUser);
   const [directionProperty, setDirectionProperty] = useState(null);
@@ -67,14 +69,14 @@ export const PropertyDetailPage = () => {
     return (
       <section className="mx-auto max-w-7xl px-6 py-16">
         <Card className="rounded-[2rem] border-white/10 bg-white/[0.04]">
-          <p className="text-xs uppercase tracking-[0.28em] text-[#c9a66b]">Annonce detail</p>
-          <h1 className="mt-4 font-serif text-4xl text-white">Bien introuvable</h1>
+          <p className="text-xs uppercase tracking-[0.28em] text-[var(--brand-contrast)]">{t("private", "propertyDetail.eyebrow", "Annonce detail")}</p>
+          <h1 className="mt-4 font-serif text-4xl text-[var(--foreground)]">{t("private", "propertyDetail.notFoundTitle", "Bien introuvable")}</h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-300">
-            Le bien demande n&apos;est pas disponible ou n&apos;est plus publie pour le moment.
+            {t("private", "propertyDetail.notFoundDescription", "Le bien demande n'est pas disponible ou n'est plus publie pour le moment.")}
           </p>
           <div className="mt-6">
             <Button as={Link} to="/properties" variant="secondary">
-              Retour aux biens
+              {t("private", "propertyDetail.backToProperties", "Retour aux biens")}
             </Button>
           </div>
         </Card>
@@ -94,32 +96,32 @@ export const PropertyDetailPage = () => {
         onOpenDirection={setDirectionProperty}
       />
 
-      <Card className="rounded-[2rem] border-[rgba(157,93,67,0.12)] bg-white p-0 shadow-[0_20px_45px_rgba(45,30,23,0.1)]">
-        <div className="border-b border-stone-200 px-6 py-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-500">Localisation</p>
-          <h2 className="mt-2 text-3xl font-bold text-stone-950">Voir le bien sur la carte</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-stone-500">
-            {property.address || "La localisation du bien est affichee ici lorsqu'une position GPS est disponible."}
+      <Card className="rounded-[2rem] border-[var(--border)] bg-[var(--surface)] p-0 shadow-[0_20px_45px_rgba(45,30,23,0.1)]">
+        <div className="border-b border-[var(--border)] px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--brand-contrast)]">{t("private", "propertyDetail.map.eyebrow", "Localisation")}</p>
+          <h2 className="mt-2 text-3xl font-bold text-[var(--foreground)]">{t("private", "propertyDetail.map.title", "Voir le bien sur la carte")}</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)]">
+            {property.address || t("private", "propertyDetail.map.description", "La localisation du bien est affichee ici lorsqu'une position GPS est disponible.")}
           </p>
         </div>
 
         <div className="p-5">
-          <div className="overflow-hidden rounded-[1.6rem] border border-stone-200 bg-[#f7f9f8]">
+          <div className="overflow-hidden rounded-[1.6rem] border border-[var(--border)] bg-[var(--public-map-bg)]">
             {!googleMapsApiKey ? (
-              <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-stone-500">
-                Ajoutez `VITE_GOOGLE_MAPS_API_KEY` ou `GOOGLE_MAPS_API_KEY` pour activer la carte Google.
+              <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-[var(--muted)]">
+                {t("private", "propertyDetail.map.missingKey", "Ajoutez `VITE_GOOGLE_MAPS_API_KEY` pour activer la carte Google.")}
               </div>
             ) : loadError ? (
-              <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-red-400">
-                Impossible de charger Google Maps pour le moment.
+              <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-[var(--danger-foreground)]">
+                {t("private", "propertyDetail.map.error", "Impossible de charger Google Maps pour le moment.")}
               </div>
             ) : !isMapsLoaded ? (
-              <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-stone-500">
-                Chargement de la carte Google...
+              <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-[var(--muted)]">
+                {t("private", "propertyDetail.map.loading", "Chargement de la carte Google...")}
               </div>
             ) : !markerPosition ? (
-              <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-stone-500">
-                Aucune coordonnee n'est disponible pour ce bien.
+              <div className="flex h-[420px] items-center justify-center px-6 text-center text-sm text-[var(--muted)]">
+                {t("private", "propertyDetail.map.noCoordinates", "Aucune coordonnee n'est disponible pour ce bien.")}
               </div>
             ) : (
               <GoogleMap

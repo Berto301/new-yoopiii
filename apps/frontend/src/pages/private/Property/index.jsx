@@ -31,6 +31,9 @@ const formatOwnerType = (ownerType, t) => {
   return t("private", "properties.card.ownerTypeIndependentAgent", "Agent independant");
 };
 
+const getContractRequestStatusLabel = (status, t) =>
+  t("private", `properties.contractRequest.status.${status || "none"}`, status || "none");
+
 const getPublicationBadgeClassName = (publicationStatus) => {
   if (publicationStatus === "approved") {
     return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
@@ -76,9 +79,11 @@ const PropertyCard = ({
   linkedContract,
   workflowMutation,
   duplicateManagedPropertyMutation,
+  requestDuplicateContractMutation,
   deleteManagedPropertyMutation,
   onEdit,
   onDuplicate,
+  onRequestContract,
   onDelete,
   onAssociateContract,
   onOpenMatching
@@ -91,6 +96,11 @@ const PropertyCard = ({
   const canReserve = !isOwnerRole && Boolean(linkedContract?.actions?.canReserveProperty);
   const canEdit = isOwnerRole || Boolean(linkedContract?.actions?.canEditProperty);
   const canDelete = isOwnerRole || Boolean(linkedContract?.actions?.canDeleteProperty);
+  const isDuplicatedProperty = Boolean(property.isDuplicated || property.duplicatedFromPropertyId);
+  const contractRequestStatus = property.contractRequestStatus || "none";
+  const canRequestOwnerContract = !isOwnerRole && isDuplicatedProperty && !property.managementContractId;
+  const isManagementBlocked = !isOwnerRole && !property.managementContractId;
+  const hasPendingContractRequest = ["draft", "pending_signature", "signed", "accepted", "active"].includes(contractRequestStatus);
   const threeDStatus = getPropertyThreeDStatusMeta({
     is3DEnabled: hasPropertyThreeDLink(property),
     status: hasPropertyThreeDLink(property) ? "generated" : null
@@ -119,6 +129,11 @@ const PropertyCard = ({
               <Badge className={getPublicationBadgeClassName(property.publicationStatus)}>{property.publicationStatus}</Badge>
               <Badge className={getStatusBadgeClassName(property.status)}>{property.status}</Badge>
               {hasThreeDLink ? <Badge className={threeDStatus.className}>3D {threeDStatus.label}</Badge> : null}
+              {isDuplicatedProperty ? (
+                <Badge className="border-sky-500/25 bg-[var(--info-surface)] text-[var(--info-foreground)]">
+                  {t("private", "properties.card.duplicated", "Bien duplique")}
+                </Badge>
+              ) : null}
               <ScoreBadge score={property.score || 0} showScore />
             </div>
 
@@ -187,10 +202,25 @@ const PropertyCard = ({
                   {t("private", "properties.card.publish", "Publier")}
                 </Button>
               ) : null}
-              <Button type="button" variant="ghost" className="px-4 py-2" disabled={duplicateManagedPropertyMutation.isPending} onClick={() => onDuplicate(property)}>
-                {t("private", "properties.card.duplicate", "Dupliquer")}
-              </Button>
-              {!isOwnerRole ? (
+              {!isManagementBlocked ? (
+                <Button type="button" variant="ghost" className="px-4 py-2" disabled={duplicateManagedPropertyMutation.isPending} onClick={() => onDuplicate(property)}>
+                  {t("private", "properties.card.duplicate", "Dupliquer")}
+                </Button>
+              ) : null}
+              {canRequestOwnerContract ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-4 py-2"
+                  disabled={requestDuplicateContractMutation.isPending || hasPendingContractRequest}
+                  onClick={() => onRequestContract(property)}
+                >
+                  {hasPendingContractRequest
+                    ? getContractRequestStatusLabel(contractRequestStatus, t)
+                    : t("private", "properties.contractRequest.action", "Demander un contrat au proprietaire")}
+                </Button>
+              ) : null}
+              {!isOwnerRole && !isManagementBlocked ? (
                 <Button type="button" variant="ghost" className="px-4 py-2" onClick={() => onOpenMatching(property)}>
                   Matching intelligent
                 </Button>
@@ -206,15 +236,17 @@ const PropertyCard = ({
                   {t("private", "properties.card.reserve", "Reserver")}
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                className="px-4 py-2"
-                disabled={workflowMutation.isPending || property.status === "archived"}
-                onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "archived" } })}
-              >
-                {t("private", "properties.card.archive", "Archiver")}
-              </Button>
+              {!isManagementBlocked ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="px-4 py-2"
+                  disabled={workflowMutation.isPending || property.status === "archived"}
+                  onClick={() => workflowMutation.mutate({ propertyId: property.id, payload: { status: "archived" } })}
+                >
+                  {t("private", "properties.card.archive", "Archiver")}
+                </Button>
+              ) : null}
               {canDelete ? (
                 <Button type="button" variant="ghost" className="px-4 py-2 text-red-200" disabled={deleteManagedPropertyMutation.isPending} onClick={() => onDelete(property)}>
                   {t("private", "properties.card.delete", "Supprimer")}
@@ -243,6 +275,7 @@ export const PropertyManagementPage = () => {
     updateContractMutation,
     updateManagedPropertyMutation,
     duplicateManagedPropertyMutation,
+    requestDuplicateContractMutation,
     deleteManagedPropertyMutation
   } = usePropertyWorkspace();
   const { showSuccess, showError } = useNotification();
@@ -391,6 +424,15 @@ export const PropertyManagementPage = () => {
       propertyId: property.id,
       payload: { title: `${property.title} copie` }
     });
+  };
+
+  const handleRequestContract = async (property) => {
+    try {
+      await requestDuplicateContractMutation.mutateAsync(property.id);
+      showSuccess(t("private", "properties.contractRequest.success", "Demande de contrat envoyee au proprietaire."));
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.contractRequest.error", "La demande de contrat a echoue.") });
+    }
   };
 
   const handleDeleteProperty = async (property) => {
@@ -548,9 +590,11 @@ export const PropertyManagementPage = () => {
                 linkedContract={linkedContract}
                 workflowMutation={workflowMutation}
                 duplicateManagedPropertyMutation={duplicateManagedPropertyMutation}
+                requestDuplicateContractMutation={requestDuplicateContractMutation}
                 deleteManagedPropertyMutation={deleteManagedPropertyMutation}
                 onEdit={openEditModal}
                 onDuplicate={handleDuplicateProperty}
+                onRequestContract={handleRequestContract}
                 onDelete={handleDeleteProperty}
                 onAssociateContract={handleAssociateContract}
                 onOpenMatching={openMatchingModal}

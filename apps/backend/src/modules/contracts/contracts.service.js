@@ -12,7 +12,7 @@ import { User } from "../users/user.model.js";
 import { ManagementContract } from "./management-contract.model.js";
 
 const SINGLETON_DATAFILE_KINDS = new Set(["profile-avatar", "agency-logo", "agency-cover"]);
-const MANAGEABLE_CONTRACT_STATUSES = new Set(["accepted", "active"]);
+const MANAGEABLE_CONTRACT_STATUSES = new Set(["signed", "accepted", "active"]);
 
 const CONTRACT_STATUS_LABELS = {
   draft: "Brouillon",
@@ -790,6 +790,8 @@ const syncContractProperties = async ({ contractId, propertyIds = [], contract, 
     {
       $set: {
         managementContractId: contractId,
+        contractRequestId: contractId,
+        contractRequestStatus: contract.status,
         ownerUserId: contract.ownerUserId,
         ownerType: contract.managerRole,
         agencyId: contract.managerRole === "agency" ? contract.agencyId : null,
@@ -801,7 +803,7 @@ const syncContractProperties = async ({ contractId, propertyIds = [], contract, 
   const idsToUnset = existingIds.filter((propertyId) => !nextIds.includes(propertyId));
 
   if (idsToUnset.length) {
-    await Property.updateMany({ _id: { $in: idsToUnset } }, { $set: { managementContractId: null } });
+      await Property.updateMany({ _id: { $in: idsToUnset } }, { $set: { managementContractId: null } });
   }
 };
 
@@ -874,8 +876,18 @@ export const updateManagementContract = async ({ contractId, actor, payload }) =
     await syncContractDocuments({ contractId, documentIds: payload.documentIds, actor });
   }
 
-  if (payload.propertyIds) {
-    await syncContractProperties({ contractId, propertyIds: payload.propertyIds, contract: contractDocument, actor });
+  const shouldAttachRequestedProperty =
+    !payload.propertyIds &&
+    contractDocument.propertyId &&
+    MANAGEABLE_CONTRACT_STATUSES.has(contractDocument.status);
+
+  if (payload.propertyIds || shouldAttachRequestedProperty) {
+    await syncContractProperties({
+      contractId,
+      propertyIds: payload.propertyIds || [String(contractDocument.propertyId)],
+      contract: contractDocument,
+      actor
+    });
   }
 
   const detailedContract = await ensureContractAccess({ contractId, actor });

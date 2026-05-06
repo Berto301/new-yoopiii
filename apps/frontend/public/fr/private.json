@@ -160,7 +160,8 @@
       "crm.pipeline.won": "CRM gagne",
       "crm.pipeline.lost": "CRM perdu",
       "crm.metadata.updated": "Metadonnee CRM",
-      "crm.agent.changed": "Agent CRM"
+      "crm.agent.changed": "Agent CRM",
+      "contract.request.created": "Demande de contrat"
     },
     "crm": {
       "propertyFallback": "ce bien",
@@ -204,6 +205,15 @@
     "markRead": "Marquer comme lue",
     "emptyTitle": "Aucune notification pour le moment.",
     "emptyDescription": "Les activites importantes, suivis commerciaux et alertes systeme apparaitront ici des qu'elles seront disponibles."
+  },
+  "directory": {
+    "eyebrow": "Agence et Agents",
+    "title": "Annuaire professionnel",
+    "description": "Explorez les agences, consultez leurs agents, puis contactez directement les profils qui vous interessent depuis la messagerie.",
+    "ownerDescription": "Explorez les agences et agents independants, consultez leurs scores et ouvrez une relation contractuelle depuis vos contrats lorsque le profil convient.",
+    "restrictedTitle": "Acces reserve",
+    "restrictedDescription": "Cette page est disponible uniquement pour les comptes autorises.",
+    "contactError": "Impossible d'ouvrir la conversation."
   },
   "messages": {
     "eyebrow": "Messagerie",
@@ -317,6 +327,7 @@
       "associateContract": "Associer a un contrat",
       "publish": "Publier",
       "duplicate": "Dupliquer",
+      "duplicated": "Bien duplique",
       "reserve": "Reserver",
       "archive": "Archiver",
       "delete": "Supprimer",
@@ -325,6 +336,24 @@
       "linkedProperty": "Bien associe",
       "linkedAgent": "Agent",
       "open3d": "Ouvrir la visite 3D"
+    },
+    "contractRequest": {
+      "action": "Demander un contrat au proprietaire",
+      "success": "Demande de contrat envoyee au proprietaire.",
+      "error": "La demande de contrat a echoue.",
+      "status": {
+        "none": "Aucune demande",
+        "draft": "Demande brouillon",
+        "pending_signature": "Demande envoyee",
+        "signed": "Contrat signe",
+        "accepted": "Contrat accepte",
+        "active": "Contrat actif",
+        "suspended": "Contrat suspendu",
+        "expired": "Contrat expire",
+        "terminated": "Contrat termine",
+        "rejected": "Demande refusee",
+        "cancelled": "Demande annulee"
+      }
     }
   },
   "owner": {
@@ -652,6 +681,21 @@
       "delete": "Supprimer"
     }
   },
+  "propertyDetail": {
+    "eyebrow": "Annonce detail",
+    "notFoundTitle": "Bien introuvable",
+    "notFoundDescription": "Le bien demande n'est pas disponible ou n'est plus publie pour le moment.",
+    "backToProperties": "Retour aux biens",
+    "map": {
+      "eyebrow": "Localisation",
+      "title": "Voir le bien sur la carte",
+      "description": "La localisation du bien est affichee ici lorsqu'une position GPS est disponible.",
+      "missingKey": "Ajoutez `VITE_GOOGLE_MAPS_API_KEY` pour activer la carte Google.",
+      "error": "Impossible de charger Google Maps pour le moment.",
+      "loading": "Chargement de la carte Google...",
+      "noCoordinates": "Aucune coordonnee n'est disponible pour ce bien."
+    }
+  },
   "direction": {
     "open": "Voir direction",
     "title": "Voir direction",
@@ -762,7 +806,9 @@
       "professionalism": "Professionnalisme",
       "followUpQuality": "Qualite du suivi",
       "clientRelation": "Relation client"
-    }
+    },
+    "success": "Note agent enregistree. Le score intelligent a ete recalcule.",
+    "error": "Impossible d'enregistrer la note agent."
   },
   "crm": {
     "eyebrow": "Metadonnees CRM",

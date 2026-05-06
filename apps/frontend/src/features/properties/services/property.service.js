@@ -34,6 +34,11 @@ export const duplicateManagedProperty = async ({ propertyId, payload = {} }) => 
   return response.data.data;
 };
 
+export const requestDuplicatePropertyContract = async (propertyId) => {
+  const response = await apiClient.post(`/properties/management/${propertyId}/contract-request`);
+  return response.data.data;
+};
+
 export const deleteManagedProperty = async (propertyId) => {
   const response = await apiClient.delete(`/properties/management/${propertyId}`);
   return response.data.data;

@@ -39,6 +39,7 @@ const buildSidebarItems = (user, t) => {
     return [
       { to: "/dashboard/owner", label: "Dashboard", permission: null, icon: DashboardIcon },
       { to: "/owner/contracts", label: t("layout", "dashboard.owner.contracts", "Gestion de contrats"), permission: null, icon: ContractsIcon },
+      { to: "/owner/agencies-agents", label: t("layout", "dashboard.owner.agenciesAgents", "Agents / Agences"), permission: null, icon: AgenciesIcon },
       { to: "/owner/calendar", label: t("layout", "dashboard.owner.calendar", "Calendrier"), permission: null, icon: CalendarIcon },
       { to: "/messages", label: t("layout", "dashboard.owner.messages", "Messages"), permission: null, icon: MessagesIcon },
       { to: "/notifications", label: t("layout", "dashboard.owner.notifications", "Notifications"), permission: null, icon: NotificationsIcon },

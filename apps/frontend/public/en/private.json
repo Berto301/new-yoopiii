@@ -33,7 +33,8 @@
       "crm.pipeline.won": "CRM won",
       "crm.pipeline.lost": "CRM lost",
       "crm.metadata.updated": "CRM metadata",
-      "crm.agent.changed": "CRM agent"
+      "crm.agent.changed": "CRM agent",
+      "contract.request.created": "Contract request"
     },
     "crm": {
       "propertyFallback": "this property",
@@ -77,6 +78,15 @@
     "markRead": "Mark as read",
     "emptyTitle": "No notifications yet.",
     "emptyDescription": "Important activity, commercial follow-up, and system alerts will appear here."
+  },
+  "directory": {
+    "eyebrow": "Agencies and agents",
+    "title": "Professional directory",
+    "description": "Explore agencies, review their agents, then contact relevant profiles directly from messaging.",
+    "ownerDescription": "Explore agencies and independent agents, review their scores, and open a contractual relationship from your contracts when the profile fits.",
+    "restrictedTitle": "Restricted access",
+    "restrictedDescription": "This page is only available to authorized accounts.",
+    "contactError": "Unable to open the conversation."
   },
   "messages": {
     "eyebrow": "Messaging",
@@ -190,6 +200,7 @@
       "associateContract": "Link to contract",
       "publish": "Publish",
       "duplicate": "Duplicate",
+      "duplicated": "Duplicated property",
       "reserve": "Reserve",
       "archive": "Archive",
       "delete": "Delete",
@@ -198,6 +209,24 @@
       "linkedProperty": "Linked property",
       "linkedAgent": "Agent",
       "open3d": "Open 3D tour"
+    },
+    "contractRequest": {
+      "action": "Request a contract from the owner",
+      "success": "Contract request sent to the owner.",
+      "error": "Contract request failed.",
+      "status": {
+        "none": "No request",
+        "draft": "Draft request",
+        "pending_signature": "Request sent",
+        "signed": "Contract signed",
+        "accepted": "Contract accepted",
+        "active": "Contract active",
+        "suspended": "Contract suspended",
+        "expired": "Contract expired",
+        "terminated": "Contract terminated",
+        "rejected": "Request rejected",
+        "cancelled": "Request cancelled"
+      }
     }
   },
   "owner": {
@@ -525,6 +554,21 @@
       "delete": "Delete"
     }
   },
+  "propertyDetail": {
+    "eyebrow": "Listing detail",
+    "notFoundTitle": "Property not found",
+    "notFoundDescription": "The requested property is unavailable or no longer published right now.",
+    "backToProperties": "Back to properties",
+    "map": {
+      "eyebrow": "Location",
+      "title": "View the property on the map",
+      "description": "The property location is shown here when GPS coordinates are available.",
+      "missingKey": "Add `VITE_GOOGLE_MAPS_API_KEY` to enable Google Maps.",
+      "error": "Google Maps could not be loaded right now.",
+      "loading": "Loading Google Map...",
+      "noCoordinates": "No coordinates are available for this property."
+    }
+  },
   "direction": {
     "open": "View directions",
     "title": "View directions",
@@ -585,7 +629,9 @@
       "professionalism": "Professionalism",
       "followUpQuality": "Follow-up quality",
       "clientRelation": "Client relationship"
-    }
+    },
+    "success": "Agent rating saved. The smart score was recalculated.",
+    "error": "Unable to save the agent rating."
   },
   "crm": {
     "eyebrow": "CRM metadata",

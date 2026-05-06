@@ -1,4 +1,5 @@
 ﻿import { useMemo, useState } from "react";
+import Board from "react-trello";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
@@ -112,12 +113,8 @@ const MetadataCard = ({ item, onGoPipeline, t, locale }) => (
   </Card>
 );
 
-const PipelineCard = ({ item, onDragStart, t }) => (
-  <article
-    draggable
-    onDragStart={() => onDragStart(item.id)}
-    className="cursor-grab rounded-[1.4rem] border border-[var(--border)] bg-[var(--card)] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.12)] active:cursor-grabbing"
-  >
+const PipelineCard = ({ item, t }) => (
+  <article className="rounded-[1.4rem] border border-[var(--border)] bg-[var(--card)] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.12)]">
     {item.property.coverImage ? (
       <img src={resolveAssetUrl(item.property.coverImage)} alt={item.property.title} className="h-28 w-full rounded-[1rem] object-cover" />
     ) : null}
@@ -135,6 +132,14 @@ const PipelineCard = ({ item, onDragStart, t }) => (
   </article>
 );
 
+const TrelloPipelineCard = ({ metadata }) => {
+  if (!metadata?.item) {
+    return null;
+  }
+
+  return <PipelineCard item={metadata.item} t={metadata.t} />;
+};
+
 export const CrmMetadataPage = () => {
   const { t, locale } = useUserPreferences();
   const { showError, showSuccess } = useNotification();
@@ -142,7 +147,6 @@ export const CrmMetadataPage = () => {
   const [activeTab, setActiveTab] = useState("list");
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
-  const [draggedId, setDraggedId] = useState("");
   const crmQuery = useQuery({
     queryKey: ["crm-metadata", search, stageFilter],
     queryFn: () => getCrmMetadata({ search, stage: stageFilter })
@@ -187,16 +191,43 @@ export const CrmMetadataPage = () => {
     return groups;
   }, [items, stages]);
 
-  const handleDrop = (pipelineStage) => {
-    if (!draggedId) return;
-    const draggedItem = items.find((item) => item.id === draggedId);
-    setDraggedId("");
+  const boardData = useMemo(() => ({
+    lanes: stages.map((stage) => ({
+      id: stage.value,
+      title: getStageLabel(t, stage.value, stage.label),
+      label: `${groupedItems[stage.value]?.length || 0}`,
+      style: {
+        background: "var(--surface-soft)",
+        border: "1px solid var(--border)",
+        borderRadius: "1.6rem",
+        color: "var(--foreground)",
+        minHeight: 540,
+        width: 280
+      },
+      titleStyle: {
+        color: "var(--foreground)",
+        fontSize: 14,
+        fontWeight: 700
+      },
+      labelStyle: {
+        color: "var(--muted)",
+        fontSize: 12
+      },
+      cards: (groupedItems[stage.value] || []).map((item) => ({
+        id: item.id,
+        title: item.property.title,
+        description: item.nextAction || "",
+        metadata: { item, t }
+      }))
+    }))
+  }), [groupedItems, stages, t]);
 
-    if (!draggedItem || draggedItem.pipelineStage === pipelineStage) {
+  const handleCardMoveAcrossLanes = (fromLaneId, toLaneId, cardId) => {
+    if (!cardId || fromLaneId === toLaneId) {
       return;
     }
 
-    updateStageMutation.mutate({ metadataId: draggedId, pipelineStage });
+    updateStageMutation.mutate({ metadataId: cardId, pipelineStage: toLaneId });
   };
 
   return (
@@ -253,25 +284,15 @@ export const CrmMetadataPage = () => {
         </div>
       ) : (
         <div className="overflow-x-auto pb-3">
-          <div className="grid min-w-[1180px] grid-cols-7 gap-4">
-            {stages.map((stage) => (
-              <section
-                key={stage.value}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => handleDrop(stage.value)}
-                className="min-h-[540px] rounded-[1.6rem] border border-[var(--border)] bg-[var(--surface-soft)] p-3"
-              >
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <Badge className={STAGE_TONES[stage.value] || "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--foreground)]"}>{getStageLabel(t, stage.value, stage.label)}</Badge>
-                  <span className="text-xs text-[var(--muted)]">{groupedItems[stage.value]?.length || 0}</span>
-                </div>
-                <div className="space-y-3">
-                  {(groupedItems[stage.value] || []).map((item) => (
-                    <PipelineCard key={item.id} item={item} t={t} onDragStart={setDraggedId} />
-                  ))}
-                </div>
-              </section>
-            ))}
+          <div className="min-w-[1180px] rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-3">
+            <Board
+              data={boardData}
+              draggable
+              laneDraggable={false}
+              components={{ Card: TrelloPipelineCard }}
+              onCardMoveAcrossLanes={handleCardMoveAcrossLanes}
+              style={{ background: "transparent", height: "auto" }}
+            />
           </div>
         </div>
       )}

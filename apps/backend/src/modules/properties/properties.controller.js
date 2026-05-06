@@ -15,6 +15,7 @@ import {
   markPropertyAsViewed,
   releasePropertyReservation,
   removePropertyFromFavorites,
+  requestDuplicatePropertyContract,
   reserveProperty,
   searchNearbyProperties,
   searchPropertiesInBounds,
@@ -128,6 +129,15 @@ export const duplicateManagedPropertyHandler = async (req, res) => {
     propertyId: req.validated.params.propertyId,
     actor: req.user,
     payload: req.validated.body
+  });
+
+  res.status(StatusCodes.CREATED).json({ success: true, data });
+};
+
+export const postDuplicatePropertyContractRequestHandler = async (req, res) => {
+  const data = await requestDuplicatePropertyContract({
+    propertyId: req.validated.params.propertyId,
+    actor: req.user
   });
 
   res.status(StatusCodes.CREATED).json({ success: true, data });

@@ -238,6 +238,11 @@ const mapPropertyListItem = (property, favoriteIds = new Set()) => {
     publicationOwnerDisplay: property.publicationOwnerDisplay || null,
     isUnderMaintenance: Boolean(property.isUnderMaintenance),
     managementContractId: property.managementContractId?._id ? String(property.managementContractId._id) : property.managementContractId || null,
+    duplicatedFromPropertyId: property.duplicatedFromPropertyId?._id ? String(property.duplicatedFromPropertyId._id) : property.duplicatedFromPropertyId || null,
+    isDuplicated: Boolean(property.duplicatedFromPropertyId),
+    contractRequestId: property.contractRequestId?._id ? String(property.contractRequestId._id) : property.contractRequestId || null,
+    contractRequestStatus: property.contractRequestStatus || "none",
+    contractRequestedAt: property.contractRequestedAt || null,
     reservedByUserId: property.reservedByUserId?._id ? String(property.reservedByUserId._id) : property.reservedByUserId || null,
     reservedAt: property.reservedAt || null,
     distanceInMeters: property.distanceInMeters ?? null,
@@ -366,6 +371,61 @@ const createPropertyActivityNotification = async ({ property, actor, type, title
       }))
   );
 };
+
+const buildContractRequestReference = async (property) => {
+  const baseValue = `REQ-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${String(property._id).slice(-6).toUpperCase()}`;
+  let candidate = baseValue;
+  let suffix = 1;
+
+  while (await ManagementContract.exists({ reference: candidate })) {
+    candidate = `${baseValue}-${suffix}`;
+    suffix += 1;
+  }
+
+  return candidate;
+};
+
+const assertDuplicateContractRequestAccess = (property, actor) => {
+  if (!["agency", "agency_agent", "independent_agent"].includes(actor.role)) {
+    throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
+  }
+
+  if (!property.duplicatedFromPropertyId) {
+    throw new AppError("Only duplicated properties can request an owner contract", StatusCodes.BAD_REQUEST);
+  }
+
+  if (property.managementContractId) {
+    throw new AppError("This duplicated property is already linked to a contract", StatusCodes.BAD_REQUEST);
+  }
+
+  if (!property.ownerUserId) {
+    throw new AppError("Owner not found for this property", StatusCodes.BAD_REQUEST);
+  }
+
+  if (actor.role === "independent_agent" && String(property.agentId || "") !== String(actor.id)) {
+    throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
+  }
+
+  if (actor.role === "agency" && String(property.agencyId || "") !== String(actor.agencyId || "")) {
+    throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
+  }
+
+  if (actor.role === "agency_agent") {
+    const sameAgency = actor.agencyId && String(property.agencyId || "") === String(actor.agencyId);
+    const sameAgent = String(property.agentId || "") === String(actor.id);
+
+    if (!sameAgency && !sameAgent) {
+      throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
+    }
+  }
+};
+
+const mapContractRequest = (contract) => ({
+  id: String(contract._id || contract.id),
+  reference: contract.reference,
+  status: contract.status,
+  propertyId: contract.propertyId ? String(contract.propertyId) : null
+});
 
 const createFavoriteNotification = async ({ userId, property, action }) => {
   await createNotifications([
@@ -997,9 +1057,123 @@ export const duplicateManagedProperty = async ({ propertyId, actor, payload }) =
   const property = await ensurePropertyExists(propertyId);
   await ensurePropertyManagementAccess(property, actor);
   const data = await buildManagedPropertyPayload({ actor, payload: { ...property.toObject(), ...payload }, existingProperty: property, duplicate: true });
+
+  if (actor.role !== "proprietaire") {
+    data.managementContractId = null;
+    data.duplicatedFromPropertyId = property._id;
+    data.contractRequestId = null;
+    data.contractRequestStatus = "none";
+    data.contractRequestedAt = null;
+  }
+
   const duplicate = await Property.create(data);
   await syncPropertyScore(duplicate);
   return mapPropertyListItem(duplicate.toObject());
+};
+
+export const requestDuplicatePropertyContract = async ({ propertyId, actor }) => {
+  const property = await ensurePropertyExists(propertyId);
+  assertDuplicateContractRequestAccess(property, actor);
+
+  if (property.contractRequestId) {
+    const existingContract = await ManagementContract.findById(property.contractRequestId).lean();
+
+    if (existingContract && !["terminated", "expired", "cancelled"].includes(existingContract.status)) {
+      property.contractRequestStatus = existingContract.status;
+      await property.save();
+
+      return {
+        property: mapPropertyListItem(property.toObject()),
+        contractRequest: mapContractRequest(existingContract)
+      };
+    }
+  }
+
+  const now = new Date();
+  const endDate = new Date(now);
+  endDate.setFullYear(endDate.getFullYear() + 1);
+
+  const managerRole = actor.role === "independent_agent" ? "independent_agent" : "agency";
+  const agencyId = managerRole === "agency" ? property.agencyId || actor.agencyId : null;
+  const managerUserId = managerRole === "independent_agent" ? actor.id : null;
+  const responsibleAgentUserId = property.agentId || actor.id;
+  const agency = agencyId ? await Agency.findById(agencyId).select("name").lean() : null;
+  const reference = await buildContractRequestReference(property);
+
+  const contract = await ManagementContract.create({
+    reference,
+    contractType: managerRole === "agency" ? "agency" : "agent",
+    status: "pending_signature",
+    startDate: now,
+    endDate,
+    ownerUserId: property.ownerUserId,
+    agencyId,
+    managerUserId,
+    responsibleAgentUserId,
+    managerRole,
+    propertyId: property._id,
+    agency: {
+      id: agencyId,
+      name: agency?.name || "",
+      commission: 0,
+      fees: 0
+    },
+    agent: {
+      id: responsibleAgentUserId,
+      name: "",
+      commission: 0,
+      fees: 0
+    },
+    financial: {
+      rentAmount: property.purpose === "rent" ? Number(property.price || 0) : 0,
+      charges: 0,
+      deposit: 0,
+      currency: property.currency || "USD",
+      paymentFrequency: "monthly",
+      paymentMethod: ""
+    },
+    actions: {
+      canPublishProperty: true,
+      canReserveProperty: true,
+      canEditProperty: true,
+      canDeleteProperty: false,
+      publicationOwnerDisplay: {
+        showOwnerName: false,
+        showOwnerContact: false,
+        allowDirectOwnerChat: false
+      }
+    },
+    notes: `Demande de contrat creee depuis le bien duplique ${property.title}.`,
+    terms: "",
+    createdByUserId: actor.id
+  });
+
+  property.contractRequestId = contract._id;
+  property.contractRequestStatus = contract.status;
+  property.contractRequestedAt = now;
+  await property.save();
+
+  await createNotifications([
+    {
+      userId: property.ownerUserId,
+      type: "contract.request.created",
+      title: `Demande de contrat pour ${property.title}`,
+      body: `Une demande de contrat a ete envoyee pour le bien duplique ${property.title}.`,
+      data: {
+        propertyId: property._id,
+        propertyTitle: property.title,
+        contractId: contract._id,
+        contractReference: contract.reference,
+        actorId: actor.id
+      },
+      channel: "in_app"
+    }
+  ]);
+
+  return {
+    property: mapPropertyListItem(property.toObject()),
+    contractRequest: mapContractRequest(contract)
+  };
 };
 
 export const deleteManagedProperty = async ({ propertyId, actor }) => {

@@ -14,6 +14,7 @@ import {
   getPropertyHistory,
   releasePropertyReservation,
   removePropertyFromFavorites,
+  requestDuplicatePropertyContract,
   reserveProperty,
   uploadPropertyAsset,
   updateManagedProperty,
@@ -157,6 +158,16 @@ export const usePropertyWorkspace = () => {
     }
   });
 
+  const requestDuplicateContractMutation = useMutation({
+    mutationFn: requestDuplicatePropertyContract,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["property-contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      invalidateManaged();
+    }
+  });
+
   const deleteManagedPropertyMutation = useMutation({
     mutationFn: deleteManagedProperty,
     onSuccess: () => {
@@ -183,6 +194,7 @@ export const usePropertyWorkspace = () => {
     updateContractMutation,
     updateManagedPropertyMutation,
     duplicateManagedPropertyMutation,
+    requestDuplicateContractMutation,
     deleteManagedPropertyMutation
   };
 };

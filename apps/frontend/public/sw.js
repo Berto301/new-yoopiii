@@ -1,4 +1,4 @@
-const APP_CACHE = "yopii-app-v1";
+const APP_CACHE = "yopii-app-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/pwa-icon.svg", "/icons/pwa-icon-maskable.svg"];
 
 self.addEventListener("install", (event) => {
@@ -15,8 +15,13 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
 
-  if (event.request.method !== "GET" || requestUrl.pathname.startsWith("/api/")) {
+  if (
+    event.request.method !== "GET" ||
+    !isSameOrigin ||
+    requestUrl.pathname.startsWith("/api/")
+  ) {
     return;
   }
 

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { selectCurrentUser } from "../../app/store/session.store.js";
+import { useUserPreferences } from "../../app/preferences/UserPreferencesProvider.jsx";
 import { Avatar } from "../../components/profile/Avatar.jsx";
 import { SectionTitle } from "../../components/shared/SectionTitle.jsx";
 import { Button } from "../../components/ui/Button.jsx";
@@ -91,6 +92,7 @@ const AgentProperties = ({ properties = [] }) => {
 export const AgenciesAgentsPage = () => {
   const navigate = useNavigate();
   const currentUser = useSelector(selectCurrentUser);
+  const { t } = useUserPreferences();
   const { showError, showSuccess } = useNotification();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("agency");
@@ -104,11 +106,12 @@ export const AgenciesAgentsPage = () => {
   const [agentType, setAgentType] = useState("all");
   const [agentRole, setAgentRole] = useState("all");
   const [agentToRate, setAgentToRate] = useState(null);
+  const canAccessDirectory = ["user", "proprietaire"].includes(currentUser?.role);
 
   const agenciesQuery = useQuery({
     queryKey: ["agency-directory", agencySearch, agencyStatus],
     queryFn: () => getAgencyDirectory({ search: agencySearch, status: agencyStatus, page: 1, limit: 24 }),
-    enabled: currentUser?.role === "user"
+    enabled: canAccessDirectory
   });
 
   useEffect(() => {
@@ -133,13 +136,13 @@ export const AgenciesAgentsPage = () => {
   const agencyAgentsQuery = useQuery({
     queryKey: ["agency-directory-agents", selectedAgencyId, agencyMemberSearch, agencyMemberRole],
     queryFn: () => getAgencyDirectoryAgents({ agencyId: selectedAgencyId, search: agencyMemberSearch, role: agencyMemberRole }),
-    enabled: Boolean(selectedAgencyId && currentUser?.role === "user")
+    enabled: Boolean(selectedAgencyId && canAccessDirectory)
   });
 
   const discoverableAgentsQuery = useQuery({
     queryKey: ["discoverable-agents", agentSearch, agentType, agentRole],
     queryFn: () => getDiscoverableAgents({ search: agentSearch, agencyType: agentType, role: agentRole, page: 1, limit: 24 }),
-    enabled: currentUser?.role === "user"
+    enabled: canAccessDirectory
   });
 
   const agentRatingQuery = useQuery({
@@ -151,7 +154,7 @@ export const AgenciesAgentsPage = () => {
   const rateAgentMutation = useMutation({
     mutationFn: ({ agent, payload }) => rateAgent({ agentId: agent.userId, payload }),
     onSuccess: (_data, variables) => {
-      showSuccess("Note agent enregistree. Le score intelligent a ete recalcule.");
+      showSuccess(t("private", "agentRating.success", "Note agent enregistree. Le score intelligent a ete recalcule."));
       queryClient.invalidateQueries({ queryKey: ["agent-rating-me", variables?.agent?.userId] });
       setAgentToRate(null);
       queryClient.invalidateQueries({ queryKey: ["discoverable-agents"] });
@@ -159,7 +162,7 @@ export const AgenciesAgentsPage = () => {
       queryClient.invalidateQueries({ queryKey: ["dashboard-top-agents"] });
     },
     onError: (error) => {
-      showError(error?.response?.data?.message || error?.message || "Impossible d'enregistrer la note agent.");
+      showError(error?.response?.data?.message || error?.message || t("private", "agentRating.error", "Impossible d'enregistrer la note agent."));
     }
   });
   const handleContact = async (participantId) => {
@@ -167,7 +170,7 @@ export const AgenciesAgentsPage = () => {
       const conversation = await createConversation({ participantId });
       navigate(`/messages?conversationId=${conversation.id}`);
     } catch (error) {
-      showError(error?.response?.data?.message || error?.message || "Impossible d'ouvrir la conversation.");
+      showError(error?.response?.data?.message || error?.message || t("private", "directory.contactError", "Impossible d'ouvrir la conversation."));
     }
   };
 
@@ -175,15 +178,15 @@ export const AgenciesAgentsPage = () => {
     setAgentToRate(agent);
   };
 
-  const canRateAgent = (agent) => !["agency", "owner", "viewer"].includes(agent?.role);
+  const canRateAgent = (agent) => currentUser?.role === "user" && !["agency", "owner", "viewer"].includes(agent?.role);
 
-  if (currentUser?.role !== "user") {
+  if (!canAccessDirectory) {
     return (
       <section className="space-y-6">
         <SectionTitle
-          eyebrow="Agence et Agents"
-          title="Acces reserve aux utilisateurs"
-          description="Cette page est disponible uniquement pour les comptes utilisateur."
+          eyebrow={t("private", "directory.eyebrow", "Agence et Agents")}
+          title={t("private", "directory.restrictedTitle", "Acces reserve")}
+          description={t("private", "directory.restrictedDescription", "Cette page est disponible uniquement pour les comptes autorises.")}
         />
       </section>
     );
@@ -193,9 +196,13 @@ export const AgenciesAgentsPage = () => {
     <>
       <section className="space-y-8">
       <SectionTitle
-        eyebrow="Agence et Agents"
-        title="Annuaire professionnel"
-        description="Explorez les agences, consultez leurs agents, puis contactez directement les profils qui vous interessent depuis la messagerie."
+        eyebrow={t("private", "directory.eyebrow", "Agence et Agents")}
+        title={t("private", "directory.title", "Annuaire professionnel")}
+        description={
+          currentUser?.role === "proprietaire"
+            ? t("private", "directory.ownerDescription", "Explorez les agences et agents independants, consultez leurs scores et ouvrez une relation contractuelle depuis vos contrats lorsque le profil convient.")
+            : t("private", "directory.description", "Explorez les agences, consultez leurs agents, puis contactez directement les profils qui vous interessent depuis la messagerie.")
+        }
       />
 
       <nav className="flex flex-wrap gap-3" aria-label="Navigation agence et agents">

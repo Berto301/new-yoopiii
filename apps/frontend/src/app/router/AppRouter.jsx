@@ -81,6 +81,7 @@ export const AppRouter = () => (
 
         <Route element={<RoleRoute allowedRoles={["proprietaire"]} />}>
           <Route path="/dashboard/owner" element={<OwnerDashboardPage />} />
+          <Route path="/owner/agencies-agents" element={<AgenciesAgentsPage />} />
           <Route path="/owner/contracts" element={<OwnerContractsPage />} />
           <Route path="/owner/calendar" element={<OwnerCalendarPage />} />
           <Route path="/owner/rents" element={<OwnerRentsPage />} />

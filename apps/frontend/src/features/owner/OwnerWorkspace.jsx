@@ -24,24 +24,24 @@ import { ModalManageTicket } from "../../pages/private/owner/ModalManageTicket.j
 import { ModalDelete } from "../../components/layout/modals/ModalDelete.jsx";
 
 const toneClassNames = {
-  alert: "border-rose-400/30 bg-rose-500/10 text-rose-100",
-  warning: "border-amber-400/30 bg-amber-500/10 text-amber-100",
-  info: "border-sky-400/30 bg-sky-500/10 text-sky-100"
+  alert: "border-red-500/25 bg-[var(--danger-surface)] text-[var(--danger-foreground)]",
+  warning: "border-amber-500/25 bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
+  info: "border-sky-500/25 bg-[var(--info-surface)] text-[var(--info-foreground)]"
 };
 
 const statusClassNames = {
-  Actif: "text-emerald-100 bg-emerald-500/10 border-emerald-400/30",
-  Archive: "text-stone-200 bg-stone-500/10 border-stone-400/30",
-  Brouillon: "text-stone-200 bg-stone-500/10 border-stone-400/30",
-  Paye: "text-emerald-100 bg-emerald-500/10 border-emerald-400/30",
-  "En retard": "text-rose-100 bg-rose-500/10 border-rose-400/30",
-  "En attente": "text-stone-200 bg-stone-500/10 border-stone-400/30",
-  Loue: "text-emerald-100 bg-emerald-500/10 border-emerald-400/30",
-  Libre: "text-sky-100 bg-sky-500/10 border-sky-400/30",
-  "En travaux": "text-amber-100 bg-amber-500/10 border-amber-400/30",
-  "En cours": "text-amber-100 bg-amber-500/10 border-amber-400/30",
-  Planifie: "text-sky-100 bg-sky-500/10 border-sky-400/30",
-  Cloture: "text-emerald-100 bg-emerald-500/10 border-emerald-400/30"
+  Actif: "text-[var(--success-foreground)] bg-[var(--success-surface)] border-emerald-500/25",
+  Archive: "text-[var(--muted)] bg-[var(--surface-muted)] border-[var(--border)]",
+  Brouillon: "text-[var(--muted)] bg-[var(--surface-muted)] border-[var(--border)]",
+  Paye: "text-[var(--success-foreground)] bg-[var(--success-surface)] border-emerald-500/25",
+  "En retard": "text-[var(--danger-foreground)] bg-[var(--danger-surface)] border-red-500/25",
+  "En attente": "text-[var(--muted)] bg-[var(--surface-muted)] border-[var(--border)]",
+  Loue: "text-[var(--success-foreground)] bg-[var(--success-surface)] border-emerald-500/25",
+  Libre: "text-[var(--info-foreground)] bg-[var(--info-surface)] border-sky-500/25",
+  "En travaux": "text-[var(--warning-foreground)] bg-[var(--warning-surface)] border-amber-500/25",
+  "En cours": "text-[var(--warning-foreground)] bg-[var(--warning-surface)] border-amber-500/25",
+  Planifie: "text-[var(--info-foreground)] bg-[var(--info-surface)] border-sky-500/25",
+  Cloture: "text-[var(--success-foreground)] bg-[var(--success-surface)] border-emerald-500/25"
 };
 
 const StatusPill = ({ value }) => (

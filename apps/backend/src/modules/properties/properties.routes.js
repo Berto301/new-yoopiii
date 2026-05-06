@@ -6,6 +6,7 @@ import {
   deleteManagedPropertyHandler,
   deletePropertyFavoriteHandler,
   duplicateManagedPropertyHandler,
+  postDuplicatePropertyContractRequestHandler,
   getFavoritePropertiesHandler,
   getManagedPropertiesHandler,
   getManagedPropertyDetailHandler,
@@ -59,6 +60,7 @@ propertyRouter.post("/management", validate(createManagedPropertySchema), asyncH
 propertyRouter.post("/management/assets/:assetKind", validate(propertyAssetUploadSchema), uploadPropertyAsset, asyncHandler(postManagedPropertyAssetHandler));
 propertyRouter.patch("/management/:propertyId", validate(updateManagedPropertySchema), asyncHandler(patchManagedPropertyHandler));
 propertyRouter.post("/management/:propertyId/duplicate", validate(duplicateManagedPropertySchema), asyncHandler(duplicateManagedPropertyHandler));
+propertyRouter.post("/management/:propertyId/contract-request", validate(propertyIdParamsSchema), asyncHandler(postDuplicatePropertyContractRequestHandler));
 propertyRouter.delete("/management/:propertyId", validate(propertyIdParamsSchema), asyncHandler(deleteManagedPropertyHandler));
 propertyRouter.get("/favorites/me", validate(propertyCollectionSchema), asyncHandler(getFavoritePropertiesHandler));
 propertyRouter.get("/history/me", validate(propertyCollectionSchema), asyncHandler(getPropertyHistoryHandler));

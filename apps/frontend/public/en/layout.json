@@ -23,6 +23,7 @@
     "owner": {
       "dashboard": "Dashboard",
       "contracts": "Contract management",
+      "agenciesAgents": "Agents / Agencies",
       "calendar": "Calendar",
       "messages": "Messages",
       "notifications": "Notifications",

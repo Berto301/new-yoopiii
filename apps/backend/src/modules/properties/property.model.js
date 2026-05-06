@@ -97,6 +97,15 @@ const propertySchema = new mongoose.Schema(
     },
     ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
     managementContractId: { type: mongoose.Schema.Types.ObjectId, ref: "ManagementContract", default: null, index: true },
+    duplicatedFromPropertyId: { type: mongoose.Schema.Types.ObjectId, ref: "Property", default: null, index: true },
+    contractRequestId: { type: mongoose.Schema.Types.ObjectId, ref: "ManagementContract", default: null, index: true },
+    contractRequestStatus: {
+      type: String,
+      enum: ["none", "draft", "pending_signature", "signed", "accepted", "active", "suspended", "expired", "terminated", "rejected", "cancelled"],
+      default: "none",
+      index: true
+    },
+    contractRequestedAt: { type: Date, default: null },
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     agencyId: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", default: null },
     reservedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
