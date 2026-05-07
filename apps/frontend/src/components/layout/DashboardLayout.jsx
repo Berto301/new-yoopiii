@@ -59,6 +59,7 @@ const buildSidebarItems = (user, t) => {
       ? [
           { to: "/favorites", label: t("layout", "dashboard.shared.favorites", "Favoris"), permission: PERMISSION_IDS.UI_ROUTE_FAVORITES, icon: FavoritesIcon },
           { to: "/bookings", label: t("layout", "dashboard.shared.bookings", "Reservations"), permission: PERMISSION_IDS.UI_ROUTE_BOOKINGS, icon: BookingIcon },
+          { to: "/my-properties", label: t("layout", "dashboard.shared.myProperties", "Mes biens"), permission: null, icon: PropertyIcon },
           { to: "/agencies-agents", label: t("layout", "dashboard.shared.agenciesAgents", "Agence et Agents"), permission: null, icon: AgenciesIcon }
         ]
       : []),

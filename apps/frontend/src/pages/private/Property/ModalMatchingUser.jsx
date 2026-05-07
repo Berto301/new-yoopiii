@@ -120,7 +120,7 @@ export const ModalMatchingUser = ({
           </Button>
         </div>
       )}
-      panelClassName="max-w-6xl"
+      panelClassName="max-h-[92vh] max-w-[96vw] overflow-y-auto xl:max-w-[112rem]"
     >
       <div className="space-y-6">
         <section className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.16),transparent_28%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.16),transparent_22%),linear-gradient(135deg,var(--surface-soft),transparent)]">
@@ -185,7 +185,7 @@ export const ModalMatchingUser = ({
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t("private", "matching.emptyDescription", "Essayez d'abaisser le score minimum ou d'enlever le filtre de type de match.")}</p>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="grid gap-4 2xl:grid-cols-2">
             {matchItems.map((item) => {
               const user = item.user;
               const userId = user.id || user._id;
@@ -197,7 +197,7 @@ export const ModalMatchingUser = ({
                   key={userId}
                   className="overflow-hidden border-[var(--border)] bg-[linear-gradient(135deg,var(--surface-soft),transparent)] p-0"
                 >
-                  <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
+                  <div className="grid h-full gap-0 xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
                     <div className="min-w-0 p-5 lg:p-6">
                       <div className="flex flex-col gap-5">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -232,7 +232,7 @@ export const ModalMatchingUser = ({
                           </div>
                         </div>
 
-                        <div className="flex flex-col flex-wrap gap-4">
+                        <div className="grid gap-3 sm:grid-cols-2">
                           <InfoTile label={t("private", "matching.summary.purpose", "Objectif")} value={summary.purposeLabel} />
                           <InfoTile label={t("private", "matching.summary.budget", "Budget reel")} value={summary.budgetLabel} />
                           <InfoTile label={t("private", "matching.summary.types", "Types recherches")} value={summary.propertyTypeLabels.join(", ") || t("private", "matching.summary.allTypes", "Tous types")} />

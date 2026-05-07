@@ -7,6 +7,7 @@ const ownerRentPaymentSchema = new mongoose.Schema(
     tenantId: { type: mongoose.Schema.Types.ObjectId, ref: "OwnerTenant", default: null },
     dueDate: { type: Date, required: true },
     amount: { type: Number, required: true, min: 0 },
+    currency: { type: String, default: "USD", trim: true, uppercase: true },
     status: {
       type: String,
       enum: ["paid", "late", "pending"],

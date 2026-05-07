@@ -86,7 +86,8 @@ const buildMapCenter = (location) => {
   return DEFAULT_MAP_CENTER;
 };
 
-const mapPropertyToFormValues = (property, defaultCurrency = "USD") => ({
+const mapPropertyToFormValues = (property, defaultCurrency = "USD", defaultManagementContractId = "") => ({
+  managementContractId: property?.managementContractId || defaultManagementContractId || "",
   title: property?.title || "",
   description: property?.description || "",
   type: propertyTypeOptions.find((item) => item.value === property?.type) || propertyTypeOptions[0],
@@ -116,6 +117,7 @@ const normalizePayload = (values) => {
   const threeDUrl = String(values.threeDUrl || "").trim();
 
   return {
+    managementContractId: values.managementContractId || null,
     title: values.title,
     description: values.description,
     type: values.type.value,
@@ -156,6 +158,8 @@ export const ModalManageProperty = ({
   mode,
   property,
   associatedContracts = [],
+  contractOptions = [],
+  isOwnerRole = false,
   onEditContract,
   onClose,
   onSubmit,
@@ -166,7 +170,11 @@ export const ModalManageProperty = ({
 }) => {
   const { preferences } = useUserPreferences();
   const preferredCurrency = String(preferences.currency || "USD").toUpperCase();
-  const defaultValues = useMemo(() => mapPropertyToFormValues(property, preferredCurrency), [preferredCurrency, property]);
+  const defaultManagementContractId = !isOwnerRole ? contractOptions[0]?.value || "" : "";
+  const defaultValues = useMemo(
+    () => mapPropertyToFormValues(property, preferredCurrency, defaultManagementContractId),
+    [defaultManagementContractId, preferredCurrency, property]
+  );
   const { googleMapsApiKey, isLoaded: isMapsLoaded, loadError } = useSharedGoogleMapsLoader();
 
   const {
@@ -369,7 +377,7 @@ export const ModalManageProperty = ({
       onClose={closeModal}
       onSave={handleSubmit(async (values) => {
         await onSubmit(normalizePayload(values));
-        reset(mapPropertyToFormValues(null, preferredCurrency));
+        reset(mapPropertyToFormValues(null, preferredCurrency, defaultManagementContractId));
         setMapCenter(DEFAULT_MAP_CENTER);
         setLocationMessage("Cliquez sur la carte pour recuperer l'adresse complete Google de ce bien.");
         setActiveUploadTarget(null);
@@ -380,6 +388,36 @@ export const ModalManageProperty = ({
       panelClassName="max-w-5xl"
     >
       <form className="space-y-6" onSubmit={(event) => event.preventDefault()}>
+        {!isOwnerRole ? (
+          <section className="rounded-[1.75rem] border border-white/10 bg-black/15 p-5">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/80">Contrat actif</p>
+              <h3 className="mt-2 text-xl font-semibold text-white">Rattachement du bien</h3>
+              <p className="mt-2 text-sm text-stone-300">
+                Selectionnez le contrat accepte ou actif qui autorise la gestion de ce bien.
+              </p>
+            </div>
+            <Controller
+              name="managementContractId"
+              control={control}
+              rules={{ required: "Un contrat accepte ou actif est requis pour gerer ce bien." }}
+              render={({ field }) => (
+                <BaseListBox
+                  label="Contrat de gestion"
+                  options={contractOptions}
+                  value={contractOptions.find((item) => item.value === field.value) || null}
+                  onChange={(nextValue) => field.onChange(nextValue?.value || "")}
+                  error={errors.managementContractId?.message}
+                  placeholder={contractOptions.length ? "Selectionner le contrat" : "Aucun contrat actif disponible"}
+                  disabled={!contractOptions.length}
+                />
+              )}
+            />
+          </section>
+        ) : (
+          <Controller name="managementContractId" control={control} render={({ field }) => <input type="hidden" {...field} />} />
+        )}
+
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.16),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))]">
           <div className="border-b border-white/10 px-5 py-5 sm:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

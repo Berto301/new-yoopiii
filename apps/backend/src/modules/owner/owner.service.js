@@ -293,6 +293,65 @@ const calculateTenantScore = ({ payments }) => {
   return Math.max(0, Math.min(100, score));
 };
 
+const ensureLateRentNotifications = async ({ ownerId, property, latePayments }) => {
+  if (!latePayments.length) {
+    return;
+  }
+
+  const paymentIds = latePayments.map((payment) => String(payment._id));
+  const existingNotifications = await Notification.find({
+    type: { $in: ["owner.rent.late", "user.rent.late"] },
+    "data.paymentId": { $in: paymentIds }
+  })
+    .select("type userId data.paymentId")
+    .lean();
+  const existingKeys = new Set(
+    existingNotifications.map((notification) => `${notification.type}:${String(notification.userId)}:${String(notification.data?.paymentId || "")}`)
+  );
+  const payloads = [];
+
+  latePayments.forEach((payment) => {
+    const paymentId = String(payment._id);
+    const tenantName = payment.tenantId?.fullName || "Locataire";
+    const tenantUserId = payment.tenantId?.linkedUserId ? String(payment.tenantId.linkedUserId) : null;
+    const ownerKey = `owner.rent.late:${String(ownerId)}:${paymentId}`;
+
+    if (!existingKeys.has(ownerKey)) {
+      payloads.push(buildOwnerNotificationPayload({
+        userId: ownerId,
+        type: "owner.rent.late",
+        title: "Loyer en retard",
+        body: `${tenantName} a un loyer en retard pour ${property.title}.`,
+        data: {
+          propertyId: String(property._id),
+          paymentId,
+          tenantId: payment.tenantId?._id ? String(payment.tenantId._id) : String(payment.tenantId || "")
+        }
+      }));
+    }
+
+    if (tenantUserId && tenantUserId !== String(ownerId)) {
+      const tenantKey = `user.rent.late:${tenantUserId}:${paymentId}`;
+
+      if (!existingKeys.has(tenantKey)) {
+        payloads.push(buildOwnerNotificationPayload({
+          userId: tenantUserId,
+          type: "user.rent.late",
+          title: "Paiement en retard",
+          body: `Un loyer est en retard pour ${property.title}.`,
+          data: {
+            propertyId: String(property._id),
+            paymentId,
+            ownerId: String(ownerId)
+          }
+        }));
+      }
+    }
+  });
+
+  await createNotifications(payloads);
+};
+
 const createMaintenanceNotification = async ({ ownerId, action, ticket }) => {
   const propertyLabel = resolveMaintenancePropertyLabel(ticket);
   const notificationByAction = {
@@ -924,13 +983,14 @@ export const getOwnerPropertyTenantWorkspace = async ({ ownerId, propertyId }) =
   const tenantIds = tenants.map((tenant) => tenant._id);
   const payments = tenantIds.length
     ? await OwnerRentPayment.find({ ownerId, tenantId: { $in: tenantIds } })
-        .populate("tenantId", "fullName")
+        .populate("tenantId", "fullName linkedUserId")
         .sort({ dueDate: -1 })
         .lean()
     : [];
 
   const paidPayments = payments.filter((payment) => payment.status === "paid");
   const latePayments = payments.filter((payment) => payment.status === "late");
+  await ensureLateRentNotifications({ ownerId, property, latePayments });
   const monthlyRevenue = paidPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const paymentsByTenant = new Map();
   payments.forEach((payment) => {
@@ -1009,7 +1069,11 @@ export const getOwnerPropertyTenantWorkspace = async ({ ownerId, propertyId }) =
 };
 
 export const generateOwnerPropertyReceipt = async ({ ownerId, propertyId, paymentId }) => {
-  await getOwnerPropertyTenantWorkspace({ ownerId, propertyId });
+  const workspace = await getOwnerPropertyTenantWorkspace({ ownerId, propertyId });
+
+  if (!workspace.receipts.some((receipt) => String(receipt.id) === String(paymentId))) {
+    throw new AppError("Paiement introuvable pour ce bien", StatusCodes.NOT_FOUND);
+  }
 
   const payment = await OwnerRentPayment.findOne({ _id: paymentId, ownerId })
     .populate("tenantId", "fullName linkedUserId")

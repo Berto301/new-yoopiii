@@ -24,12 +24,13 @@ import {
 export const usePropertyWorkspace = () => {
   const user = useSelector(selectCurrentUser);
   const queryClient = useQueryClient();
+  const managedPropertiesScope = user?.role === "agency" || user?.role === "agency_agent" ? "agency" : "own";
 
   const managedPropertiesQuery = useQuery({
-    queryKey: ["managed-properties", user?.role, user?.agencyId],
+    queryKey: ["managed-properties", user?.role, user?.agencyId, user?.id, managedPropertiesScope],
     queryFn: () =>
       getManagedProperties({
-        scope: user?.role === "agency" ? "agency" : "own",
+        scope: managedPropertiesScope,
         page: 1,
         limit: 50
       }),

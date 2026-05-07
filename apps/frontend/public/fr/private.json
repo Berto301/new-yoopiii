@@ -1,4 +1,190 @@
 {
+  "common": {
+    "back": "Retour"
+  },
+  "priorities": {
+    "low": "Basse",
+    "medium": "Moyenne",
+    "high": "Haute"
+  },
+  "userProperties": {
+    "eyebrow": "Mes biens",
+    "title": "Biens loues et achetes",
+    "description": "Retrouvez vos biens, leurs contrats, agents, fichiers, paiements et actions utiles depuis un espace unique.",
+    "addressMissing": "Adresse non renseignee",
+    "loading": "Chargement de vos biens...",
+    "error": "Impossible de charger vos biens.",
+    "empty": "Aucun bien ne correspond aux filtres.",
+    "types": {
+      "purchased": "Achete",
+      "rented": "Loue"
+    },
+    "summary": {
+      "total": "Total",
+      "rented": "Loues",
+      "purchased": "Achetes"
+    },
+    "filters": {
+      "search": "Recherche",
+      "placeholder": "Bien, adresse, type...",
+      "type": "Type",
+      "all": "Tous"
+    },
+    "actions": {
+      "sell": "Vendre",
+      "matching": "Matching intelligent",
+      "release": "Liberer ce bien",
+      "manage": "Gerer"
+    },
+    "messages": {
+      "releaseSuccess": "Bien libere et proprietaire notifie.",
+      "releaseError": "Impossible de liberer ce bien.",
+      "sellSuccess": "Demande de vente envoyee a l'agent responsable.",
+      "sellError": "Impossible d'envoyer la demande de vente."
+    },
+    "detail": {
+      "loading": "Chargement du detail...",
+      "map": "Emplacement",
+      "addressMissing": "Adresse non renseignee",
+      "noMap": "Aucune coordonnee GPS disponible.",
+      "missingMapKey": "Ajoutez VITE_GOOGLE_MAPS_API_KEY pour activer la carte.",
+      "mapError": "Impossible de charger Google Maps.",
+      "mapLoading": "Chargement de la carte...",
+      "price": "Prix",
+      "area": "Surface",
+      "rooms": "Pieces",
+      "files": "Fichiers",
+      "contract": "Contrat associe",
+      "noContract": "Aucun contrat",
+      "openContract": "Ouvrir le contrat",
+      "agent": "Agent responsable",
+      "noAgent": "Non attribue",
+      "previousOwner": "Ancien proprietaire",
+      "owner": "Proprietaire",
+      "noOwner": "Non renseigne",
+      "filesList": "Fichiers associes"
+    }
+  },
+  "userTenant": {
+    "eyebrow": "Gestion locataire",
+    "title": "Gestion du bien loue",
+    "description": "Suivez vos loyers, signalez un probleme, consultez les voisins et envoyez un feedback lie au bien.",
+    "loading": "Chargement de la gestion locataire...",
+    "error": "Impossible de charger cette gestion.",
+    "emptyPayments": "Aucun paiement de loyer disponible.",
+    "tabs": {
+      "rents": "Gestion de loyer",
+      "issue": "Signaler un probleme",
+      "neighbors": "Voisins",
+      "feedback": "Feedback"
+    },
+    "actions": {
+      "pay": "Payer",
+      "receipt": "Telecharger la quittance",
+      "report": "Signaler",
+      "feedback": "Envoyer"
+    },
+    "messages": {
+      "paymentSuccess": "Paiement synchronise et quittance disponible.",
+      "paymentError": "Impossible de synchroniser le paiement.",
+      "issueSuccess": "Probleme signale au proprietaire.",
+      "issueError": "Impossible de signaler ce probleme.",
+      "feedbackSuccess": "Feedback envoye.",
+      "feedbackError": "Impossible d'envoyer le feedback.",
+      "receiptError": "Impossible de telecharger la quittance."
+    },
+    "issue": {
+      "title": "Objet",
+      "description": "Detail",
+      "priority": "Priorite"
+    },
+    "neighbors": {
+      "search": "Recherche",
+      "empty": "Aucun voisin affiche pour ce bien."
+    },
+    "feedback": {
+      "subject": "Objet",
+      "rating": "Note",
+      "message": "Feedback"
+    }
+  },
+  "ownerPropertyTenancy": {
+    "eyebrow": "Gestion locataires",
+    "title": "Gestion des locataires du bien",
+    "description": "Pilotez les loyers, les locataires, les quittances et les feedbacks uniquement pour le bien selectionne.",
+    "property": "Bien",
+    "addressMissing": "Adresse non renseignee",
+    "loading": "Chargement de la gestion locataires...",
+    "error": "Impossible de charger cette gestion locataires.",
+    "status": {
+      "paid": "Paye",
+      "late": "En retard",
+      "pending": "En attente"
+    },
+    "tabs": {
+      "dashboard": "Dashboard loyers",
+      "tenants": "Locataires",
+      "receipts": "Quittance",
+      "feedback": "Feedback"
+    },
+    "messages": {
+      "receiptSuccess": "Quittance generee et locataire notifie.",
+      "receiptError": "Impossible de generer la quittance.",
+      "feedbackHandled": "Feedback marque comme traite.",
+      "feedbackError": "Impossible de traiter ce feedback.",
+      "contactUnavailable": "Ce locataire n'a pas encore de compte utilisateur lie.",
+      "contactError": "Impossible d'ouvrir la conversation.",
+      "downloadError": "Impossible de telecharger la quittance."
+    },
+    "dashboard": {
+      "totalRents": "Loyers suivis",
+      "paidRents": "Loyers payes",
+      "lateRents": "Loyers en retard",
+      "monthlyRevenue": "Revenus mensuels",
+      "rentsTitle": "Resume des loyers",
+      "noRents": "Aucun loyer rattache a ce bien.",
+      "alerts": "Alertes importantes",
+      "noAlerts": "Aucune alerte active pour ce bien."
+    },
+    "tenants": {
+      "search": "Recherche locataire",
+      "searchPlaceholder": "Nom, contact, CIN, contrat...",
+      "contact": "Contact",
+      "contract": "Contrat associe",
+      "identity": "Identite",
+      "source": "Source",
+      "paymentHistory": "Historique des paiements",
+      "noPayments": "Aucun paiement disponible.",
+      "contactAction": "Contacter",
+      "openFile": "Fiche locataire",
+      "empty": "Aucun locataire ne correspond aux filtres pour ce bien."
+    },
+    "receipts": {
+      "generate": "Generer",
+      "regenerate": "Regenerer",
+      "download": "Telecharger",
+      "empty": "Aucune quittance disponible pour ce bien.",
+      "fileTitle": "Quittance {number}",
+      "fileProperty": "Bien: {property}",
+      "fileTenant": "Locataire: {tenant}",
+      "fileAmount": "Montant: {amount}",
+      "fileDueDate": "Echeance: {date}",
+      "fileStatus": "Statut: {status}"
+    },
+    "feedback": {
+      "search": "Recherche feedback",
+      "searchPlaceholder": "Locataire, message, objet...",
+      "period": "Periode",
+      "allPeriods": "Toutes",
+      "last30": "30 derniers jours",
+      "last90": "90 derniers jours",
+      "handled": "Traite",
+      "new": "Nouveau",
+      "subjectFallback": "Feedback sans objet",
+      "markHandled": "Marquer comme traite",
+      "empty": "Aucun feedback ne correspond aux filtres."
+    }
+  },
   "favorites": {
     "eyebrow": "Favoris",
     "title": "Vos biens suivis avec une lecture plus premium",
@@ -325,6 +511,7 @@
       "slugFallback": "propriete",
       "edit": "Modifier",
       "associateContract": "Associer a un contrat",
+      "manageTenants": "Gerer les locataires",
       "publish": "Publier",
       "duplicate": "Dupliquer",
       "duplicated": "Bien duplique",

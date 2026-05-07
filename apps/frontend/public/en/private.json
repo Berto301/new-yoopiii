@@ -1,4 +1,190 @@
 {
+  "common": {
+    "back": "Back"
+  },
+  "priorities": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "userProperties": {
+    "eyebrow": "My properties",
+    "title": "Rented and purchased properties",
+    "description": "Find your properties, contracts, agents, files, payments, and useful actions from one place.",
+    "addressMissing": "Address not provided",
+    "loading": "Loading your properties...",
+    "error": "Unable to load your properties.",
+    "empty": "No property matches the filters.",
+    "types": {
+      "purchased": "Purchased",
+      "rented": "Rented"
+    },
+    "summary": {
+      "total": "Total",
+      "rented": "Rented",
+      "purchased": "Purchased"
+    },
+    "filters": {
+      "search": "Search",
+      "placeholder": "Property, address, type...",
+      "type": "Type",
+      "all": "All"
+    },
+    "actions": {
+      "sell": "Sell",
+      "matching": "Smart matching",
+      "release": "Release this property",
+      "manage": "Manage"
+    },
+    "messages": {
+      "releaseSuccess": "Property released and owner notified.",
+      "releaseError": "Unable to release this property.",
+      "sellSuccess": "Sale request sent to the responsible agent.",
+      "sellError": "Unable to send the sale request."
+    },
+    "detail": {
+      "loading": "Loading details...",
+      "map": "Location",
+      "addressMissing": "Address not provided",
+      "noMap": "No GPS coordinates available.",
+      "missingMapKey": "Add VITE_GOOGLE_MAPS_API_KEY to enable the map.",
+      "mapError": "Unable to load Google Maps.",
+      "mapLoading": "Loading map...",
+      "price": "Price",
+      "area": "Area",
+      "rooms": "Rooms",
+      "files": "Files",
+      "contract": "Linked contract",
+      "noContract": "No contract",
+      "openContract": "Open contract",
+      "agent": "Responsible agent",
+      "noAgent": "Unassigned",
+      "previousOwner": "Previous owner",
+      "owner": "Owner",
+      "noOwner": "Not provided",
+      "filesList": "Linked files"
+    }
+  },
+  "userTenant": {
+    "eyebrow": "Tenant management",
+    "title": "Rented property management",
+    "description": "Track rents, report an issue, view neighbors, and send feedback linked to the property.",
+    "loading": "Loading tenant management...",
+    "error": "Unable to load this management space.",
+    "emptyPayments": "No rent payment available.",
+    "tabs": {
+      "rents": "Rent management",
+      "issue": "Report an issue",
+      "neighbors": "Neighbors",
+      "feedback": "Feedback"
+    },
+    "actions": {
+      "pay": "Pay",
+      "receipt": "Download receipt",
+      "report": "Report",
+      "feedback": "Send"
+    },
+    "messages": {
+      "paymentSuccess": "Payment synchronized and receipt available.",
+      "paymentError": "Unable to synchronize the payment.",
+      "issueSuccess": "Issue reported to the owner.",
+      "issueError": "Unable to report this issue.",
+      "feedbackSuccess": "Feedback sent.",
+      "feedbackError": "Unable to send feedback.",
+      "receiptError": "Unable to download the receipt."
+    },
+    "issue": {
+      "title": "Subject",
+      "description": "Details",
+      "priority": "Priority"
+    },
+    "neighbors": {
+      "search": "Search",
+      "empty": "No neighbor displayed for this property."
+    },
+    "feedback": {
+      "subject": "Subject",
+      "rating": "Rating",
+      "message": "Feedback"
+    }
+  },
+  "ownerPropertyTenancy": {
+    "eyebrow": "Tenant management",
+    "title": "Property tenant management",
+    "description": "Manage rents, tenants, receipts, and feedback only for the selected property.",
+    "property": "Property",
+    "addressMissing": "Address not provided",
+    "loading": "Loading tenant management...",
+    "error": "Unable to load this tenant management space.",
+    "status": {
+      "paid": "Paid",
+      "late": "Late",
+      "pending": "Pending"
+    },
+    "tabs": {
+      "dashboard": "Rent dashboard",
+      "tenants": "Tenants",
+      "receipts": "Receipt",
+      "feedback": "Feedback"
+    },
+    "messages": {
+      "receiptSuccess": "Receipt generated and tenant notified.",
+      "receiptError": "Unable to generate the receipt.",
+      "feedbackHandled": "Feedback marked as handled.",
+      "feedbackError": "Unable to handle this feedback.",
+      "contactUnavailable": "This tenant does not have a linked user account yet.",
+      "contactError": "Unable to open the conversation.",
+      "downloadError": "Unable to download the receipt."
+    },
+    "dashboard": {
+      "totalRents": "Tracked rents",
+      "paidRents": "Paid rents",
+      "lateRents": "Late rents",
+      "monthlyRevenue": "Monthly revenue",
+      "rentsTitle": "Rent summary",
+      "noRents": "No rent linked to this property.",
+      "alerts": "Important alerts",
+      "noAlerts": "No active alert for this property."
+    },
+    "tenants": {
+      "search": "Search tenant",
+      "searchPlaceholder": "Name, contact, ID, contract...",
+      "contact": "Contact",
+      "contract": "Linked contract",
+      "identity": "Identity",
+      "source": "Source",
+      "paymentHistory": "Payment history",
+      "noPayments": "No payment available.",
+      "contactAction": "Contact",
+      "openFile": "Tenant record",
+      "empty": "No tenant matches the filters for this property."
+    },
+    "receipts": {
+      "generate": "Generate",
+      "regenerate": "Regenerate",
+      "download": "Download",
+      "empty": "No receipt available for this property.",
+      "fileTitle": "Receipt {number}",
+      "fileProperty": "Property: {property}",
+      "fileTenant": "Tenant: {tenant}",
+      "fileAmount": "Amount: {amount}",
+      "fileDueDate": "Due date: {date}",
+      "fileStatus": "Status: {status}"
+    },
+    "feedback": {
+      "search": "Search feedback",
+      "searchPlaceholder": "Tenant, message, subject...",
+      "period": "Period",
+      "allPeriods": "All",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "handled": "Handled",
+      "new": "New",
+      "subjectFallback": "Feedback without subject",
+      "markHandled": "Mark as handled",
+      "empty": "No feedback matches the filters."
+    }
+  },
   "notifications": {
     "eyebrow": "Notifications",
     "title": "Notification center",
@@ -198,6 +384,7 @@
       "slugFallback": "property",
       "edit": "Edit",
       "associateContract": "Link to contract",
+      "manageTenants": "Manage tenants",
       "publish": "Publish",
       "duplicate": "Duplicate",
       "duplicated": "Duplicated property",

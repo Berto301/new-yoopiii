@@ -40,6 +40,9 @@ import { OwnerPropertiesPage } from "../../pages/private/owner/OwnerPropertiesPa
 import { OwnerMaintenancePage } from "../../pages/private/owner/OwnerMaintenancePage.jsx";
 import { OwnerCalendarPage } from "../../pages/private/owner/OwnerCalendarPage.jsx";
 import { ContractsPage } from "../../pages/private/contracts/ContractsPage.jsx";
+import { OwnerPropertyTenantsManagementPage } from "../../pages/private/owner/OwnerPropertyTenantsManagementPage.jsx";
+import { MyPropertiesPage } from "../../pages/private/user/MyPropertiesPage.jsx";
+import { UserPropertyTenantManagementPage } from "../../pages/private/user/UserPropertyTenantManagementPage.jsx";
 
 export const AppRouter = () => (
   <Routes>
@@ -64,6 +67,8 @@ export const AppRouter = () => (
           <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/agencies-agents" element={<AgenciesAgentsPage />} />
+          <Route path="/my-properties" element={<MyPropertiesPage />} />
+          <Route path="/my-properties/rented/:assetId/manage" element={<UserPropertyTenantManagementPage />} />
         </Route>
         <Route path="/messages" element={<ChatPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
@@ -88,6 +93,7 @@ export const AppRouter = () => (
           <Route path="/owner/expenses" element={<OwnerExpensesPage />} />
           <Route path="/owner/tenants" element={<OwnerTenantsPage />} />
           <Route path="/owner/properties" element={<OwnerPropertiesPage />} />
+          <Route path="/owner/properties/:propertyId/tenants" element={<OwnerPropertyTenantsManagementPage />} />
           <Route path="/owner/maintenance" element={<OwnerMaintenancePage />} />
         </Route>
 

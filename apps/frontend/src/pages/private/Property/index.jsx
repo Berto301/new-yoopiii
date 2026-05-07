@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { formatMoney } from "../../../app/preferences/user-preferences.utils.js";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
@@ -86,6 +86,7 @@ const PropertyCard = ({
   onRequestContract,
   onDelete,
   onAssociateContract,
+  onManageTenants,
   onOpenMatching
 }) => {
   const { t } = useUserPreferences();
@@ -188,9 +189,14 @@ const PropertyCard = ({
                 </Button>
               ) : null}
               {isOwnerRole ? (
-                <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onAssociateContract(property)}>
-                  {t("private", "properties.card.associateContract", "Associer a un contrat")}
-                </Button>
+                <>
+                  <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onAssociateContract(property)}>
+                    {t("private", "properties.card.associateContract", "Associer a un contrat")}
+                  </Button>
+                  <Button type="button" variant="secondary" className="px-4 py-2" onClick={() => onManageTenants(property)}>
+                    {t("private", "properties.card.manageTenants", "Gerer les locataires")}
+                  </Button>
+                </>
               ) : canPublish ? (
                 <Button
                   type="button"
@@ -262,6 +268,7 @@ const PropertyCard = ({
 
 export const PropertyManagementPage = () => {
   const { t } = useUserPreferences();
+  const navigate = useNavigate();
   const {
     user,
     managedPropertiesQuery,
@@ -356,6 +363,10 @@ export const PropertyManagementPage = () => {
   const handleAssociateContract = (property) => {
     setSelectedProperty(property);
     setContractModalState({ open: true, mode: "create", contract: null });
+  };
+
+  const handleManageTenants = (property) => {
+    navigate(`/owner/properties/${property.id}/tenants`);
   };
 
   const closeContractModal = () => {
@@ -597,6 +608,7 @@ export const PropertyManagementPage = () => {
                 onRequestContract={handleRequestContract}
                 onDelete={handleDeleteProperty}
                 onAssociateContract={handleAssociateContract}
+                onManageTenants={handleManageTenants}
                 onOpenMatching={openMatchingModal}
               />
               );
@@ -622,6 +634,8 @@ export const PropertyManagementPage = () => {
         mode={modalMode}
         property={selectedProperty}
         associatedContracts={associatedContracts}
+        contractOptions={contractOptions}
+        isOwnerRole={isOwnerRole}
         onEditContract={openEditContractModal}
         onClose={closeManageModal}
         onSubmit={handleSaveProperty}
