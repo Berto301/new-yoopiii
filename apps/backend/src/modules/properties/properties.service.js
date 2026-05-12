@@ -4,7 +4,7 @@ import { AppError } from "../../core/errors/app-error.js";
 import { Agency } from "../agencies/agency.model.js";
 import { AgencyMember } from "../agencies/models/agency-member.model.js";
 import { Booking } from "../bookings/booking.model.js";
-import { getActiveManagementContractIdsForActor, validateActiveContractForActor } from "../contracts/contracts.service.js";
+import { getManageableManagementContractsForActor, validateActiveContractForActor } from "../contracts/contracts.service.js";
 import { createNotifications } from "../notifications/notifications.service.js";
 import { calculatePropertyScore, recalculateAgencyScore, recalculateAgentScore } from "../scoring/scoring.service.js";
 import { OwnerMaintenanceTicket } from "../owner/models/owner-maintenance-ticket.model.js";
@@ -31,6 +31,17 @@ const slugify = (value) =>
 
 const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const hasThreeDLink = (property) => Boolean(String(property?.threeDUrl || "").trim());
+const CONTRACT_STATUS_LABELS = {
+  signed: "Signe",
+  accepted: "Accepte",
+  active: "Actif"
+};
+
+const resolveDocumentId = (value) => {
+  if (!value) return "";
+  if (typeof value === "object" && value._id) return String(value._id);
+  return String(value);
+};
 
 const ensureUniqueSlug = async (baseValue, excludedId = null) => {
   const baseSlug = slugify(baseValue) || `property-${Date.now()}`;
@@ -238,6 +249,7 @@ const mapPropertyListItem = (property, favoriteIds = new Set()) => {
     publicationOwnerDisplay: property.publicationOwnerDisplay || null,
     isUnderMaintenance: Boolean(property.isUnderMaintenance),
     managementContractId: property.managementContractId?._id ? String(property.managementContractId._id) : property.managementContractId || null,
+    managementContract: property.managementContract || null,
     duplicatedFromPropertyId: property.duplicatedFromPropertyId?._id ? String(property.duplicatedFromPropertyId._id) : property.duplicatedFromPropertyId || null,
     isDuplicated: Boolean(property.duplicatedFromPropertyId),
     contractRequestId: property.contractRequestId?._id ? String(property.contractRequestId._id) : property.contractRequestId || null,
@@ -550,11 +562,18 @@ const ensurePropertyManagementAccess = async (property, actor, requiredAction = 
     return;
   }
 
-  if (!property.managementContractId) {
-    throw new AppError("This property is no longer manageable because it is not linked to an active contract", StatusCodes.FORBIDDEN);
-  }
+  let contract = null;
 
-  const contract = await validateActiveContractForActor({ contractId: String(property.managementContractId), actor });
+  if (!property.managementContractId) {
+    const contractScope = await buildManageableContractScope(actor);
+    contract = contractScope.contractByPropertyId.get(resolveDocumentId(property._id || property.id)) || null;
+
+    if (!contract) {
+      throw new AppError("This property is no longer manageable because it is not linked to an active contract", StatusCodes.FORBIDDEN);
+    }
+  } else {
+    contract = await validateActiveContractForActor({ contractId: String(property.managementContractId), actor });
+  }
 
   if (requiredAction === "publish" && !contract.actions?.canPublishProperty) {
     throw new AppError("Ce contrat n'autorise pas la publication du bien", StatusCodes.FORBIDDEN);
@@ -573,17 +592,33 @@ const ensurePropertyManagementAccess = async (property, actor, requiredAction = 
   }
 
   if (actor.role === "agency") {
-    if (!property.agencyId || String(property.agencyId) !== actor.agencyId) throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
-    return;
-  }
+    if (contract.managerRole === "agency" && resolveDocumentId(contract.agencyId) === resolveDocumentId(actor.agencyId)) {
+      return contract;
+    }
 
-  if (actor.role === "agency_agent") {
-    if (property.agencyId && actor.agencyId && String(property.agencyId) === actor.agencyId) return;
-    if (String(property.agentId) === actor.id) return;
     throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
   }
 
-  if (actor.role === "independent_agent" && String(property.agentId) === actor.id) return;
+  if (actor.role === "agency_agent") {
+    if (
+      contract.managerRole === "agency" &&
+      resolveDocumentId(contract.agencyId) === resolveDocumentId(actor.agencyId) &&
+      resolveDocumentId(contract.responsibleAgentUserId) === resolveDocumentId(actor.id)
+    ) {
+      return contract;
+    }
+
+    throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
+  }
+
+  if (
+    actor.role === "independent_agent" &&
+    contract.managerRole === "independent_agent" &&
+    resolveDocumentId(contract.managerUserId) === resolveDocumentId(actor.id)
+  ) {
+    return contract;
+  }
+
   throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
 };
 
@@ -596,6 +631,124 @@ const mapManagedSummary = async (matchQuery) => {
   ]);
 
   return { total, published, pendingApproval, totalFavorites: favorites[0]?.totalFavorites || 0 };
+};
+
+const mapManagementContractSummary = (contract) => {
+  if (!contract) return null;
+
+  const responsibleAgent = contract.responsibleAgentUserId
+    ? {
+        id: resolveDocumentId(contract.responsibleAgentUserId),
+        fullName: [contract.responsibleAgentUserId.firstName, contract.responsibleAgentUserId.lastName].filter(Boolean).join(" ").trim(),
+        email: contract.responsibleAgentUserId.email || ""
+      }
+    : null;
+
+  return {
+    id: String(contract._id || contract.id),
+    reference: contract.reference,
+    status: contract.status,
+    statusLabel: CONTRACT_STATUS_LABELS[contract.status] || contract.status,
+    propertyId: contract.propertyId ? String(contract.propertyId) : null,
+    manager: contract.managerRole === "agency"
+      ? {
+          role: "agency",
+          id: resolveDocumentId(contract.agencyId),
+          name: contract.agencyId?.name || "Agence"
+        }
+      : {
+          role: "independent_agent",
+          id: resolveDocumentId(contract.managerUserId),
+          name: [contract.managerUserId?.firstName, contract.managerUserId?.lastName].filter(Boolean).join(" ").trim() || contract.managerUserId?.email || "Agent"
+        },
+    responsibleAgent,
+    actions: {
+      canPublishProperty: Boolean(contract.actions?.canPublishProperty ?? true),
+      canReserveProperty: Boolean(contract.actions?.canReserveProperty ?? true),
+      canEditProperty: Boolean(contract.actions?.canEditProperty),
+      canDeleteProperty: Boolean(contract.actions?.canDeleteProperty),
+      publicationOwnerDisplay: {
+        showOwnerName: Boolean(contract.actions?.publicationOwnerDisplay?.showOwnerName),
+        showOwnerContact: Boolean(contract.actions?.publicationOwnerDisplay?.showOwnerContact),
+        allowDirectOwnerChat: Boolean(contract.actions?.publicationOwnerDisplay?.allowDirectOwnerChat)
+      }
+    }
+  };
+};
+
+const buildManagedPropertyFilterMatch = (filters) => {
+  const query = {};
+
+  if (filters.publicationStatus) query.publicationStatus = filters.publicationStatus;
+  if (filters.status) query.status = filters.status;
+
+  return query;
+};
+
+const buildManageableContractScope = async (actor) => {
+  const contracts = await getManageableManagementContractsForActor(actor);
+  const contractIds = contracts.map((contract) => String(contract._id));
+  const contractById = new Map(contracts.map((contract) => [String(contract._id), contract]));
+  const contractByPropertyId = new Map();
+
+  contracts.forEach((contract) => {
+    const propertyId = resolveDocumentId(contract.propertyId);
+    if (propertyId && !contractByPropertyId.has(propertyId)) {
+      contractByPropertyId.set(propertyId, contract);
+    }
+  });
+
+  return { contracts, contractIds, contractById, contractByPropertyId };
+};
+
+const resolveManagedPropertyContract = (property, contractScope) => {
+  const linkedContract = contractScope.contractById.get(resolveDocumentId(property.managementContractId));
+
+  if (linkedContract) {
+    return linkedContract;
+  }
+
+  return contractScope.contractByPropertyId.get(resolveDocumentId(property._id || property.id)) || null;
+};
+
+const applyContractManagementContext = (property, contract) => {
+  if (!contract) {
+    return property;
+  }
+
+  const contractAgentId =
+    contract.managerRole === "agency"
+      ? contract.responsibleAgentUserId?._id || contract.responsibleAgentUserId || property.agentId
+      : contract.managerUserId?._id || contract.managerUserId || property.agentId;
+
+  return {
+    ...property,
+    ownerType: contract.managerRole || property.ownerType,
+    ownerUserId: contract.ownerUserId?._id || contract.ownerUserId || property.ownerUserId,
+    managementContractId: contract._id || contract.id || property.managementContractId,
+    agencyId: contract.managerRole === "agency" ? contract.agencyId?._id || contract.agencyId : null,
+    agentId: contractAgentId,
+    managementContract: mapManagementContractSummary(contract)
+  };
+};
+
+const buildContractLinkedPropertyMatch = ({ contractScope, filters }) => {
+  const matchQuery = buildManagedPropertyFilterMatch(filters);
+  const directPropertyIds = [...contractScope.contractByPropertyId.keys()];
+  const clauses = [];
+
+  if (contractScope.contractIds.length) {
+    clauses.push({ managementContractId: { $in: contractScope.contractIds } });
+  }
+
+  if (directPropertyIds.length) {
+    clauses.push({ _id: { $in: directPropertyIds } });
+  }
+
+  return {
+    ...matchQuery,
+    ...(clauses.length ? { $or: clauses } : {})
+  };
 };
 
 const buildManagedPropertyPayload = async ({ actor, payload, existingProperty = null, duplicate = false }) => {
@@ -778,9 +931,9 @@ export const getManagedProperties = async ({ user, filters }) => {
     };
   }
 
-  const activeContractIds = await getActiveManagementContractIdsForActor(user);
+  const contractScope = await buildManageableContractScope(user);
 
-  if (!activeContractIds.length) {
+  if (!contractScope.contractIds.length) {
     return {
       items: [],
       summary: { total: 0, published: 0, pendingApproval: 0, totalFavorites: 0 },
@@ -789,15 +942,20 @@ export const getManagedProperties = async ({ user, filters }) => {
     };
   }
 
-  matchQuery.managementContractId = { $in: activeContractIds };
+  const contractLinkedMatchQuery = buildContractLinkedPropertyMatch({ contractScope, filters });
 
   const [items, total, summary] = await Promise.all([
-    Property.find(matchQuery).sort({ score: -1, updatedAt: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
-    Property.countDocuments(matchQuery),
-    mapManagedSummary(matchQuery)
+    Property.find(contractLinkedMatchQuery).sort({ score: -1, updatedAt: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Property.countDocuments(contractLinkedMatchQuery),
+    mapManagedSummary(contractLinkedMatchQuery)
   ]);
 
-  return { items: items.map((item) => mapPropertyListItem(item)), summary, pagination: buildPagination({ page, limit, total, itemsLength: items.length }), appliedFilters: { scope: filters.scope || (user.role === "agency" ? "agency" : "own"), status: filters.status || null, publicationStatus: filters.publicationStatus || null } };
+  return {
+    items: items.map((item) => mapPropertyListItem(applyContractManagementContext(item, resolveManagedPropertyContract(item, contractScope)))),
+    summary,
+    pagination: buildPagination({ page, limit, total, itemsLength: items.length }),
+    appliedFilters: { scope: filters.scope || (user.role === "agency" ? "agency" : "own"), status: filters.status || null, publicationStatus: filters.publicationStatus || null }
+  };
 };
 
 export const getPropertyPublications = async ({ user, filters }) => {
@@ -988,7 +1146,7 @@ export const getManagedPropertyDetail = async ({ identifier, actor }) => {
     throw new AppError("Property not found", StatusCodes.NOT_FOUND);
   }
 
-  await ensurePropertyManagementAccess(property, actor);
+  const contract = await ensurePropertyManagementAccess(property, actor);
 
   const favoriteIds = await loadFavoriteIdsForUser(actor?.id, [property._id]);
   const isUnderMaintenance = await OwnerMaintenanceTicket.exists({
@@ -997,7 +1155,7 @@ export const getManagedPropertyDetail = async ({ identifier, actor }) => {
   });
 
   return mapPropertyListItem({
-    ...property,
+    ...applyContractManagementContext(property, contract),
     isUnderMaintenance: Boolean(isUnderMaintenance)
   }, favoriteIds);
 };

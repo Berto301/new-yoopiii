@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { formatMoney } from "../../../app/preferences/user-preferences.utils.js";
@@ -62,6 +62,78 @@ const getStatusBadgeClassName = (status) => {
   return "border-white/10 bg-white/5 text-stone-200";
 };
 
+const MANAGEABLE_CONTRACT_STATUSES = new Set(["accepted", "signed", "active"]);
+
+const isManageableContract = (contract) =>
+  MANAGEABLE_CONTRACT_STATUSES.has(String(contract?.status || "").trim().toLowerCase());
+
+const isContractManageableForUser = (contract, user) => {
+  if (!isManageableContract(contract) || !user) return false;
+
+  if (user.role === "agency") {
+    return contract?.manager?.role === "agency" && String(contract?.manager?.id || "") === String(user.agencyId || "");
+  }
+
+  if (user.role === "agency_agent") {
+    return (
+      contract?.manager?.role === "agency" &&
+      String(contract?.manager?.id || "") === String(user.agencyId || "") &&
+      String(contract?.responsibleAgent?.id || "") === String(user.id || "")
+    );
+  }
+
+  if (user.role === "independent_agent") {
+    return contract?.manager?.role === "independent_agent" && String(contract?.manager?.id || "") === String(user.id || "");
+  }
+
+  return user.role === "proprietaire";
+};
+
+const getContractStatusLabel = (status, t) => {
+  if (status === "accepted") return t("private", "properties.contractStatus.accepted", "Accepté");
+  if (status === "signed") return t("private", "properties.contractStatus.signed", "Signé");
+  if (status === "active") return t("private", "properties.contractStatus.active", "Actif");
+  return status || "--";
+};
+
+const getContractStatusBadgeClassName = (status) => {
+  if (status === "active") {
+    return "border-emerald-400/30 bg-emerald-500/10 text-emerald-100";
+  }
+
+  if (status === "signed") {
+    return "border-sky-400/30 bg-sky-500/10 text-sky-100";
+  }
+
+  return "border-amber-400/30 bg-amber-500/10 text-amber-100";
+};
+
+const getContractLinkedPropertyIds = (contract) =>
+  [
+    contract?.propertyId,
+    ...(contract?.coveredProperties || []).map((property) => property?.id || property?._id || property)
+  ]
+    .filter(Boolean)
+    .map(String);
+
+const getResponsibleAgentName = (contract) =>
+  contract?.responsibleAgent?.fullName ||
+  contract?.responsibleAgent?.name ||
+  contract?.agent?.name ||
+  "";
+
+const mergeContractsById = (...contractLists) => {
+  const contractsById = new Map();
+
+  contractLists.flat().filter(Boolean).forEach((contract) => {
+    const contractId = String(contract.id || "");
+    if (!contractId || contractsById.has(contractId)) return;
+    contractsById.set(contractId, contract);
+  });
+
+  return [...contractsById.values()];
+};
+
 const StatCard = ({ label, value, description, accent }) => (
   <Card className="relative overflow-hidden border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))]">
     <div className={`absolute inset-0 bg-gradient-to-br ${accent}`} />
@@ -93,14 +165,17 @@ const PropertyCard = ({
   const coverImage = resolveAssetUrl(property.coverImage || property.media?.find((item) => item.type === "image")?.url || "");
   const mediaCount = property.media?.length || 0;
   const isOwnerRole = user?.role === "proprietaire";
-  const canPublish = !isOwnerRole && Boolean(linkedContract?.actions?.canPublishProperty);
-  const canReserve = !isOwnerRole && Boolean(linkedContract?.actions?.canReserveProperty);
-  const canEdit = isOwnerRole || Boolean(linkedContract?.actions?.canEditProperty);
-  const canDelete = isOwnerRole || Boolean(linkedContract?.actions?.canDeleteProperty);
+  const contractForDisplay = linkedContract || property.managementContract || null;
+  const contractStatus = String(contractForDisplay?.status || "").trim().toLowerCase();
+  const responsibleAgentName = getResponsibleAgentName(contractForDisplay);
+  const canPublish = !isOwnerRole && Boolean(contractForDisplay?.actions?.canPublishProperty);
+  const canReserve = !isOwnerRole && Boolean(contractForDisplay?.actions?.canReserveProperty);
+  const canEdit = isOwnerRole || Boolean(contractForDisplay?.actions?.canEditProperty);
+  const canDelete = isOwnerRole || Boolean(contractForDisplay?.actions?.canDeleteProperty);
   const isDuplicatedProperty = Boolean(property.isDuplicated || property.duplicatedFromPropertyId);
   const contractRequestStatus = property.contractRequestStatus || "none";
   const canRequestOwnerContract = !isOwnerRole && isDuplicatedProperty && !property.managementContractId;
-  const isManagementBlocked = !isOwnerRole && !property.managementContractId;
+  const isManagementBlocked = !isOwnerRole && !property.managementContractId && !contractForDisplay;
   const hasPendingContractRequest = ["draft", "pending_signature", "signed", "accepted", "active"].includes(contractRequestStatus);
   const threeDStatus = getPropertyThreeDStatusMeta({
     is3DEnabled: hasPropertyThreeDLink(property),
@@ -111,7 +186,10 @@ const PropertyCard = ({
     { label: t("private", "properties.card.type", "Type"), value: property.type || "--" },
     { label: t("private", "properties.card.usage", "Usage"), value: property.purpose || "--" },
     { label: t("private", "properties.card.files", "Fichiers"), value: mediaCount },
-    { label: t("private", "properties.card.management", "Gestion"), value: formatOwnerType(property.ownerType, t) }
+    { label: t("private", "properties.card.management", "Gestion"), value: formatOwnerType(property.ownerType, t) },
+    ...(responsibleAgentName
+      ? [{ label: t("private", "properties.card.responsibleAgent", "Agent responsable"), value: responsibleAgentName }]
+      : [])
   ];
 
   return (
@@ -129,6 +207,11 @@ const PropertyCard = ({
             <div className="flex flex-wrap gap-2">
               <Badge className={getPublicationBadgeClassName(property.publicationStatus)}>{property.publicationStatus}</Badge>
               <Badge className={getStatusBadgeClassName(property.status)}>{property.status}</Badge>
+              {isManageableContract(contractForDisplay) ? (
+                <Badge className={getContractStatusBadgeClassName(contractStatus)}>
+                  {getContractStatusLabel(contractStatus, t)}
+                </Badge>
+              ) : null}
               {hasThreeDLink ? <Badge className={threeDStatus.className}>3D {threeDStatus.label}</Badge> : null}
               {isDuplicatedProperty ? (
                 <Badge className="border-sky-500/25 bg-[var(--info-surface)] text-[var(--info-foreground)]">
@@ -319,13 +402,47 @@ export const PropertyManagementPage = () => {
   ];
 
   const isOwnerRole = user?.role === "proprietaire";
+  const managed = managedPropertiesQuery.data;
+  const items = managed?.items || [];
+  const summary = managed?.summary || {};
+  const allContracts = useMemo(
+    () => mergeContractsById(contractsQuery.data || [], activeContractsQuery.data || []),
+    [activeContractsQuery.data, contractsQuery.data]
+  );
+  const manageableContracts = useMemo(
+    () => allContracts.filter((contract) => isContractManageableForUser(contract, user)),
+    [allContracts, user]
+  );
+  const contractOptions = useMemo(
+    () => manageableContracts.map((contract) => ({
+      label: `${contract.reference} - ${contract.owner?.fullName || "Proprietaire"} - ${getContractStatusLabel(String(contract.status || "").trim().toLowerCase(), t)}`,
+      value: contract.id
+    })),
+    [manageableContracts, t]
+  );
+  const associatedContracts = useMemo(() => {
+    if (!selectedProperty?.id) {
+      return [];
+    }
+
+    const selectedPropertyId = String(selectedProperty.id);
+    const selectedContractId = selectedProperty.managementContractId ? String(selectedProperty.managementContractId) : null;
+    const contracts = allContracts.filter((contract) => {
+      const contractId = String(contract.id || "");
+      const linkedPropertyIds = getContractLinkedPropertyIds(contract);
+
+      return linkedPropertyIds.includes(selectedPropertyId) || (selectedContractId && contractId === selectedContractId);
+    });
+
+    return contracts.length || !selectedProperty.managementContract ? contracts : [selectedProperty.managementContract];
+  }, [allContracts, selectedProperty]);
 
   if (!user || !["agency", "agency_agent", "independent_agent", "proprietaire"].includes(user.role)) {
     return <Navigate to="/dashboard/user" replace />;
   }
 
   const openCreateModal = () => {
-    if (!isOwnerRole && !(activeContractsQuery.data || []).length) {
+    if (!isOwnerRole && !manageableContracts.length) {
       showError(t("private", "properties.createBlocked", "Aucun contrat valide ne permet actuellement de gerer ou creer un bien."));
       return;
     }
@@ -431,10 +548,15 @@ export const PropertyManagementPage = () => {
   };
 
   const handleDuplicateProperty = async (property) => {
-    await duplicateManagedPropertyMutation.mutateAsync({
-      propertyId: property.id,
-      payload: { title: `${property.title} copie` }
-    });
+    try {
+      await duplicateManagedPropertyMutation.mutateAsync({
+        propertyId: property.id,
+        payload: { title: `${property.title} copie` }
+      });
+      showSuccess(t("private", "properties.duplicateSuccess", "Bien duplique avec succes."));
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.duplicateError", "La duplication du bien a echoue.") });
+    }
   };
 
   const handleRequestContract = async (property) => {
@@ -449,7 +571,12 @@ export const PropertyManagementPage = () => {
   const handleDeleteProperty = async (property) => {
     const confirmed = window.confirm(replaceTemplate(t("private", "properties.confirmDelete", "Supprimer definitivement {name} ?"), { name: property.title }));
     if (!confirmed) return;
-    await deleteManagedPropertyMutation.mutateAsync(property.id);
+    try {
+      await deleteManagedPropertyMutation.mutateAsync(property.id);
+      showSuccess(t("private", "properties.deleteSuccess", "Bien supprime avec succes."));
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "properties.deleteError", "La suppression du bien a echoue.") });
+    }
   };
 
   if (managedPropertiesQuery.isLoading) {
@@ -474,34 +601,30 @@ export const PropertyManagementPage = () => {
     );
   }
 
-  const managed = managedPropertiesQuery.data;
-  const items = managed?.items || [];
-  const summary = managed?.summary || {};
-  const contractOptions = (activeContractsQuery.data || []).map((contract) => ({
-    label: `${contract.reference} â€¢ ${contract.owner?.fullName || "Proprietaire"} â€¢ ${contract.endDateLabel}`,
-    value: contract.id
-  }));
-  const allContracts = contractsQuery.data || activeContractsQuery.data || [];
-  const associatedContracts = (() => {
-    if (!selectedProperty?.id) {
-      return [];
-    }
+  // const managed = managedPropertiesQuery.data;
+  // const items = managed?.items || [];
+  // const summary = managed?.summary || {};
+  // const contractOptions = manageableContracts.map((contract) => ({
+  //   label: `${contract.reference} - ${contract.owner?.fullName || "Proprietaire"} - ${getContractStatusLabel(String(contract.status || "").trim().toLowerCase(), t)}`,
+  //   value: contract.id
+  // }));
+  // const associatedContracts = (() => {
+  //   if (!selectedProperty?.id) {
+  //     return [];
+  //   }
 
-    const selectedPropertyId = String(selectedProperty.id);
-    const selectedContractId = selectedProperty.managementContractId ? String(selectedProperty.managementContractId) : null;
+  //   const selectedPropertyId = String(selectedProperty.id);
+  //   const selectedContractId = selectedProperty.managementContractId ? String(selectedProperty.managementContractId) : null;
 
-    return (allContracts || []).filter((contract) => {
-      const contractId = String(contract.id || "");
-      const linkedPropertyIds = [
-        contract.propertyId,
-        ...(contract.coveredProperties || []).map((property) => property.id)
-      ]
-        .filter(Boolean)
-        .map(String);
+  //   const contracts = allContracts.filter((contract) => {
+  //     const contractId = String(contract.id || "");
+  //     const linkedPropertyIds = getContractLinkedPropertyIds(contract);
 
-      return linkedPropertyIds.includes(selectedPropertyId) || (selectedContractId && contractId === selectedContractId);
-    });
-  })();
+  //     return linkedPropertyIds.includes(selectedPropertyId) || (selectedContractId && contractId === selectedContractId);
+  //   });
+
+  //   return contracts.length || !selectedProperty.managementContract ? contracts : [selectedProperty.managementContract];
+  // })();
   const agencyOptions = selectedProperty?.agencyId || user?.agencyId
     ? [{ label: selectedProperty?.agencyName || "Agence courante", value: selectedProperty?.agencyId || user?.agencyId }]
     : [];
@@ -589,9 +712,13 @@ export const PropertyManagementPage = () => {
         <div className="space-y-5">
           {items.map((property) => (
             (() => {
-              const linkedContract = (allContracts || []).find((contract) =>
-                [contract.propertyId, ...(contract.coveredProperties || []).map((linkedProperty) => linkedProperty.id)].includes(property.id)
-              ) || null;
+              const propertyContractId = property.managementContractId ? String(property.managementContractId) : null;
+              const linkedContract = allContracts.find((contract) => {
+                const contractId = String(contract.id || "");
+                const linkedPropertyIds = getContractLinkedPropertyIds(contract);
+
+                return (propertyContractId && contractId === propertyContractId) || linkedPropertyIds.includes(String(property.id));
+              }) || property.managementContract || null;
 
               return (
               <PropertyCard

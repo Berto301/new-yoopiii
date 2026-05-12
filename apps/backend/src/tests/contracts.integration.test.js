@@ -189,6 +189,210 @@ test("agency can manage a property only after accepting a contract created by th
   assert.equal(managedAfterTermination.body.data.items.length, 0);
 });
 
+test("agency and responsible agency agent see properties linked to accepted contracts by propertyId", async () => {
+  const now = new Date();
+  const futureStartDate = new Date(now);
+  futureStartDate.setMonth(futureStartDate.getMonth() + 1);
+  const futureEndDate = new Date(futureStartDate);
+  futureEndDate.setFullYear(futureEndDate.getFullYear() + 1);
+
+  const owner = await createUser({ firstName: "Owner", role: "proprietaire" });
+  const agencyOwner = await createUser({ firstName: "Agency", role: "agency" });
+  const responsibleAgent = await createUser({ firstName: "Resp", lastName: "Agent", role: "agency_agent" });
+  const otherAgent = await createUser({ firstName: "Other", lastName: "Agent", role: "agency_agent" });
+  const agency = await Agency.create({
+    name: "Accepted Agency",
+    slug: `accepted-agency-${Date.now()}`,
+    contactEmail: agencyOwner.email,
+    contactPhone: "",
+    ownerUserId: agencyOwner._id,
+    status: "active"
+  });
+
+  agencyOwner.agencyId = agency._id;
+  responsibleAgent.agencyId = agency._id;
+  otherAgent.agencyId = agency._id;
+  await Promise.all([agencyOwner.save(), responsibleAgent.save(), otherAgent.save()]);
+
+  const property = await Property.create({
+    title: "Bien accepte propertyId",
+    slug: `bien-accepte-propertyid-${Date.now()}`,
+    description: "Bien proprietaire lie par propertyId sur un contrat accepte.",
+    type: "house",
+    purpose: "rent",
+    price: 120000,
+    currency: "AR",
+    area: 90,
+    rooms: 4,
+    bedrooms: 2,
+    bathrooms: 1,
+    features: [],
+    address: "Ivandry",
+    location: { type: "Point", coordinates: [-4.0, 5.3] },
+    status: "draft",
+    publicationStatus: "pending",
+    ownerType: "proprietaire",
+    ownerUserId: owner._id,
+    agentId: owner._id
+  });
+
+  const contract = await ManagementContract.create({
+    reference: "CTR-ACCEPTED-PROPERTYID",
+    contractType: "agency",
+    status: "accepted",
+    startDate: futureStartDate,
+    endDate: futureEndDate,
+    ownerUserId: owner._id,
+    agencyId: agency._id,
+    responsibleAgentUserId: responsibleAgent._id,
+    managerRole: "agency",
+    propertyId: property._id,
+    agency: {
+      id: agency._id,
+      name: agency.name,
+      commission: 8,
+      fees: 0
+    },
+    agent: {
+      id: responsibleAgent._id,
+      name: "Resp Agent",
+      commission: 0,
+      fees: 0
+    },
+    financial: {
+      rentAmount: 120000,
+      charges: 0,
+      deposit: 0,
+      currency: "AR",
+      paymentFrequency: "monthly",
+      paymentMethod: "bank_transfer"
+    },
+    actions: {
+      canPublishProperty: true,
+      canReserveProperty: true,
+      canEditProperty: true,
+      canDeleteProperty: false
+    },
+    createdByUserId: owner._id
+  });
+
+  const app = createApp();
+
+  const activeContractsResponse = await request(app)
+    .get("/api/v1/contracts/active")
+    .set("Authorization", `Bearer ${signAccessToken(agencyOwner)}`);
+
+  assert.equal(activeContractsResponse.statusCode, 200);
+  assert.equal(activeContractsResponse.body.data.length, 1);
+  assert.equal(activeContractsResponse.body.data[0].id, String(contract._id));
+  assert.equal(activeContractsResponse.body.data[0].status, "accepted");
+
+  const agencyManagedResponse = await request(app)
+    .get("/api/v1/properties/management/mine")
+    .set("Authorization", `Bearer ${signAccessToken(agencyOwner)}`);
+
+  assert.equal(agencyManagedResponse.statusCode, 200);
+  assert.equal(agencyManagedResponse.body.data.items.length, 1);
+  assert.equal(agencyManagedResponse.body.data.summary.total, 1);
+  assert.equal(agencyManagedResponse.body.data.items[0].id, String(property._id));
+  assert.equal(agencyManagedResponse.body.data.items[0].managementContractId, String(contract._id));
+  assert.equal(agencyManagedResponse.body.data.items[0].managementContract.status, "accepted");
+  assert.equal(agencyManagedResponse.body.data.items[0].managementContract.responsibleAgent.id, String(responsibleAgent._id));
+
+  const responsibleManagedResponse = await request(app)
+    .get("/api/v1/properties/management/mine?scope=agency")
+    .set("Authorization", `Bearer ${signAccessToken(responsibleAgent)}`);
+
+  assert.equal(responsibleManagedResponse.statusCode, 200);
+  assert.equal(responsibleManagedResponse.body.data.items.length, 1);
+  assert.equal(responsibleManagedResponse.body.data.summary.total, 1);
+
+  const otherAgentManagedResponse = await request(app)
+    .get("/api/v1/properties/management/mine?scope=agency")
+    .set("Authorization", `Bearer ${signAccessToken(otherAgent)}`);
+
+  assert.equal(otherAgentManagedResponse.statusCode, 200);
+  assert.equal(otherAgentManagedResponse.body.data.items.length, 0);
+  assert.equal(otherAgentManagedResponse.body.data.summary.total, 0);
+});
+
+test("independent agent sees properties linked to accepted contracts by propertyId", async () => {
+  const now = new Date();
+  const futureStartDate = new Date(now);
+  futureStartDate.setMonth(futureStartDate.getMonth() + 1);
+  const futureEndDate = new Date(futureStartDate);
+  futureEndDate.setFullYear(futureEndDate.getFullYear() + 1);
+
+  const owner = await createUser({ firstName: "Owner", role: "proprietaire" });
+  const agent = await createUser({ firstName: "Solo", role: "independent_agent" });
+  const property = await Property.create({
+    title: "Bien accepte independant",
+    slug: `bien-accepte-independant-${Date.now()}`,
+    description: "Bien proprietaire lie a un agent independant par contrat accepte.",
+    type: "apartment",
+    purpose: "rent",
+    price: 95000,
+    currency: "AR",
+    area: 75,
+    rooms: 3,
+    bedrooms: 2,
+    bathrooms: 1,
+    features: [],
+    address: "Analamahitsy",
+    location: { type: "Point", coordinates: [-4.02, 5.31] },
+    status: "draft",
+    publicationStatus: "pending",
+    ownerType: "proprietaire",
+    ownerUserId: owner._id,
+    agentId: owner._id
+  });
+
+  const contract = await ManagementContract.create({
+    reference: "CTR-INDEPENDENT-ACCEPTED",
+    contractType: "agent",
+    status: "accepted",
+    startDate: futureStartDate,
+    endDate: futureEndDate,
+    ownerUserId: owner._id,
+    managerUserId: agent._id,
+    managerRole: "independent_agent",
+    propertyId: property._id,
+    agent: {
+      id: agent._id,
+      name: "Solo Agent",
+      commission: 0,
+      fees: 0
+    },
+    financial: {
+      rentAmount: 95000,
+      charges: 0,
+      deposit: 0,
+      currency: "AR",
+      paymentFrequency: "monthly",
+      paymentMethod: "bank_transfer"
+    },
+    actions: {
+      canPublishProperty: true,
+      canReserveProperty: true,
+      canEditProperty: true,
+      canDeleteProperty: false
+    },
+    createdByUserId: owner._id
+  });
+
+  const app = createApp();
+  const managedResponse = await request(app)
+    .get("/api/v1/properties/management/mine")
+    .set("Authorization", `Bearer ${signAccessToken(agent)}`);
+
+  assert.equal(managedResponse.statusCode, 200);
+  assert.equal(managedResponse.body.data.items.length, 1);
+  assert.equal(managedResponse.body.data.summary.total, 1);
+  assert.equal(managedResponse.body.data.items[0].id, String(property._id));
+  assert.equal(managedResponse.body.data.items[0].managementContractId, String(contract._id));
+  assert.equal(managedResponse.body.data.items[0].managementContract.status, "accepted");
+});
+
 test("independent agent cannot create a managed property without an active contract", async () => {
   const agent = await createUser({ firstName: "Solo", role: "independent_agent" });
   const token = signAccessToken(agent);

@@ -12,7 +12,7 @@ import { User } from "../users/user.model.js";
 import { ManagementContract } from "./management-contract.model.js";
 
 const SINGLETON_DATAFILE_KINDS = new Set(["profile-avatar", "agency-logo", "agency-cover"]);
-const MANAGEABLE_CONTRACT_STATUSES = new Set(["signed", "accepted", "active"]);
+export const MANAGEABLE_CONTRACT_STATUSES = new Set(["signed", "accepted", "active"]);
 
 const CONTRACT_STATUS_LABELS = {
   draft: "Brouillon",
@@ -87,7 +87,7 @@ const syncContractScores = async (contract) => {
 };
 
 export const isContractCurrentlyActive = (contract) => {
-  if (!contract || !MANAGEABLE_CONTRACT_STATUSES.has(contract.status)) {
+  if (!contract || !isManageableContractStatus(contract.status)) {
     return false;
   }
 
@@ -105,6 +105,8 @@ export const isContractCurrentlyActive = (contract) => {
 
   return true;
 };
+
+export const isManageableContractStatus = (status) => MANAGEABLE_CONTRACT_STATUSES.has(String(status || "").trim().toLowerCase());
 
 const resolveManagerScope = (actor) => {
   if (actor.role === "agency" || actor.role === "agency_agent") {
@@ -139,6 +141,34 @@ const buildContractActorMatch = (actor) => {
   return scope.managerRole === "agency"
     ? { managerRole: "agency", agencyId: scope.agencyId }
     : { managerRole: "independent_agent", managerUserId: scope.managerUserId };
+};
+
+const buildManageableContractActorMatch = (actor) => {
+  if (actor.role === "proprietaire") {
+    return { ownerUserId: actor.id };
+  }
+
+  if (actor.role === "agency") {
+    if (!actor.agencyId) {
+      throw new AppError("Agency context not found", StatusCodes.BAD_REQUEST);
+    }
+
+    return { managerRole: "agency", agencyId: actor.agencyId };
+  }
+
+  if (actor.role === "agency_agent") {
+    if (!actor.agencyId) {
+      throw new AppError("Agency context not found", StatusCodes.BAD_REQUEST);
+    }
+
+    return { managerRole: "agency", agencyId: actor.agencyId, responsibleAgentUserId: actor.id };
+  }
+
+  if (actor.role === "independent_agent") {
+    return { managerRole: "independent_agent", managerUserId: actor.id };
+  }
+
+  throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
 };
 
 const mapDocument = (document) => ({
@@ -565,13 +595,31 @@ export const getActiveManagementContractIdsForActor = async (actor) => {
     return [];
   }
 
-  const match = buildContractActorMatch(actor);
+  const match = buildManageableContractActorMatch(actor);
   const contracts = await ManagementContract.find({
     ...match,
     status: { $in: [...MANAGEABLE_CONTRACT_STATUSES] }
-  }).select("_id status startDate endDate").lean();
+  }).select("_id").lean();
 
-  return contracts.filter(isContractCurrentlyActive).map((contract) => String(contract._id));
+  return contracts.map((contract) => String(contract._id));
+};
+
+export const getManageableManagementContractsForActor = async (actor) => {
+  if (!["agency", "agency_agent", "independent_agent", "proprietaire"].includes(actor.role)) {
+    return [];
+  }
+
+  const match = buildManageableContractActorMatch(actor);
+
+  return ManagementContract.find({
+    ...match,
+    status: { $in: [...MANAGEABLE_CONTRACT_STATUSES] }
+  })
+    .populate("ownerUserId", "firstName lastName email phone avatar")
+    .populate("managerUserId", "firstName lastName email")
+    .populate("responsibleAgentUserId", "firstName lastName email")
+    .populate("agencyId", "name ownerUserId")
+    .lean();
 };
 
 export const getActiveManagementContractsForActor = async (actor) => {
@@ -594,8 +642,17 @@ export const getActiveManagementContractsForActor = async (actor) => {
 export const validateActiveContractForActor = async ({ contractId, actor }) => {
   const contract = await ensureContractAccess({ contractId, actor });
 
-  if (!isContractCurrentlyActive(contract)) {
+  if (!isManageableContractStatus(contract.status)) {
     throw new AppError("An accepted or active contract is required to manage this property", StatusCodes.FORBIDDEN);
+  }
+
+  if (
+    actor.role === "agency_agent" &&
+    (contract.managerRole !== "agency" ||
+      resolveComparableId(contract.agencyId) !== resolveComparableId(actor.agencyId) ||
+      resolveComparableId(contract.responsibleAgentUserId) !== resolveComparableId(actor.id))
+  ) {
+    throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
   }
 
   return contract;
