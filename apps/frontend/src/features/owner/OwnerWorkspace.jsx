@@ -22,6 +22,8 @@ import { ModalDeleteTicket } from "../../pages/private/owner/ModalDeleteTicket.j
 import { ModalManageLocataire } from "../../pages/private/owner/ModalManageLocataire.jsx";
 import { ModalManageTicket } from "../../pages/private/owner/ModalManageTicket.jsx";
 import { ModalDelete } from "../../components/layout/modals/ModalDelete.jsx";
+import { ModalPayment } from "../../pages/private/ModalPayment.jsx";
+import { PaymentToolbar, RentPaymentsTable } from "./RentPaymentsTable.jsx";
 
 const toneClassNames = {
   alert: "border-red-500/25 bg-[var(--danger-surface)] text-[var(--danger-foreground)]",
@@ -274,14 +276,23 @@ export const OwnerContractsModule = () => {
 };
 
 export const OwnerRentsModule = () => {
-  const { rentsQuery } = useOwnerWorkspace();
+  const {
+    rentsQuery,
+    tenantsManagementQuery,
+    createRentPaymentMutation,
+    updateRentPaymentMutation,
+    deleteRentPaymentMutation,
+    approveRentPaymentMutation
+  } = useOwnerWorkspace();
   const { t } = useUserPreferences();
+  const { showError, showSuccess } = useNotification();
+  const [paymentModalState, setPaymentModalState] = useState({ open: false, mode: "create", payment: null });
 
-  if (rentsQuery.isLoading) {
+  if (rentsQuery.isLoading || tenantsManagementQuery.isLoading) {
     return <DashboardLoadingState label={t("private", "owner.rents.loading", "Chargement des loyers...")} />;
   }
 
-  if (rentsQuery.isError) {
+  if (rentsQuery.isError || tenantsManagementQuery.isError) {
     return (
       <DashboardEmptyState
         title={t("private", "owner.rents.unavailableTitle", "Loyers indisponibles")}
@@ -290,28 +301,109 @@ export const OwnerRentsModule = () => {
     );
   }
 
-  const rents = rentsQuery.data || [];
+  const rents = tenantsManagementQuery.data?.payments || rentsQuery.data || [];
+  const tenantOptions = (tenantsManagementQuery.data?.tenants || []).map((tenant) => ({
+    value: tenant.id,
+    label: `${tenant.fullName || tenant.email || "Locataire"} - ${tenant.property || "Bien"}`,
+    tenantName: tenant.fullName,
+    propertyId: tenant.propertyId || tenant.managedPropertyId,
+    propertyTitle: tenant.property,
+    propertyAddress: tenant.propertyAddress || "",
+    contractId: tenant.contractId || tenant.managementContractId,
+    contractLabel: tenant.contract,
+    rentAmount: Number(tenant.rentAmount || 0),
+    currency: tenant.currency || "USD"
+  })).filter((tenant) => tenant.propertyId);
+  const isBusy = createRentPaymentMutation.isPending || updateRentPaymentMutation.isPending || deleteRentPaymentMutation.isPending || approveRentPaymentMutation.isPending;
+
+  const handleSubmitPayment = async (payload) => {
+    try {
+      if (paymentModalState.mode === "edit" && paymentModalState.payment) {
+        await updateRentPaymentMutation.mutateAsync({ paymentId: paymentModalState.payment.id, payload });
+        showSuccess(t("private", "owner.rents.paymentUpdated", "Paiement mis a jour."));
+      } else {
+        await createRentPaymentMutation.mutateAsync(payload);
+        showSuccess(t("private", "owner.rents.paymentCreated", "Paiement ajoute et synchronise."));
+      }
+
+      setPaymentModalState({ open: false, mode: "create", payment: null });
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "owner.rents.paymentSaveError", "Impossible d'enregistrer ce paiement.") });
+    }
+  };
+
+  const handleDeletePayment = async (payment) => {
+    const confirmed = window.confirm(t("private", "owner.rents.confirmDeletePayment", "Supprimer ce paiement ?"));
+    if (!confirmed) return;
+
+    try {
+      await deleteRentPaymentMutation.mutateAsync(payment.id);
+      showSuccess(t("private", "owner.rents.paymentDeleted", "Paiement supprime."));
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "owner.rents.paymentDeleteError", "Impossible de supprimer ce paiement.") });
+    }
+  };
+
+  const handleApprovePayment = async (payment) => {
+    try {
+      await approveRentPaymentMutation.mutateAsync(payment.id);
+      showSuccess(t("private", "owner.rents.paymentApproved", "Paiement approuve, quittance disponible et locataire notifie."));
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "owner.rents.paymentApproveError", "Impossible d'approuver ce paiement.") });
+    }
+  };
+
+  const handleDownloadReceipt = (payment) => {
+    const receiptNumber = payment.receiptNumber || "quittance";
+    const content = [
+      `Quittance: ${receiptNumber}`,
+      `Locataire: ${payment.tenant || "-"}`,
+      `Bien: ${payment.property || "-"}`,
+      `Echeance: ${payment.dueDateLabel || "-"}`,
+      `Montant: ${payment.paidAmountLabel || payment.amountLabel || "-"}`,
+      `Statut: ${payment.statusLabel || payment.status || "-"}`
+    ].join("\n");
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${receiptNumber}.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="space-y-4">
-      <DashboardPanel
-        title={t("private", "owner.rents.title", "Gestion de loyers")}
-        description={t("private", "owner.rents.description", "Suivi des paiements, quittances et alertes de retard sur l'ensemble de vos biens locatifs.")}
-        badge={replaceTemplate(t("private", "owner.rents.badge", "{count} retards"), { count: rents.filter((item) => item.status === "En retard").length })}
-        action={<Button type="button" variant="secondary">{t("private", "owner.rents.generateReceipts", "Generer les quittances")}</Button>}
-      >
-        <DataTable
-          columns={[
-            { key: "tenant", label: t("private", "owner.rents.columns.tenant", "Locataire") },
-            { key: "property", label: t("private", "owner.rents.columns.property", "Bien") },
-            { key: "dueDate", label: t("private", "owner.rents.columns.dueDate", "Echeance") },
-            { key: "amount", label: t("private", "owner.rents.columns.amount", "Montant") },
-            { key: "status", label: t("private", "owner.rents.columns.status", "Paiement"), render: (row) => <StatusPill value={row.status} /> }
-          ]}
-          rows={rents}
+    <>
+      <div className="space-y-4">
+        <PaymentToolbar
+          title={t("private", "owner.rents.title", "Gestion de loyers")}
+          description={t("private", "owner.rents.description", "Suivi des paiements, quittances et alertes de retard sur l'ensemble de vos biens locatifs.")}
+          actionLabel={t("private", "payments.actions.add", "Ajouter un paiement")}
+          onAction={() => setPaymentModalState({ open: true, mode: "create", payment: null })}
+          disabled={isBusy || !tenantOptions.length}
         />
-      </DashboardPanel>
-    </div>
+        <RentPaymentsTable
+          payments={rents}
+          showApprove
+          isBusy={isBusy}
+          emptyLabel={t("private", "owner.rents.empty", "Aucun paiement de loyer disponible.")}
+          onEdit={(payment) => setPaymentModalState({ open: true, mode: "edit", payment })}
+          onDelete={handleDeletePayment}
+          onDownloadReceipt={handleDownloadReceipt}
+          onApprove={handleApprovePayment}
+        />
+      </div>
+      <ModalPayment
+        open={paymentModalState.open}
+        mode={paymentModalState.mode}
+        role="owner"
+        payment={paymentModalState.payment}
+        tenantOptions={tenantOptions}
+        onClose={() => setPaymentModalState({ open: false, mode: "create", payment: null })}
+        onSubmit={handleSubmitPayment}
+        isSaving={createRentPaymentMutation.isPending || updateRentPaymentMutation.isPending}
+      />
+    </>
   );
 };
 

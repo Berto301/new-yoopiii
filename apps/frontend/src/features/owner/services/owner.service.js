@@ -15,6 +15,31 @@ export const getOwnerRents = async () => {
   return response.data.data;
 };
 
+export const getOwnerTenantsManagement = async (params = {}) => {
+  const response = await apiClient.get("/owner/tenants-management", { params });
+  return response.data.data;
+};
+
+export const createOwnerRentPayment = async (payload) => {
+  const response = await apiClient.post("/owner/rents", payload);
+  return response.data.data;
+};
+
+export const updateOwnerRentPayment = async ({ paymentId, payload }) => {
+  const response = await apiClient.patch(`/owner/rents/${paymentId}`, payload);
+  return response.data.data;
+};
+
+export const deleteOwnerRentPayment = async (paymentId) => {
+  const response = await apiClient.delete(`/owner/rents/${paymentId}`);
+  return response.data.data;
+};
+
+export const approveOwnerRentPayment = async (paymentId) => {
+  const response = await apiClient.post(`/owner/rents/${paymentId}/approve`);
+  return response.data.data;
+};
+
 export const getOwnerTenants = async () => {
   const response = await apiClient.get("/owner/tenants");
   return response.data.data;

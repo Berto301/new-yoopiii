@@ -45,7 +45,7 @@ const buildSidebarItems = (user, t) => {
       { to: "/notifications", label: t("layout", "dashboard.owner.notifications", "Notifications"), permission: null, icon: NotificationsIcon },
       { to: "/owner/rents", label: t("layout", "dashboard.owner.rents", "Gestion de loyers"), permission: null, icon: RentIcon },
       { to: "/owner/expenses", label: t("layout", "dashboard.owner.expenses", "Gestion des depenses"), permission: null, icon: ExpensesIcon },
-      { to: "/owner/tenants", label: t("layout", "dashboard.owner.tenants", "Gestion des locataires"), permission: null, icon: TenantsIcon },
+      { to: "/owner/tenants-management", label: t("layout", "dashboard.owner.tenants", "Gestion locataire"), permission: null, icon: TenantsIcon },
       { to: "/owner/properties", label: t("layout", "dashboard.owner.properties", "Mes biens"), permission: null, icon: PropertyIcon },
       { to: "/owner/maintenance", label: t("layout", "dashboard.owner.maintenance", "Gestion de maintenance"), permission: null, icon: MaintenanceIcon },
       { to: "/settings", label: t("layout", "dashboard.owner.settings", "Parametres"), permission: null, icon: SettingsIcon }

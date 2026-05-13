@@ -2,7 +2,18 @@
 
 export const getManagedProperties = async (params = {}) => {
   const response = await apiClient.get("/properties/management/mine", { params });
-  return response.data.data;
+  const data = response.data.data;
+  const uniqueItems = [];
+  const seenIds = new Set();
+
+  (data.items || []).forEach((property) => {
+    const propertyId = String(property.id || property._id || "");
+    if (!propertyId || seenIds.has(propertyId)) return;
+    seenIds.add(propertyId);
+    uniqueItems.push(property);
+  });
+
+  return { ...data, items: uniqueItems };
 };
 
 export const createManagedProperty = async (payload) => {

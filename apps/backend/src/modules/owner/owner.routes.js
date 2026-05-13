@@ -3,8 +3,11 @@ import { authorizeRoles, requireAuth } from "../../core/middleware/auth.middlewa
 import { validate } from "../../core/middleware/validate.middleware.js";
 import { asyncHandler } from "../../core/utils/async-handler.js";
 import {
+  approveOwnerRentPaymentHandler,
+  createOwnerRentPaymentHandler,
   createOwnerTenantHandler,
   createOwnerMaintenanceHandler,
+  deleteOwnerRentPaymentHandler,
   deleteOwnerTenantHandler,
   deleteOwnerMaintenanceHandler,
   getOwnerContractsHandler,
@@ -13,20 +16,25 @@ import {
   getOwnerPropertyTenantWorkspaceHandler,
   getOwnerPropertiesHandler,
   getOwnerRentsHandler,
+  getOwnerTenantsManagementHandler,
   getOwnerTenantsHandler,
   generateOwnerPropertyReceiptHandler,
   markOwnerPropertyFeedbackHandledHandler,
+  updateOwnerRentPaymentHandler,
   updateOwnerTenantHandler,
   updateOwnerMaintenanceHandler
 } from "./owner.controller.js";
 import {
+  createOwnerRentPaymentSchema,
   createOwnerTenantSchema,
   createOwnerMaintenanceTicketSchema,
   maintenanceTicketParamsSchema,
   ownerPropertyFeedbackParamsSchema,
   ownerPropertyParamsSchema,
   ownerPropertyPaymentParamsSchema,
+  ownerRentPaymentParamsSchema,
   ownerTenantParamsSchema,
+  updateOwnerRentPaymentSchema,
   updateOwnerTenantSchema,
   updateOwnerMaintenanceTicketSchema
 } from "./owner.validation.js";
@@ -39,7 +47,12 @@ ownerRouter.use(asyncHandler(authorizeRoles("proprietaire")));
 ownerRouter.get("/dashboard", asyncHandler(getOwnerDashboardHandler));
 ownerRouter.get("/contracts", asyncHandler(getOwnerContractsHandler));
 ownerRouter.get("/rents", asyncHandler(getOwnerRentsHandler));
+ownerRouter.post("/rents", validate(createOwnerRentPaymentSchema), asyncHandler(createOwnerRentPaymentHandler));
+ownerRouter.patch("/rents/:paymentId", validate(updateOwnerRentPaymentSchema), asyncHandler(updateOwnerRentPaymentHandler));
+ownerRouter.delete("/rents/:paymentId", validate(ownerRentPaymentParamsSchema), asyncHandler(deleteOwnerRentPaymentHandler));
+ownerRouter.post("/rents/:paymentId/approve", validate(ownerRentPaymentParamsSchema), asyncHandler(approveOwnerRentPaymentHandler));
 ownerRouter.get("/tenants", asyncHandler(getOwnerTenantsHandler));
+ownerRouter.get("/tenants-management", asyncHandler(getOwnerTenantsManagementHandler));
 ownerRouter.post("/tenants", validate(createOwnerTenantSchema), asyncHandler(createOwnerTenantHandler));
 ownerRouter.patch("/tenants/:tenantId", validate(updateOwnerTenantSchema), asyncHandler(updateOwnerTenantHandler));
 ownerRouter.delete("/tenants/:tenantId", validate(ownerTenantParamsSchema), asyncHandler(deleteOwnerTenantHandler));

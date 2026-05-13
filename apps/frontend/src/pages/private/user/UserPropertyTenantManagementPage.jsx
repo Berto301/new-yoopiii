@@ -7,7 +7,6 @@ import { z } from "zod";
 import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { Avatar } from "../../../components/profile/Avatar.jsx";
-import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -15,11 +14,15 @@ import { Textarea } from "../../../components/ui/Textarea.jsx";
 import { useNotification } from "../../../hooks/useNotification.js";
 import { notifyApiErrors } from "../../../lib/errors/api-error.js";
 import { SettingsTabButton } from "../settings/SettingsTabButton.jsx";
+import { ModalPayment } from "../ModalPayment.jsx";
+import { PaymentToolbar, RentPaymentsTable } from "../../../features/owner/RentPaymentsTable.jsx";
 import {
+  createUserRentPayment,
+  deleteUserRentPayment,
   createUserAssetFeedback,
   getUserAssetDetail,
   getUserRentReceipt,
-  payUserRent,
+  updateUserRentPayment,
   reportUserAssetIssue
 } from "../../../features/user-assets/services/user-assets.service.js";
 
@@ -35,15 +38,6 @@ const feedbackSchema = z.object({
   rating: z.coerce.number().min(0).max(5)
 });
 
-const PaymentStatusBadge = ({ status }) => {
-  const className = status === "paid"
-    ? "border-emerald-500/25 bg-[var(--success-surface)] text-[var(--success-foreground)]"
-    : status === "late"
-      ? "border-red-500/25 bg-[var(--danger-surface)] text-[var(--danger-foreground)]"
-      : "border-amber-500/25 bg-[var(--warning-surface)] text-[var(--warning-foreground)]";
-  return <Badge className={className}>{status}</Badge>;
-};
-
 export const UserPropertyTenantManagementPage = () => {
   const { assetId } = useParams();
   const navigate = useNavigate();
@@ -52,6 +46,7 @@ export const UserPropertyTenantManagementPage = () => {
   const { showError, showSuccess } = useNotification();
   const [activeTab, setActiveTab] = useState("rents");
   const [neighborSearch, setNeighborSearch] = useState("");
+  const [paymentModalState, setPaymentModalState] = useState({ open: false, mode: "create", payment: null });
   const detailQuery = useQuery({
     queryKey: ["user-asset-detail", "rented", assetId],
     queryFn: () => getUserAssetDetail({ assetType: "rented", assetId }),
@@ -72,13 +67,33 @@ export const UserPropertyTenantManagementPage = () => {
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 
-  const payMutation = useMutation({
-    mutationFn: payUserRent,
+  const createPaymentMutation = useMutation({
+    mutationFn: createUserRentPayment,
     onSuccess: () => {
-      showSuccess(t("private", "userTenant.messages.paymentSuccess", "Paiement synchronise et quittance disponible."));
+      showSuccess(t("private", "userTenant.messages.paymentSuccess", "Paiement ajoute et envoye au proprietaire pour approbation."));
+      setPaymentModalState({ open: false, mode: "create", payment: null });
       invalidateDetail();
     },
     onError: (error) => notifyApiErrors({ error, showError, fallbackMessage: t("private", "userTenant.messages.paymentError", "Impossible de synchroniser le paiement.") })
+  });
+
+  const updatePaymentMutation = useMutation({
+    mutationFn: updateUserRentPayment,
+    onSuccess: () => {
+      showSuccess(t("private", "userTenant.messages.paymentUpdateSuccess", "Paiement mis a jour."));
+      setPaymentModalState({ open: false, mode: "create", payment: null });
+      invalidateDetail();
+    },
+    onError: (error) => notifyApiErrors({ error, showError, fallbackMessage: t("private", "userTenant.messages.paymentError", "Impossible de synchroniser le paiement.") })
+  });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: deleteUserRentPayment,
+    onSuccess: () => {
+      showSuccess(t("private", "userTenant.messages.paymentDeleteSuccess", "Paiement supprime."));
+      invalidateDetail();
+    },
+    onError: (error) => notifyApiErrors({ error, showError, fallbackMessage: t("private", "userTenant.messages.paymentDeleteError", "Impossible de supprimer ce paiement.") })
   });
 
   const issueMutation = useMutation({
@@ -102,6 +117,13 @@ export const UserPropertyTenantManagementPage = () => {
   });
 
   const detail = detailQuery.data;
+  const paymentContext = useMemo(() => ({
+    property: detail?.property,
+    contract: detail?.contract,
+    owner: detail?.owner || detail?.previousOwner,
+    agent: detail?.agent,
+    tenant: detail?.tenant
+  }), [detail]);
   const filteredNeighbors = useMemo(() => {
     const query = neighborSearch.trim().toLowerCase();
     return (detail?.neighbors || []).filter((neighbor) => {
@@ -123,6 +145,27 @@ export const UserPropertyTenantManagementPage = () => {
     } catch (error) {
       notifyApiErrors({ error, showError, fallbackMessage: t("private", "userTenant.messages.receiptError", "Impossible de telecharger la quittance.") });
     }
+  };
+
+  const handleSubmitPayment = (payload) => {
+    if (paymentModalState.mode === "edit" && paymentModalState.payment) {
+      updatePaymentMutation.mutate({
+        assetType: "rented",
+        assetId,
+        paymentId: paymentModalState.payment.id,
+        payload
+      });
+      return;
+    }
+
+    createPaymentMutation.mutate({ assetType: "rented", assetId, payload });
+  };
+
+  const handleDeletePayment = (payment) => {
+    const confirmed = window.confirm(t("private", "userTenant.messages.confirmDeletePayment", "Supprimer ce paiement ?"));
+    if (!confirmed) return;
+
+    deletePaymentMutation.mutate({ assetType: "rented", assetId, paymentId: payment.id });
   };
 
   return (
@@ -152,32 +195,22 @@ export const UserPropertyTenantManagementPage = () => {
           </nav>
 
           {activeTab === "rents" ? (
-            <div className="grid gap-4">
-              {(detail.payments || []).map((payment) => (
-                <Card key={payment.id} className="border-[var(--border)] bg-[var(--surface)]">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <PaymentStatusBadge status={payment.status} />
-                        {payment.receiptNumber ? <Badge className="border-[var(--border)] bg-[var(--surface-muted)] text-[var(--foreground)]">{payment.receiptNumber}</Badge> : null}
-                      </div>
-                      <h3 className="mt-3 text-xl font-semibold text-[var(--foreground)]">{payment.amountLabel}</h3>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{payment.dueDateLabel}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {payment.status !== "paid" ? (
-                        <Button type="button" onClick={() => payMutation.mutate({ assetType: "rented", assetId, paymentId: payment.id })} disabled={payMutation.isPending}>
-                          {t("private", "userTenant.actions.pay", "Payer")}
-                        </Button>
-                      ) : null}
-                      <Button type="button" variant="secondary" onClick={() => handleReceiptDownload(payment.id)}>
-                        {t("private", "userTenant.actions.receipt", "Telecharger la quittance")}
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-              {!detail.payments?.length ? <Card><p className="text-sm text-[var(--muted)]">{t("private", "userTenant.emptyPayments", "Aucun paiement de loyer disponible.")}</p></Card> : null}
+            <div className="space-y-4">
+              <PaymentToolbar
+                title={t("private", "userTenant.rents.title", "Gestion de loyer")}
+                description={t("private", "userTenant.rents.description", "Ajoutez vos paiements et suivez leur validation par le proprietaire. La quittance devient disponible apres approbation.")}
+                actionLabel={t("private", "payments.actions.add", "Ajouter un paiement")}
+                onAction={() => setPaymentModalState({ open: true, mode: "create", payment: null })}
+                disabled={createPaymentMutation.isPending}
+              />
+              <RentPaymentsTable
+                payments={detail.payments || []}
+                isBusy={createPaymentMutation.isPending || updatePaymentMutation.isPending || deletePaymentMutation.isPending}
+                emptyLabel={t("private", "userTenant.emptyPayments", "Aucun paiement de loyer disponible.")}
+                onEdit={(payment) => setPaymentModalState({ open: true, mode: "edit", payment })}
+                onDelete={handleDeletePayment}
+                onDownloadReceipt={(payment) => handleReceiptDownload(payment.id)}
+              />
             </div>
           ) : null}
 
@@ -247,6 +280,16 @@ export const UserPropertyTenantManagementPage = () => {
           ) : null}
         </>
       ) : null}
+      <ModalPayment
+        open={paymentModalState.open}
+        mode={paymentModalState.mode}
+        role="tenant"
+        context={paymentContext}
+        payment={paymentModalState.payment}
+        onClose={() => setPaymentModalState({ open: false, mode: "create", payment: null })}
+        onSubmit={handleSubmitPayment}
+        isSaving={createPaymentMutation.isPending || updatePaymentMutation.isPending}
+      />
     </section>
   );
 };

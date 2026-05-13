@@ -92,6 +92,7 @@ export const AppRouter = () => (
           <Route path="/owner/rents" element={<OwnerRentsPage />} />
           <Route path="/owner/expenses" element={<OwnerExpensesPage />} />
           <Route path="/owner/tenants" element={<OwnerTenantsPage />} />
+          <Route path="/owner/tenants-management" element={<OwnerTenantsPage />} />
           <Route path="/owner/properties" element={<OwnerPropertiesPage />} />
           <Route path="/owner/properties/:propertyId/tenants" element={<OwnerPropertyTenantsManagementPage />} />
           <Route path="/owner/maintenance" element={<OwnerMaintenancePage />} />

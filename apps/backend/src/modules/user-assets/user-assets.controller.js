@@ -1,14 +1,17 @@
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 import {
+  createUserRentPayment,
   createUserAssetFeedback,
+  deleteUserRentPayment,
   getUserAssetDetail,
   getUserRentReceipt,
   listUserAssets,
   payUserRent,
   releaseUserRentedAsset,
   reportUserAssetIssue,
-  requestUserAssetSaleContract
+  requestUserAssetSaleContract,
+  updateUserRentPayment
 } from "./user-assets.service.js";
 
 export const listUserAssetsHandler = async (req, res) => {
@@ -41,6 +44,49 @@ export const releaseUserRentedAssetHandler = async (req, res) => {
 
 export const payUserRentHandler = async (req, res) => {
   const data = await payUserRent({
+    userId: req.user.id,
+    assetId: req.validated.params.assetId,
+    paymentId: req.validated.params.paymentId
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const createUserRentPaymentHandler = async (req, res) => {
+  if (req.validated.params.assetType !== "rented") {
+    throw new AppError("Seuls les biens loues acceptent des paiements", StatusCodes.BAD_REQUEST);
+  }
+
+  const data = await createUserRentPayment({
+    userId: req.user.id,
+    assetId: req.validated.params.assetId,
+    payload: req.validated.body
+  });
+
+  res.status(StatusCodes.CREATED).json({ success: true, data });
+};
+
+export const updateUserRentPaymentHandler = async (req, res) => {
+  if (req.validated.params.assetType !== "rented") {
+    throw new AppError("Seuls les biens loues acceptent des paiements", StatusCodes.BAD_REQUEST);
+  }
+
+  const data = await updateUserRentPayment({
+    userId: req.user.id,
+    assetId: req.validated.params.assetId,
+    paymentId: req.validated.params.paymentId,
+    payload: req.validated.body
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const deleteUserRentPaymentHandler = async (req, res) => {
+  if (req.validated.params.assetType !== "rented") {
+    throw new AppError("Seuls les biens loues acceptent des paiements", StatusCodes.BAD_REQUEST);
+  }
+
+  const data = await deleteUserRentPayment({
     userId: req.user.id,
     assetId: req.validated.params.assetId,
     paymentId: req.validated.params.paymentId

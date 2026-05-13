@@ -5,6 +5,8 @@ const genderSchema = z.enum(["homme", "femme", "autre"]);
 
 const maintenancePrioritySchema = z.enum(["high", "medium", "low"]);
 const maintenanceStatusSchema = z.enum(["planned", "in_progress", "closed"]);
+const paymentMethodSchema = z.enum(["cash", "bank_transfer", "mobile_money", "card", "check", "other", ""]);
+const paymentStatusSchema = z.enum(["pending", "pending_approval", "approved", "paid", "late", "rejected", "cancelled"]);
 
 const nullableObjectIdSchema = z.preprocess((value) => {
   if (value === "" || value === null || value === undefined) {
@@ -94,6 +96,45 @@ export const ownerPropertyFeedbackParamsSchema = z.object({
   params: z.object({
     propertyId: objectIdSchema,
     feedbackId: objectIdSchema
+  }),
+  body: z.object({}).optional().default({}),
+  query: z.object({}).optional().default({})
+});
+
+const rentPaymentBodySchema = z.object({
+  managedPropertyId: objectIdSchema,
+  tenantId: objectIdSchema,
+  managementContractId: nullableObjectIdSchema.optional().default(null),
+  dueDate: z.coerce.date(),
+  amount: z.coerce.number().min(0),
+  paidAmount: z.coerce.number().min(0),
+  currency: z.string().trim().min(2).max(8).transform((value) => value.toUpperCase()).default("USD"),
+  status: paymentStatusSchema.optional().default("pending_approval"),
+  paymentDate: z.coerce.date().optional().nullable().default(null),
+  paymentMethod: paymentMethodSchema.default(""),
+  paymentReference: z.string().trim().max(160).default(""),
+  proofUrl: z.string().trim().max(1000).default(""),
+  proofName: z.string().trim().max(255).default(""),
+  note: z.string().trim().max(2000).default("")
+});
+
+export const createOwnerRentPaymentSchema = z.object({
+  body: rentPaymentBodySchema,
+  params: z.object({}).optional().default({}),
+  query: z.object({}).optional().default({})
+});
+
+export const updateOwnerRentPaymentSchema = z.object({
+  body: rentPaymentBodySchema.partial().refine((value) => Object.keys(value).length > 0, "At least one field is required"),
+  params: z.object({
+    paymentId: objectIdSchema
+  }),
+  query: z.object({}).optional().default({})
+});
+
+export const ownerRentPaymentParamsSchema = z.object({
+  params: z.object({
+    paymentId: objectIdSchema
   }),
   body: z.object({}).optional().default({}),
   query: z.object({}).optional().default({})

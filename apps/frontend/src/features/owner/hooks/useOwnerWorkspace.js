@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getManagedProperties } from "../../properties/services/property.service.js";
 import {
+  approveOwnerRentPayment,
+  createOwnerRentPayment,
   createOwnerTenant,
   createOwnerMaintenanceTicket,
+  deleteOwnerRentPayment,
   deleteOwnerTenant,
   deleteOwnerMaintenanceTicket,
   getOwnerContracts,
@@ -10,7 +13,9 @@ import {
   getOwnerMaintenance,
   getOwnerProperties,
   getOwnerRents,
+  getOwnerTenantsManagement,
   getOwnerTenants,
+  updateOwnerRentPayment,
   updateOwnerTenant,
   updateOwnerMaintenanceTicket
 } from "../services/owner.service.js";
@@ -30,6 +35,11 @@ export const useOwnerWorkspace = () => {
   const rentsQuery = useQuery({
     queryKey: ["owner-rents"],
     queryFn: getOwnerRents
+  });
+
+  const tenantsManagementQuery = useQuery({
+    queryKey: ["owner-tenants-management"],
+    queryFn: getOwnerTenantsManagement
   });
 
   const tenantsQuery = useQuery({
@@ -58,6 +68,8 @@ export const useOwnerWorkspace = () => {
   const invalidateOwnerWorkspace = () => {
     queryClient.invalidateQueries({ queryKey: ["owner-dashboard"] });
     queryClient.invalidateQueries({ queryKey: ["owner-tenants"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-tenants-management"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-rents"] });
     queryClient.invalidateQueries({ queryKey: ["owner-maintenance"] });
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
     queryClient.invalidateQueries({ queryKey: ["property-publications"] });
@@ -74,6 +86,26 @@ export const useOwnerWorkspace = () => {
 
   const createTenantMutation = useMutation({
     mutationFn: createOwnerTenant,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
+  const createRentPaymentMutation = useMutation({
+    mutationFn: createOwnerRentPayment,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
+  const updateRentPaymentMutation = useMutation({
+    mutationFn: updateOwnerRentPayment,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
+  const deleteRentPaymentMutation = useMutation({
+    mutationFn: deleteOwnerRentPayment,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
+  const approveRentPaymentMutation = useMutation({
+    mutationFn: approveOwnerRentPayment,
     onSuccess: invalidateOwnerWorkspace
   });
 
@@ -101,11 +133,16 @@ export const useOwnerWorkspace = () => {
     dashboardQuery,
     contractsQuery,
     rentsQuery,
+    tenantsManagementQuery,
     tenantsQuery,
     propertiesQuery,
     maintenanceQuery,
     managedPropertiesQuery,
     createTenantMutation,
+    createRentPaymentMutation,
+    updateRentPaymentMutation,
+    deleteRentPaymentMutation,
+    approveRentPaymentMutation,
     updateTenantMutation,
     deleteTenantMutation,
     createMaintenanceTicketMutation,

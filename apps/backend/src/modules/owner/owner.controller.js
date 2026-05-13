@@ -1,14 +1,20 @@
 import { StatusCodes } from "http-status-codes";
 import {
+  approveOwnerRentPayment,
+  createOwnerRentPayment,
   createOwnerTenant,
   createOwnerMaintenanceTicket,
+  deleteOwnerRentPayment,
   deleteOwnerTenant,
   deleteOwnerMaintenanceTicket,
   generateOwnerPropertyReceipt,
   getOwnerDashboard,
+  getOwnerRentPayments,
   getOwnerPropertyTenantWorkspace,
+  getOwnerTenantsManagement,
   getOwnerWorkspace,
   markOwnerPropertyFeedbackHandled,
+  updateOwnerRentPayment,
   updateOwnerTenant,
   updateOwnerMaintenanceTicket
 } from "./owner.service.js";
@@ -34,13 +40,58 @@ export const getOwnerContractsHandler = async (req, res) => {
 };
 
 export const getOwnerRentsHandler = async (req, res) => {
-  const workspace = await getOwnerWorkspace({ ownerId: req.user.id });
-  res.status(StatusCodes.OK).json({ success: true, data: workspace.rents });
+  const data = await getOwnerRentPayments({ ownerId: req.user.id, filters: req.query || {} });
+  res.status(StatusCodes.OK).json({ success: true, data });
 };
 
 export const getOwnerTenantsHandler = async (req, res) => {
   const workspace = await getOwnerWorkspace({ ownerId: req.user.id });
   res.status(StatusCodes.OK).json({ success: true, data: workspace.tenants });
+};
+
+export const getOwnerTenantsManagementHandler = async (req, res) => {
+  const data = await getOwnerTenantsManagement({ ownerId: req.user.id, filters: req.query || {} });
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const createOwnerRentPaymentHandler = async (req, res) => {
+  const data = await createOwnerRentPayment({
+    ownerId: req.user.id,
+    actorId: req.user.id,
+    payload: req.validated.body,
+    source: "owner"
+  });
+
+  res.status(StatusCodes.CREATED).json({ success: true, data });
+};
+
+export const updateOwnerRentPaymentHandler = async (req, res) => {
+  const data = await updateOwnerRentPayment({
+    ownerId: req.user.id,
+    paymentId: req.validated.params.paymentId,
+    payload: req.validated.body
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const deleteOwnerRentPaymentHandler = async (req, res) => {
+  const data = await deleteOwnerRentPayment({
+    ownerId: req.user.id,
+    paymentId: req.validated.params.paymentId,
+    actorId: req.user.id
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
+};
+
+export const approveOwnerRentPaymentHandler = async (req, res) => {
+  const data = await approveOwnerRentPayment({
+    ownerId: req.user.id,
+    paymentId: req.validated.params.paymentId
+  });
+
+  res.status(StatusCodes.OK).json({ success: true, data });
 };
 
 export const createOwnerTenantHandler = async (req, res) => {

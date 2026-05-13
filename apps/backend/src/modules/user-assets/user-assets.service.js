@@ -75,14 +75,50 @@ const mapContract = (contract) => contract
 
 const mapPayment = (payment) => ({
   id: toId(payment),
+  tenantId: toId(payment.tenantId),
+  propertyId: toId(payment.managedPropertyId),
+  contractId: toId(payment.managementContractId),
   dueDate: payment.dueDate || null,
   dueDateLabel: formatDate(payment.dueDate),
   amount: Number(payment.amount || 0),
   amountLabel: formatMoney(payment.amount, payment.currency || "USD"),
+  paidAmount: Number(payment.paidAmount || payment.amount || 0),
+  paidAmountLabel: formatMoney(payment.paidAmount || payment.amount, payment.currency || "USD"),
+  payment: formatMoney(payment.paidAmount || payment.amount, payment.currency || "USD"),
   currency: payment.currency || "USD",
   status: payment.status || "pending",
+  statusLabel: ({
+    paid: "Paye",
+    approved: "Approuve",
+    pending: "En attente",
+    pending_approval: "En attente d'approbation",
+    late: "En retard",
+    rejected: "Rejete",
+    cancelled: "Annule"
+  })[payment.status || "pending"] || payment.status,
+  paymentDate: payment.paymentDate || null,
+  paymentDateLabel: payment.paymentDate ? formatDate(payment.paymentDate) : "-",
+  paymentMethod: payment.paymentMethod || "",
+  paymentMethodLabel: ({
+    cash: "Especes",
+    bank_transfer: "Virement",
+    mobile_money: "Mobile money",
+    card: "Carte bancaire",
+    check: "Cheque",
+    other: "Autre",
+    "": "-"
+  })[payment.paymentMethod || ""] || payment.paymentMethod || "-",
+  paymentReference: payment.paymentReference || "",
+  proofUrl: payment.proofUrl || "",
+  proofName: payment.proofName || "",
+  note: payment.note || "",
   receiptNumber: payment.receiptNumber || "",
-  canDownloadReceipt: Boolean(payment.receiptNumber || payment.status === "paid")
+  tenant: payment.tenantId?.fullName || "",
+  property: payment.managedPropertyId?.title || "",
+  canApprove: false,
+  canEdit: !["paid", "approved"].includes(payment.status),
+  canDelete: !["paid", "approved"].includes(payment.status),
+  canDownloadReceipt: Boolean(payment.receiptNumber && ["paid", "approved"].includes(payment.status))
 });
 
 const mapFeedback = (feedback) => ({
@@ -289,7 +325,11 @@ export const getUserAssetDetail = async ({ userId, assetType, assetId }) => {
   const access = await resolveAssetAccess({ userId, assetType, assetId });
   const [payments, maintenance, feedbacks, neighbors] = await Promise.all([
     access.tenant
-      ? OwnerRentPayment.find({ tenantId: access.tenant._id }).sort({ dueDate: -1 }).lean()
+      ? OwnerRentPayment.find({ tenantId: access.tenant._id })
+          .populate("managedPropertyId", "title address")
+          .populate("managementContractId", "reference")
+          .sort({ dueDate: -1 })
+          .lean()
       : Promise.resolve([]),
     OwnerMaintenanceTicket.find({ managedPropertyId: access.property._id }).sort({ createdAt: -1 }).limit(8).lean(),
     UserPropertyFeedback.find({ propertyId: access.property._id, userId })
@@ -377,6 +417,100 @@ export const releaseUserRentedAsset = async ({ userId, assetId }) => {
   return { success: true, releasedPropertyId: toId(access.property), terminatedContractId: toId(contract) };
 };
 
+const ensureEditableTenantPayment = async ({ userId, assetId, paymentId }) => {
+  const access = await resolveAssetAccess({ userId, assetType: "rented", assetId });
+  const payment = await OwnerRentPayment.findOne({ _id: paymentId, tenantId: access.tenant._id });
+
+  if (!payment) {
+    throw new AppError("Paiement introuvable", StatusCodes.NOT_FOUND);
+  }
+
+  if (["approved", "paid"].includes(payment.status)) {
+    throw new AppError("Un paiement approuve ne peut plus etre modifie", StatusCodes.BAD_REQUEST);
+  }
+
+  return { access, payment };
+};
+
+export const createUserRentPayment = async ({ userId, assetId, payload }) => {
+  const access = await resolveAssetAccess({ userId, assetType: "rented", assetId });
+  const contract = access.contract || {};
+  const amount = Number(contract.financial?.rentAmount || access.property.price || 0);
+  const currency = contract.financial?.currency || access.property.currency || "USD";
+
+  const payment = await OwnerRentPayment.create({
+    ownerId: access.ownerId,
+    managedPropertyId: access.property._id,
+    tenantId: access.tenant._id,
+    managementContractId: contract._id || access.tenant.managementContractId || null,
+    dueDate: payload.dueDate,
+    amount,
+    paidAmount: payload.paidAmount,
+    currency,
+    status: "pending_approval",
+    paymentDate: payload.paymentDate,
+    paymentMethod: payload.paymentMethod || "",
+    paymentReference: payload.paymentReference || "",
+    proofUrl: payload.proofUrl || "",
+    proofName: payload.proofName || "",
+    note: payload.note || "",
+    createdByUserId: userId,
+    source: "tenant"
+  });
+
+  await createNotifications([
+    createNotificationPayload({
+      userId: access.ownerId,
+      type: "rent.payment.created_by_tenant",
+      title: "Paiement ajoute par le locataire",
+      body: `${access.tenant.fullName} a ajoute un paiement pour ${access.property.title}.`,
+      data: {
+        paymentId: toId(payment),
+        propertyId: toId(access.property),
+        tenantId: toId(access.tenant),
+        contractId: toId(contract),
+        actorId: userId
+      }
+    })
+  ]);
+
+  return mapPayment(payment);
+};
+
+export const updateUserRentPayment = async ({ userId, assetId, paymentId, payload }) => {
+  const { payment } = await ensureEditableTenantPayment({ userId, assetId, paymentId });
+
+  Object.assign(payment, {
+    ...payload,
+    status: payment.status === "late" ? "late" : "pending_approval"
+  });
+  await payment.save();
+
+  return mapPayment(payment);
+};
+
+export const deleteUserRentPayment = async ({ userId, assetId, paymentId }) => {
+  const { access, payment } = await ensureEditableTenantPayment({ userId, assetId, paymentId });
+  await OwnerRentPayment.deleteOne({ _id: payment._id });
+
+  await createNotifications([
+    createNotificationPayload({
+      userId: access.ownerId,
+      type: "rent.payment.deleted_by_tenant",
+      title: "Paiement supprime par le locataire",
+      body: `${access.tenant.fullName} a supprime un paiement pour ${access.property.title}.`,
+      data: {
+        paymentId,
+        propertyId: toId(access.property),
+        tenantId: toId(access.tenant),
+        actorId: userId
+      }
+    })
+  ]);
+
+  return { success: true, paymentId };
+};
+
 export const payUserRent = async ({ userId, assetId, paymentId }) => {
   await resolveAssetAccess({ userId, assetType: "rented", assetId });
   const payment = await OwnerRentPayment.findById(paymentId);
@@ -427,6 +561,10 @@ export const getUserRentReceipt = async ({ userId, assetId, paymentId }) => {
   const tenant = await OwnerTenant.findOne({ _id: payment.tenantId, linkedUserId: userId }).lean();
   if (!tenant) {
     throw new AppError("Quittance non autorisee", StatusCodes.FORBIDDEN);
+  }
+
+  if (!["approved", "paid"].includes(payment.status) || !payment.receiptNumber) {
+    throw new AppError("La quittance est disponible uniquement apres approbation du paiement", StatusCodes.BAD_REQUEST);
   }
 
   return {

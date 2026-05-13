@@ -20,6 +20,21 @@ export const payUserRent = async ({ assetType, assetId, paymentId }) => {
   return response.data.data;
 };
 
+export const createUserRentPayment = async ({ assetType, assetId, payload }) => {
+  const response = await apiClient.post(`/user-assets/properties/${assetType}/${assetId}/payments`, payload);
+  return response.data.data;
+};
+
+export const updateUserRentPayment = async ({ assetType, assetId, paymentId, payload }) => {
+  const response = await apiClient.patch(`/user-assets/properties/${assetType}/${assetId}/payments/${paymentId}`, payload);
+  return response.data.data;
+};
+
+export const deleteUserRentPayment = async ({ assetType, assetId, paymentId }) => {
+  const response = await apiClient.delete(`/user-assets/properties/${assetType}/${assetId}/payments/${paymentId}`);
+  return response.data.data;
+};
+
 export const getUserRentReceipt = async ({ assetType, assetId, paymentId }) => {
   const response = await apiClient.get(`/user-assets/properties/${assetType}/${assetId}/payments/${paymentId}/receipt`);
   return response.data.data;

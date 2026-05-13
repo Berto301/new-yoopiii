@@ -403,7 +403,17 @@ export const PropertyManagementPage = () => {
 
   const isOwnerRole = user?.role === "proprietaire";
   const managed = managedPropertiesQuery.data;
-  const items = managed?.items || [];
+  const items = useMemo(() => {
+    const byId = new Map();
+
+    (managed?.items || []).forEach((property) => {
+      const propertyId = String(property.id || property._id || "");
+      if (!propertyId || byId.has(propertyId)) return;
+      byId.set(propertyId, property);
+    });
+
+    return [...byId.values()];
+  }, [managed?.items]);
   const summary = managed?.summary || {};
   const allContracts = useMemo(
     () => mergeContractsById(contractsQuery.data || [], activeContractsQuery.data || []),
@@ -483,7 +493,7 @@ export const PropertyManagementPage = () => {
   };
 
   const handleManageTenants = (property) => {
-    navigate(`/owner/properties/${property.id}/tenants`);
+    navigate(`/owner/tenants-management?propertyId=${property.id}`);
   };
 
   const closeContractModal = () => {
