@@ -864,6 +864,33 @@ const buildManagedPropertyPayload = async ({ actor, payload, existingProperty = 
   };
 };
 
+const syncLinkedContractFinancialFromProperty = async (property) => {
+  if (!property?.managementContractId) {
+    return;
+  }
+
+  const financialUpdate = {
+    "financial.rentAmount": Number(property.price || 0),
+    "financial.currency": property.currency || "USD"
+  };
+
+  if (property.purpose === "sale") {
+    financialUpdate["financial.paymentFrequency"] = "one_time";
+    financialUpdate["financial.charges"] = 0;
+    financialUpdate["financial.deposit"] = 0;
+  }
+
+  await ManagementContract.updateOne(
+    { _id: property.managementContractId },
+    {
+      $set: {
+        propertyId: property._id,
+        ...financialUpdate
+      }
+    }
+  );
+};
+
 export const searchNearbyProperties = async (filters, currentUser = null) => {
   const page = filters.page || 1;
   const limit = filters.limit || 20;
@@ -1164,6 +1191,7 @@ export const createManagedProperty = async ({ actor, payload }) => {
   if (!["agency", "agency_agent", "independent_agent", "proprietaire"].includes(actor.role)) throw new AppError("Forbidden", StatusCodes.FORBIDDEN);
   const data = await buildManagedPropertyPayload({ actor, payload });
   const property = await Property.create(data);
+  await syncLinkedContractFinancialFromProperty(property);
   await syncPropertyScore(property);
   await createPropertyActivityNotification({
     property,
@@ -1184,6 +1212,7 @@ export const updateManagedProperty = async ({ propertyId, actor, payload }) => {
   const data = await buildManagedPropertyPayload({ actor, payload, existingProperty: property });
   Object.assign(property, data);
   await property.save();
+  await syncLinkedContractFinancialFromProperty(property);
   await syncPropertyScore(property);
 
   await createPropertyActivityNotification({

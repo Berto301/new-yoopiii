@@ -5,6 +5,7 @@ export const OWNER_EXPENSE_TYPES = ["actif", "passif"];
 export const OWNER_EXPENSE_CATEGORIES = [
   "rent_income",
   "sale_price",
+  "visit_fee",
   "property_income",
   "maintenance",
   "administrative",
@@ -37,7 +38,7 @@ const ownerExpenseSchema = new mongoose.Schema(
     budgetAmount: { type: Number, default: 0, min: 0 },
     source: {
       type: String,
-      enum: ["manual", "maintenance", "contract", "property"],
+      enum: ["manual", "maintenance", "contract", "property", "rent_payment", "visit_fee"],
       default: "manual",
       index: true
     },

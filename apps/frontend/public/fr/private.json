@@ -1,6 +1,7 @@
 {
   "common": {
-    "back": "Retour"
+    "back": "Retour",
+    "cancel": "Annuler"
   },
   "priorities": {
     "low": "Basse",
@@ -96,7 +97,14 @@
     "issue": {
       "title": "Objet",
       "description": "Detail",
-      "priority": "Priorite"
+      "priority": "Priorite",
+      "propertyFallback": "Bien selectionne",
+      "listTitle": "Demandes de maintenance",
+      "listDescription": "Les problemes signales ici arrivent dans la gestion de maintenance du proprietaire.",
+      "newTicket": "Signaler un probleme",
+      "modalTitle": "Signaler un probleme",
+      "ticketFallback": "Ticket de maintenance",
+      "empty": "Aucune demande de maintenance pour ce bien."
     },
     "neighbors": {
       "search": "Recherche",
@@ -104,8 +112,22 @@
     },
     "feedback": {
       "subject": "Objet",
+      "subjectPlaceholder": "Objet du feedback",
       "rating": "Note",
-      "message": "Feedback"
+      "message": "Feedback",
+      "messagePlaceholder": "Expliquez votre experience ou votre remarque sur ce bien.",
+      "modalTitle": "Nouveau feedback",
+      "save": "Envoyer",
+      "listTitle": "Feedbacks envoyes",
+      "listDescription": "Gardez l'historique de vos retours et de leur traitement par le proprietaire.",
+      "newFeedback": "Nouveau feedback",
+      "handled": "Traite",
+      "new": "Nouveau",
+      "noSubject": "Feedback sans objet",
+      "empty": "Aucun feedback envoye pour ce bien.",
+      "validation": {
+        "message": "Message trop court"
+      }
     }
   },
   "ownerPropertyTenancy": {
@@ -347,7 +369,15 @@
       "crm.pipeline.lost": "CRM perdu",
       "crm.metadata.updated": "Metadonnee CRM",
       "crm.agent.changed": "Agent CRM",
-      "contract.request.created": "Demande de contrat"
+      "contract.request.created": "Demande de contrat",
+      "user.maintenance.reported": "Maintenance signalee",
+      "user.maintenance.reported.agent": "Maintenance locataire",
+      "user.property.feedback": "Feedback bien",
+      "user.property.feedback.agent": "Feedback bien",
+      "owner.maintenance.created": "Ticket maintenance",
+      "owner.maintenance.updated": "Maintenance mise a jour",
+      "owner.maintenance.deleted": "Maintenance supprimee",
+      "owner.feedback.handled": "Feedback traite"
     },
     "crm": {
       "propertyFallback": "ce bien",
@@ -725,6 +755,7 @@
       "categories": {
         "rent_income": "Revenus locatifs",
         "sale_price": "Prix de vente",
+        "visit_fee": "Droits de visite",
         "property_income": "Autres revenus",
         "maintenance": "Entretien",
         "administrative": "Administratif",
@@ -777,7 +808,8 @@
       "modal": {
         "createTitle": "Nouveau mouvement",
         "editTitle": "Modifier le mouvement",
-        "syncedMaintenance": "Ligne synchronisee avec la maintenance. Le montant et le budget restent ajustables."
+        "syncedMaintenance": "Ligne synchronisee avec la maintenance. Le montant et le budget restent ajustables.",
+        "syncedAutomatic": "Ligne synchronisee automatiquement. Modifiez la source d'origine pour ajuster ce mouvement."
       },
       "chart": {
         "title": "Repartition par categorie",
@@ -792,7 +824,11 @@
         "alerts": "Alertes budget"
       },
       "sources": {
-        "maintenance": "Maintenance"
+        "maintenance": "Maintenance",
+        "rentPayment": "Loyer approuve",
+        "property": "Bien",
+        "contract": "Contrat",
+        "visitFee": "Droit de visite"
       }
     },
     "tenants": {
@@ -860,9 +896,68 @@
         "property": "Bien",
         "priority": "Priorite",
         "assignee": "Intervenant",
+        "totalPrice": "Prix total",
         "lastUpdate": "Derniere mise a jour",
         "status": "Statut",
         "actions": "Actions"
+      },
+      "status": {
+        "planned": "Planifie",
+        "inProgress": "En cours",
+        "closed": "Cloture"
+      },
+      "modal": {
+        "createTitle": "Nouveau ticket",
+        "editTitle": "Modifier le ticket",
+        "create": "Creer",
+        "save": "Enregistrer"
+      },
+      "fields": {
+        "property": "Bien concerne",
+        "ticketTitle": "Titre du ticket",
+        "assignee": "Intervenant",
+        "priority": "Priorite",
+        "status": "Statut",
+        "lastUpdate": "Derniere mise a jour",
+        "totalPrice": "Prix total de l'entretien",
+        "currency": "Devise",
+        "details": "Details"
+      },
+      "placeholders": {
+        "property": "Selectionner un bien",
+        "noProperty": "Aucun bien disponible",
+        "repair": "Selectionner une ou plusieurs reparations",
+        "assignee": "Entreprise ou technicien",
+        "details": "Precisez le contexte, l'urgence et ce qui doit etre traite."
+      },
+      "validation": {
+        "property": "Le bien est requis",
+        "title": "Selectionnez au moins une reparation",
+        "description": "Le detail doit contenir au moins 10 caracteres",
+        "amount": "Le prix total doit etre positif",
+        "lastUpdate": "La date de mise a jour est requise"
+      },
+      "repairs": {
+        "perimeterFence": "Cloture perimetrique",
+        "landLeveling": "Nivellement du terrain",
+        "landDrainage": "Drainage du terrain",
+        "clearing": "Debroussaillage",
+        "markingAccess": "Balisage et acces",
+        "plumbingLeak": "Fuite plomberie",
+        "interiorPainting": "Peinture interieure",
+        "roofRepair": "Reparation toiture",
+        "electricalInstallation": "Installation electrique",
+        "wallHumidity": "Humidite murale",
+        "doorsWindows": "Menuiserie portes/fenetres",
+        "waterHeater": "Chauffe-eau",
+        "bathroomLeak": "Fuite salle de bain",
+        "lockAccess": "Serrure et acces",
+        "airConditioning": "Climatisation",
+        "socketsLights": "Prises et luminaires",
+        "tileRepair": "Reparation carrelage",
+        "technicalCleaning": "Nettoyage technique",
+        "generalCheck": "Controle general",
+        "smallRepair": "Petite reparation"
       },
       "edit": "Modifier",
       "delete": "Supprimer"

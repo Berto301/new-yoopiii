@@ -197,6 +197,7 @@ export const ModalManageProperty = ({
   const [activeUploadTarget, setActiveUploadTarget] = useState(null);
 
   const threeDUrl = watch("threeDUrl");
+  const selectedManagementContractId = watch("managementContractId");
   const has3DView = Boolean(String(threeDUrl || "").trim());
   const latitude = watch("location.lat");
   const longitude = watch("location.lng");
@@ -213,6 +214,10 @@ export const ModalManageProperty = ({
 
   const { fields, append, remove } = useFieldArray({ control, name: "media" });
   const title = mode === "edit" ? "Modifier le Bien" : "Ajout de Bien";
+  const selectedContractOption = useMemo(
+    () => contractOptions.find((item) => item.value === selectedManagementContractId) || null,
+    [contractOptions, selectedManagementContractId]
+  );
 
   useEffect(() => {
     if (isMapsLoaded && window.google?.maps) {
@@ -230,6 +235,23 @@ export const ModalManageProperty = ({
       setActiveUploadTarget(null);
     }
   }, [defaultValues, open, reset]);
+
+  useEffect(() => {
+    if (!open || mode === "edit" || !selectedContractOption?.financial) {
+      return;
+    }
+
+    const contractAmount = Number(selectedContractOption.financial.rentAmount || 0);
+    const contractCurrency = selectedContractOption.financial.currency;
+
+    if (contractAmount > 0) {
+      setValue("price", String(contractAmount), { shouldDirty: true, shouldValidate: true });
+    }
+
+    if (contractCurrency) {
+      setValue("currency", String(contractCurrency).toUpperCase(), { shouldDirty: true, shouldValidate: true });
+    }
+  }, [mode, open, selectedContractOption, setValue]);
 
   useEffect(() => {
     if (!open || markerPosition || !navigator.geolocation) {

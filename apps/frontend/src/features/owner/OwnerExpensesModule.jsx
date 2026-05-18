@@ -82,11 +82,19 @@ export const OwnerExpensesModule = () => {
   const categoryLabels = useMemo(() => ({
     rent_income: t("private", "owner.expenses.categories.rent_income", "Revenus locatifs"),
     sale_price: t("private", "owner.expenses.categories.sale_price", "Prix de vente"),
+    visit_fee: t("private", "owner.expenses.categories.visit_fee", "Droits de visite"),
     property_income: t("private", "owner.expenses.categories.property_income", "Autres revenus"),
     maintenance: t("private", "owner.expenses.categories.maintenance", "Entretien"),
     administrative: t("private", "owner.expenses.categories.administrative", "Administratif"),
     commission: t("private", "owner.expenses.categories.commission", "Commission"),
     other_charge: t("private", "owner.expenses.categories.other_charge", "Autres charges")
+  }), [t]);
+  const sourceLabels = useMemo(() => ({
+    maintenance: t("private", "owner.expenses.sources.maintenance", "Maintenance"),
+    rent_payment: t("private", "owner.expenses.sources.rentPayment", "Loyer approuve"),
+    property: t("private", "owner.expenses.sources.property", "Bien"),
+    contract: t("private", "owner.expenses.sources.contract", "Contrat"),
+    visit_fee: t("private", "owner.expenses.sources.visitFee", "Droit de visite")
   }), [t]);
 
   const monthLabels = useMemo(() => ({
@@ -322,9 +330,9 @@ export const OwnerExpensesModule = () => {
                           <div className="space-y-2">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-sm font-semibold text-white">{expense.label}</p>
-                              {expense.source === "maintenance" ? (
+                              {expense.source !== "manual" ? (
                                 <Badge className="border-sky-400/30 bg-sky-500/10 text-sky-100">
-                                  {t("private", "owner.expenses.sources.maintenance", "Maintenance")}
+                                  {sourceLabels[expense.source] || expense.source}
                                 </Badge>
                               ) : null}
                               {expense.isBudgetExceeded ? (
@@ -372,7 +380,7 @@ export const OwnerExpensesModule = () => {
                             >
                               {t("private", "owner.expenses.actions.edit", "Modifier")}
                             </Button>
-                            {expense.source !== "maintenance" ? (
+                            {expense.source === "manual" ? (
                               <Button
                                 type="button"
                                 variant="ghost"

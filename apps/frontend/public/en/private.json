@@ -1,6 +1,7 @@
 {
   "common": {
-    "back": "Back"
+    "back": "Back",
+    "cancel": "Cancel"
   },
   "priorities": {
     "low": "Low",
@@ -96,7 +97,14 @@
     "issue": {
       "title": "Subject",
       "description": "Details",
-      "priority": "Priority"
+      "priority": "Priority",
+      "propertyFallback": "Selected property",
+      "listTitle": "Maintenance requests",
+      "listDescription": "Issues reported here arrive in the owner's maintenance management.",
+      "newTicket": "Report an issue",
+      "modalTitle": "Report an issue",
+      "ticketFallback": "Maintenance ticket",
+      "empty": "No maintenance request for this property."
     },
     "neighbors": {
       "search": "Search",
@@ -104,8 +112,22 @@
     },
     "feedback": {
       "subject": "Subject",
+      "subjectPlaceholder": "Feedback subject",
       "rating": "Rating",
-      "message": "Feedback"
+      "message": "Feedback",
+      "messagePlaceholder": "Describe your experience or remark about this property.",
+      "modalTitle": "New feedback",
+      "save": "Send",
+      "listTitle": "Sent feedback",
+      "listDescription": "Keep the history of your feedback and how the owner handles it.",
+      "newFeedback": "New feedback",
+      "handled": "Handled",
+      "new": "New",
+      "noSubject": "Feedback without subject",
+      "empty": "No feedback sent for this property.",
+      "validation": {
+        "message": "Message is too short"
+      }
     }
   },
   "ownerPropertyTenancy": {
@@ -220,7 +242,15 @@
       "crm.pipeline.lost": "CRM lost",
       "crm.metadata.updated": "CRM metadata",
       "crm.agent.changed": "CRM agent",
-      "contract.request.created": "Contract request"
+      "contract.request.created": "Contract request",
+      "user.maintenance.reported": "Reported maintenance",
+      "user.maintenance.reported.agent": "Tenant maintenance",
+      "user.property.feedback": "Property feedback",
+      "user.property.feedback.agent": "Property feedback",
+      "owner.maintenance.created": "Maintenance ticket",
+      "owner.maintenance.updated": "Maintenance updated",
+      "owner.maintenance.deleted": "Maintenance deleted",
+      "owner.feedback.handled": "Feedback handled"
     },
     "crm": {
       "propertyFallback": "this property",
@@ -598,6 +628,7 @@
       "categories": {
         "rent_income": "Rental income",
         "sale_price": "Sale price",
+        "visit_fee": "Visit fees",
         "property_income": "Other income",
         "maintenance": "Maintenance",
         "administrative": "Administrative",
@@ -650,7 +681,8 @@
       "modal": {
         "createTitle": "New movement",
         "editTitle": "Edit movement",
-        "syncedMaintenance": "Line synchronized with maintenance. Amount and budget remain adjustable."
+        "syncedMaintenance": "Line synchronized with maintenance. Amount and budget remain adjustable.",
+        "syncedAutomatic": "Automatically synchronized line. Edit the source record to adjust this movement."
       },
       "chart": {
         "title": "Breakdown by category",
@@ -665,7 +697,11 @@
         "alerts": "Budget alerts"
       },
       "sources": {
-        "maintenance": "Maintenance"
+        "maintenance": "Maintenance",
+        "rentPayment": "Approved rent",
+        "property": "Property",
+        "contract": "Contract",
+        "visitFee": "Visit fee"
       }
     },
     "tenants": {
@@ -733,9 +769,68 @@
         "property": "Property",
         "priority": "Priority",
         "assignee": "Assignee",
+        "totalPrice": "Total price",
         "lastUpdate": "Last update",
         "status": "Status",
         "actions": "Actions"
+      },
+      "status": {
+        "planned": "Planned",
+        "inProgress": "In progress",
+        "closed": "Closed"
+      },
+      "modal": {
+        "createTitle": "New ticket",
+        "editTitle": "Edit ticket",
+        "create": "Create",
+        "save": "Save"
+      },
+      "fields": {
+        "property": "Related property",
+        "ticketTitle": "Ticket title",
+        "assignee": "Assignee",
+        "priority": "Priority",
+        "status": "Status",
+        "lastUpdate": "Last update",
+        "totalPrice": "Total maintenance price",
+        "currency": "Currency",
+        "details": "Details"
+      },
+      "placeholders": {
+        "property": "Select a property",
+        "noProperty": "No property available",
+        "repair": "Select one or more repairs",
+        "assignee": "Company or technician",
+        "details": "Describe the context, urgency, and what needs to be handled."
+      },
+      "validation": {
+        "property": "Property is required",
+        "title": "Select at least one repair",
+        "description": "Details must contain at least 10 characters",
+        "amount": "Total price must be positive",
+        "lastUpdate": "Update date is required"
+      },
+      "repairs": {
+        "perimeterFence": "Perimeter fence",
+        "landLeveling": "Land leveling",
+        "landDrainage": "Land drainage",
+        "clearing": "Clearing",
+        "markingAccess": "Marking and access",
+        "plumbingLeak": "Plumbing leak",
+        "interiorPainting": "Interior painting",
+        "roofRepair": "Roof repair",
+        "electricalInstallation": "Electrical installation",
+        "wallHumidity": "Wall dampness",
+        "doorsWindows": "Doors/windows carpentry",
+        "waterHeater": "Water heater",
+        "bathroomLeak": "Bathroom leak",
+        "lockAccess": "Lock and access",
+        "airConditioning": "Air conditioning",
+        "socketsLights": "Sockets and lighting",
+        "tileRepair": "Tile repair",
+        "technicalCleaning": "Technical cleaning",
+        "generalCheck": "General check",
+        "smallRepair": "Small repair"
       },
       "edit": "Edit",
       "delete": "Delete"

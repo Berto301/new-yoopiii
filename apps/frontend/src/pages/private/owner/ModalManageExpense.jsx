@@ -12,6 +12,7 @@ import { Textarea } from "../../../components/ui/Textarea.jsx";
 const CATEGORY_TYPE_MAP = {
   rent_income: "actif",
   sale_price: "actif",
+  visit_fee: "actif",
   property_income: "actif",
   maintenance: "passif",
   administrative: "passif",
@@ -47,6 +48,7 @@ export const ModalManageExpense = ({
     category: z.enum([
       "rent_income",
       "sale_price",
+      "visit_fee",
       "property_income",
       "maintenance",
       "administrative",
@@ -94,6 +96,7 @@ export const ModalManageExpense = ({
   const categoryOptions = useMemo(() => [
     { value: "rent_income", label: t("private", "owner.expenses.categories.rent_income", "Revenus locatifs") },
     { value: "sale_price", label: t("private", "owner.expenses.categories.sale_price", "Prix de vente") },
+    { value: "visit_fee", label: t("private", "owner.expenses.categories.visit_fee", "Droits de visite") },
     { value: "property_income", label: t("private", "owner.expenses.categories.property_income", "Autres revenus") },
     { value: "maintenance", label: t("private", "owner.expenses.categories.maintenance", "Entretien") },
     { value: "administrative", label: t("private", "owner.expenses.categories.administrative", "Administratif") },
@@ -110,6 +113,7 @@ export const ModalManageExpense = ({
   const selectedCategory = watch("category");
   const selectedType = CATEGORY_TYPE_MAP[selectedCategory] || "passif";
   const selectedProperty = propertyOptions.find((option) => option.value === selectedPropertyId) || null;
+  const isSyncedExpense = expense?.source && expense.source !== "manual";
 
   return (
     <ModalLayout
@@ -130,9 +134,11 @@ export const ModalManageExpense = ({
       isSaving={isSaving}
     >
       <div className="space-y-5">
-        {isSyncedMaintenance ? (
+        {isSyncedExpense ? (
           <div className="rounded-2xl border border-sky-400/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-            {t("private", "owner.expenses.modal.syncedMaintenance", "Ligne synchronisee avec la maintenance. Le montant vient du ticket et la devise suit vos parametres.")}
+            {isSyncedMaintenance
+              ? t("private", "owner.expenses.modal.syncedMaintenance", "Ligne synchronisee avec la maintenance. Le montant vient du ticket et la devise suit vos parametres.")
+              : t("private", "owner.expenses.modal.syncedAutomatic", "Ligne synchronisee automatiquement. Modifiez la source d'origine pour ajuster ce mouvement.")}
           </div>
         ) : null}
 
@@ -145,7 +151,7 @@ export const ModalManageExpense = ({
                 label={t("private", "owner.expenses.fields.label", "Libelle")}
                 placeholder={t("private", "owner.expenses.placeholders.label", "Ex: Loyer avril, peinture facade...")}
                 error={errors.label?.message}
-                disabled={isSyncedMaintenance}
+                disabled={isSyncedExpense}
                 {...field}
               />
             )}
@@ -177,7 +183,7 @@ export const ModalManageExpense = ({
                 onChange={(option) => field.onChange(option?.value || "")}
                 placeholder={t("private", "owner.expenses.placeholders.property", "Selectionner un bien")}
                 error={errors.propertyId?.message}
-                disabled={isSyncedMaintenance}
+                disabled={isSyncedExpense}
               />
             )}
           />
@@ -191,7 +197,7 @@ export const ModalManageExpense = ({
                 value={categoryOptions.find((option) => option.value === field.value) || null}
                 onChange={(option) => field.onChange(option?.value || "maintenance")}
                 error={errors.category?.message}
-                disabled={isSyncedMaintenance}
+                disabled={isSyncedExpense}
               />
             )}
           />
@@ -208,8 +214,8 @@ export const ModalManageExpense = ({
                 min="0"
                 step="1"
                 error={errors.amount?.message}
-                disabled={isSyncedMaintenance}
-                className={isSyncedMaintenance ? "cursor-not-allowed bg-stone-950/90 text-stone-500" : undefined}
+                disabled={isSyncedExpense}
+                className={isSyncedExpense ? "cursor-not-allowed bg-stone-950/90 text-stone-500" : undefined}
                 {...field}
               />
             )}
@@ -249,7 +255,7 @@ export const ModalManageExpense = ({
                 label={t("private", "owner.expenses.fields.date", "Date")}
                 type="date"
                 error={errors.expenseDate?.message}
-                disabled={isSyncedMaintenance}
+                disabled={isSyncedExpense}
                 {...field}
               />
             )}
@@ -265,7 +271,7 @@ export const ModalManageExpense = ({
               placeholder={t("private", "owner.expenses.placeholders.description", "Notes internes, facture, contexte ou reference.")}
               rows={4}
               error={errors.description?.message}
-              disabled={isSyncedMaintenance}
+              disabled={isSyncedExpense}
               {...field}
             />
           )}

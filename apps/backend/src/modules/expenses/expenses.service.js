@@ -1,11 +1,14 @@
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "../../core/errors/app-error.js";
 import { createNotifications } from "../notifications/notifications.service.js";
+import { Message } from "../conversations/message.model.js";
+import { ManagementContract } from "../contracts/management-contract.model.js";
 import { OwnerMaintenanceTicket } from "../owner/models/owner-maintenance-ticket.model.js";
+import { OwnerRentPayment } from "../owner/models/owner-rent-payment.model.js";
 import { Property } from "../properties/property.model.js";
 import { OwnerExpense } from "./expense.model.js";
 
-const ASSET_CATEGORIES = new Set(["rent_income", "sale_price", "property_income"]);
+const ASSET_CATEGORIES = new Set(["rent_income", "sale_price", "visit_fee", "property_income"]);
 const LIABILITY_CATEGORIES = new Set(["maintenance", "administrative", "commission", "other_charge"]);
 
 const formatCurrency = (value, currency = "USD") =>
@@ -316,8 +319,306 @@ const syncMaintenanceExpenses = async ({ ownerId }) => {
   );
 };
 
+const syncApprovedRentPaymentExpenses = async ({ ownerId }) => {
+  const payments = await OwnerRentPayment.find({
+    ownerId,
+    status: { $in: ["approved", "paid"] }
+  })
+    .populate("managedPropertyId", "title currency")
+    .populate("tenantId", "fullName email")
+    .sort({ approvedAt: -1, paymentDate: -1, dueDate: -1 })
+    .lean();
+
+  const paymentIds = payments.map((payment) => payment._id);
+
+  await OwnerExpense.deleteMany({
+    ownerId,
+    source: "rent_payment",
+    ...(paymentIds.length ? { sourceRefId: { $nin: paymentIds } } : {})
+  });
+
+  await Promise.all(
+    payments.map((payment) => {
+      const managedPropertyId = payment.managedPropertyId?._id || payment.managedPropertyId || null;
+      const propertyLabel = payment.managedPropertyId?.title || "Bien non renseigne";
+      const tenantLabel = payment.tenantId?.fullName || payment.tenantId?.email || "Locataire";
+      const paidAmount = Number(payment.paidAmount || payment.amount || 0);
+      const currency = payment.currency || payment.managedPropertyId?.currency || "USD";
+
+      return OwnerExpense.findOneAndUpdate(
+        {
+          ownerId,
+          source: "rent_payment",
+          sourceRefId: payment._id
+        },
+        {
+          $set: {
+            ownerId,
+            propertyId: managedPropertyId,
+            propertyLabel,
+            label: `Loyer - ${propertyLabel}`,
+            description: `Paiement approuve${tenantLabel ? ` - ${tenantLabel}` : ""}${payment.receiptNumber ? ` (${payment.receiptNumber})` : ""}.`,
+            type: "actif",
+            category: "rent_income",
+            amount: paidAmount,
+            currency,
+            expenseDate: payment.paymentDate || payment.approvedAt || payment.dueDate || payment.updatedAt || payment.createdAt,
+            source: "rent_payment",
+            sourceRefId: payment._id,
+            sourceMeta: {
+              paymentStatus: payment.status,
+              tenantId: payment.tenantId?._id ? String(payment.tenantId._id) : payment.tenantId ? String(payment.tenantId) : null,
+              receiptNumber: payment.receiptNumber || "",
+              dueDate: payment.dueDate,
+              paidAmount,
+              currency
+            },
+            updatedBy: ownerId
+          },
+          $setOnInsert: {
+            budgetAmount: 0,
+            createdBy: ownerId
+          }
+        },
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true
+        }
+      );
+    })
+  );
+};
+
+const syncSoldPropertySalePriceExpenses = async ({ ownerId }) => {
+  const properties = await Property.find({
+    ownerUserId: ownerId,
+    purpose: "sale",
+    status: "sold",
+    price: { $gt: 0 }
+  })
+    .select("title price currency updatedAt createdAt")
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
+
+  const propertyIds = properties.map((property) => property._id);
+
+  await OwnerExpense.deleteMany({
+    ownerId,
+    source: "property",
+    category: "sale_price",
+    ...(propertyIds.length ? { sourceRefId: { $nin: propertyIds } } : {})
+  });
+
+  await Promise.all(
+    properties.map((property) =>
+      OwnerExpense.findOneAndUpdate(
+        {
+          ownerId,
+          source: "property",
+          sourceRefId: property._id,
+          category: "sale_price"
+        },
+        {
+          $set: {
+            ownerId,
+            propertyId: property._id,
+            propertyLabel: property.title || "Bien non renseigne",
+            label: `Prix de vente - ${property.title || "Bien"}`,
+            description: "Prix de vente synchronise depuis le bien vendu.",
+            type: "actif",
+            category: "sale_price",
+            amount: Number(property.price || 0),
+            currency: property.currency || "USD",
+            expenseDate: property.updatedAt || property.createdAt || new Date(),
+            source: "property",
+            sourceRefId: property._id,
+            sourceMeta: {
+              propertyStatus: "sold",
+              price: Number(property.price || 0),
+              currency: property.currency || "USD"
+            },
+            updatedBy: ownerId
+          },
+          $setOnInsert: {
+            budgetAmount: 0,
+            createdBy: ownerId
+          }
+        },
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true
+        }
+      )
+    )
+  );
+};
+
+const syncContractChargeExpenses = async ({ ownerId }) => {
+  const contracts = await ManagementContract.find({
+    ownerUserId: ownerId,
+    status: { $in: ["signed", "accepted", "active"] },
+    "financial.charges": { $gt: 0 }
+  })
+    .populate("propertyId", "title currency")
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
+
+  const contractIds = contracts.map((contract) => contract._id);
+
+  await OwnerExpense.deleteMany({
+    ownerId,
+    source: "contract",
+    category: "other_charge",
+    ...(contractIds.length ? { sourceRefId: { $nin: contractIds } } : {})
+  });
+
+  await Promise.all(
+    contracts.map((contract) => {
+      const propertyId = contract.propertyId?._id || contract.propertyId || null;
+      const propertyLabel = contract.propertyId?.title || contract.propertyReference || "Portefeuille";
+      const charges = Number(contract.financial?.charges || 0);
+      const currency = contract.financial?.currency || contract.propertyId?.currency || "USD";
+
+      return OwnerExpense.findOneAndUpdate(
+        {
+          ownerId,
+          source: "contract",
+          sourceRefId: contract._id,
+          category: "other_charge"
+        },
+        {
+          $set: {
+            ownerId,
+            propertyId,
+            propertyLabel,
+            label: `Charges proprietaire - ${contract.reference}`,
+            description: `Charges synchronisees depuis le contrat ${contract.reference}.`,
+            type: "passif",
+            category: "other_charge",
+            amount: charges,
+            currency,
+            expenseDate: contract.updatedAt || contract.startDate || contract.createdAt || new Date(),
+            source: "contract",
+            sourceRefId: contract._id,
+            sourceMeta: {
+              contractReference: contract.reference,
+              contractStatus: contract.status,
+              charges,
+              currency
+            },
+            updatedBy: ownerId
+          },
+          $setOnInsert: {
+            budgetAmount: 0,
+            createdBy: ownerId
+          }
+        },
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true
+        }
+      );
+    })
+  );
+};
+
+const syncVisitFeeExpenses = async ({ ownerId }) => {
+  const properties = await Property.find({ ownerUserId: ownerId })
+    .select("title currency")
+    .lean();
+  const propertyById = new Map(properties.map((property) => [String(property._id), property]));
+  const propertyIds = [...propertyById.keys()];
+
+  if (!propertyIds.length) {
+    await OwnerExpense.deleteMany({ ownerId, source: "visit_fee" });
+    return;
+  }
+
+  const messages = await Message.find({
+    messageType: "appointment",
+    isDeleted: { $ne: true },
+    "appointment.propertyId": { $in: propertyIds },
+    "appointment.visitFee": { $gt: 0 },
+    "appointment.status": { $ne: "cancelled" }
+  })
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
+
+  const messageIds = messages.map((message) => message._id);
+
+  await OwnerExpense.deleteMany({
+    ownerId,
+    source: "visit_fee",
+    ...(messageIds.length ? { sourceRefId: { $nin: messageIds } } : {})
+  });
+
+  await Promise.all(
+    messages.map((message) => {
+      const appointment = message.appointment || {};
+      const property = propertyById.get(String(appointment.propertyId || ""));
+      const visitFee = Number(appointment.visitFee || 0);
+      const expenseDate = appointment.date ? new Date(appointment.date) : message.updatedAt || message.createdAt || new Date();
+      const currency = property?.currency || "MGA";
+
+      return OwnerExpense.findOneAndUpdate(
+        {
+          ownerId,
+          source: "visit_fee",
+          sourceRefId: message._id
+        },
+        {
+          $set: {
+            ownerId,
+            propertyId: property?._id || appointment.propertyId || null,
+            propertyLabel: property?.title || appointment.propertyTitle || "Bien non renseigne",
+            label: `Droit de visite - ${property?.title || appointment.propertyTitle || "Bien"}`,
+            description: appointment.description || "Frais de visite synchronise depuis le rendez-vous.",
+            type: "actif",
+            category: "visit_fee",
+            amount: visitFee,
+            currency,
+            expenseDate: Number.isNaN(expenseDate.getTime()) ? message.updatedAt || message.createdAt || new Date() : expenseDate,
+            source: "visit_fee",
+            sourceRefId: message._id,
+            sourceMeta: {
+              appointmentId: appointment.appointmentId || "",
+              appointmentStatus: appointment.status || "",
+              clientId: appointment.clientId || null,
+              visitFee,
+              currency
+            },
+            updatedBy: ownerId
+          },
+          $setOnInsert: {
+            budgetAmount: 0,
+            createdBy: ownerId
+          }
+        },
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true
+        }
+      );
+    })
+  );
+};
+
+const syncAutomaticOwnerExpenses = async ({ ownerId }) => {
+  await Promise.all([
+    syncMaintenanceExpenses({ ownerId }),
+    syncApprovedRentPaymentExpenses({ ownerId }),
+    syncSoldPropertySalePriceExpenses({ ownerId }),
+    syncContractChargeExpenses({ ownerId }),
+    syncVisitFeeExpenses({ ownerId })
+  ]);
+};
+
 export const listOwnerExpenses = async ({ ownerId, filters = {} }) => {
-  await syncMaintenanceExpenses({ ownerId });
+  await syncAutomaticOwnerExpenses({ ownerId });
 
   const expenses = await hydrateExpense(
     OwnerExpense.find(buildExpenseQuery({ ownerId, filters })).sort({ expenseDate: -1, updatedAt: -1 })
@@ -330,7 +631,7 @@ export const listOwnerExpenses = async ({ ownerId, filters = {} }) => {
 };
 
 export const getOwnerExpenseById = async ({ ownerId, expenseId }) => {
-  await syncMaintenanceExpenses({ ownerId });
+  await syncAutomaticOwnerExpenses({ ownerId });
 
   const expense = await hydrateExpense(OwnerExpense.findOne({ _id: expenseId, ownerId }));
 

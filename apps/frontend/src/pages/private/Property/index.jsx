@@ -426,7 +426,8 @@ export const PropertyManagementPage = () => {
   const contractOptions = useMemo(
     () => manageableContracts.map((contract) => ({
       label: `${contract.reference} - ${contract.owner?.fullName || "Proprietaire"} - ${getContractStatusLabel(String(contract.status || "").trim().toLowerCase(), t)}`,
-      value: contract.id
+      value: contract.id,
+      financial: contract.financial || null
     })),
     [manageableContracts, t]
   );

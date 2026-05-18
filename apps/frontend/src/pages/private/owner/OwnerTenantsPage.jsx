@@ -77,6 +77,7 @@ export const OwnerTenantsPage = () => {
     queryClient.invalidateQueries({ queryKey: ["owner-tenants-management"] });
     queryClient.invalidateQueries({ queryKey: ["owner-rents"] });
     queryClient.invalidateQueries({ queryKey: ["owner-dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-expenses"] });
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 

@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { useUserPreferences } from "../../../app/preferences/UserPreferencesProvider.jsx";
+import { ModalLayout } from "../../../components/layout/modals/ModalLayout.jsx";
 import { SectionTitle } from "../../../components/shared/SectionTitle.jsx";
 import { Avatar } from "../../../components/profile/Avatar.jsx";
+import { Badge } from "../../../components/ui/Badge.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Input } from "../../../components/ui/Input.jsx";
@@ -15,6 +17,7 @@ import { useNotification } from "../../../hooks/useNotification.js";
 import { notifyApiErrors } from "../../../lib/errors/api-error.js";
 import { SettingsTabButton } from "../settings/SettingsTabButton.jsx";
 import { ModalPayment } from "../ModalPayment.jsx";
+import { ModalManageTicket } from "../owner/ModalManageTicket.jsx";
 import { PaymentToolbar, RentPaymentsTable } from "../../../features/owner/RentPaymentsTable.jsx";
 import {
   createUserRentPayment,
@@ -26,17 +29,98 @@ import {
   reportUserAssetIssue
 } from "../../../features/user-assets/services/user-assets.service.js";
 
-const issueSchema = z.object({
-  title: z.string().trim().min(3, "Titre requis"),
-  description: z.string().trim().min(10, "Description trop courte"),
-  priority: z.enum(["low", "medium", "high"])
-});
-
-const feedbackSchema = z.object({
+const buildFeedbackSchema = (t) => z.object({
   subject: z.string().trim().max(160).default(""),
-  message: z.string().trim().min(10, "Message trop court"),
+  message: z.string().trim().min(10, t("private", "userTenant.feedback.validation.message", "Message trop court")),
   rating: z.coerce.number().min(0).max(5)
 });
+
+const ticketStatusClassName = {
+  planned: "border-sky-500/25 bg-[var(--info-surface)] text-[var(--info-foreground)]",
+  in_progress: "border-amber-500/25 bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
+  closed: "border-emerald-500/25 bg-[var(--success-surface)] text-[var(--success-foreground)]"
+};
+
+const priorityClassName = {
+  high: "border-red-500/25 bg-[var(--danger-surface)] text-[var(--danger-foreground)]",
+  medium: "border-amber-500/25 bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
+  low: "border-sky-500/25 bg-[var(--info-surface)] text-[var(--info-foreground)]"
+};
+
+const feedbackStatusClassName = {
+  handled: "border-emerald-500/25 bg-[var(--success-surface)] text-[var(--success-foreground)]",
+  new: "border-sky-500/25 bg-[var(--info-surface)] text-[var(--info-foreground)]"
+};
+
+const FeedbackModal = ({ open, onClose, onSubmit, isSaving }) => {
+  const { t } = useUserPreferences();
+  const feedbackSchema = useMemo(() => buildFeedbackSchema(t), [t]);
+  const { control, handleSubmit, reset, formState: { errors } } = useForm({
+    resolver: zodResolver(feedbackSchema),
+    defaultValues: { subject: "", message: "", rating: 4 }
+  });
+
+  useEffect(() => {
+    if (open) {
+      reset({ subject: "", message: "", rating: 4 });
+    }
+  }, [open, reset]);
+
+  return (
+    <ModalLayout
+      open={open}
+      title={t("private", "userTenant.feedback.modalTitle", "Nouveau feedback")}
+      onClose={onClose}
+      onSave={handleSubmit((values) => onSubmit({ ...values, rating: Number(values.rating || 0) }))}
+      saveLabel={t("private", "userTenant.feedback.save", "Envoyer")}
+      cancelLabel={t("private", "common.cancel", "Annuler")}
+      isSaving={isSaving}
+    >
+      <div className="space-y-5">
+        <Controller
+          control={control}
+          name="subject"
+          render={({ field }) => (
+            <Input
+              label={t("private", "userTenant.feedback.subject", "Objet")}
+              placeholder={t("private", "userTenant.feedback.subjectPlaceholder", "Objet du feedback")}
+              error={errors.subject?.message}
+              {...field}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="rating"
+          render={({ field }) => (
+            <Input
+              type="number"
+              min="0"
+              max="5"
+              step="1"
+              label={t("private", "userTenant.feedback.rating", "Note")}
+              error={errors.rating?.message}
+              {...field}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="message"
+          render={({ field }) => (
+            <Textarea
+              label={t("private", "userTenant.feedback.message", "Feedback")}
+              placeholder={t("private", "userTenant.feedback.messagePlaceholder", "Expliquez votre experience ou votre remarque sur ce bien.")}
+              rows={6}
+              error={errors.message?.message}
+              {...field}
+            />
+          )}
+        />
+      </div>
+    </ModalLayout>
+  );
+};
 
 export const UserPropertyTenantManagementPage = () => {
   const { assetId } = useParams();
@@ -46,6 +130,8 @@ export const UserPropertyTenantManagementPage = () => {
   const { showError, showSuccess } = useNotification();
   const [activeTab, setActiveTab] = useState("rents");
   const [neighborSearch, setNeighborSearch] = useState("");
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [paymentModalState, setPaymentModalState] = useState({ open: false, mode: "create", payment: null });
   const detailQuery = useQuery({
     queryKey: ["user-asset-detail", "rented", assetId],
@@ -53,17 +139,10 @@ export const UserPropertyTenantManagementPage = () => {
     enabled: Boolean(assetId)
   });
 
-  const issueForm = useForm({
-    resolver: zodResolver(issueSchema),
-    defaultValues: { title: "", description: "", priority: "medium" }
-  });
-  const feedbackForm = useForm({
-    resolver: zodResolver(feedbackSchema),
-    defaultValues: { subject: "", message: "", rating: 4 }
-  });
-
   const invalidateDetail = () => {
     queryClient.invalidateQueries({ queryKey: ["user-asset-detail", "rented", assetId] });
+    queryClient.invalidateQueries({ queryKey: ["owner-maintenance"] });
+    queryClient.invalidateQueries({ queryKey: ["owner-dashboard"] });
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
   };
 
@@ -100,7 +179,7 @@ export const UserPropertyTenantManagementPage = () => {
     mutationFn: reportUserAssetIssue,
     onSuccess: () => {
       showSuccess(t("private", "userTenant.messages.issueSuccess", "Probleme signale au proprietaire."));
-      issueForm.reset({ title: "", description: "", priority: "medium" });
+      setIssueModalOpen(false);
       invalidateDetail();
     },
     onError: (error) => notifyApiErrors({ error, showError, fallbackMessage: t("private", "userTenant.messages.issueError", "Impossible de signaler ce probleme.") })
@@ -110,7 +189,7 @@ export const UserPropertyTenantManagementPage = () => {
     mutationFn: createUserAssetFeedback,
     onSuccess: () => {
       showSuccess(t("private", "userTenant.messages.feedbackSuccess", "Feedback envoye."));
-      feedbackForm.reset({ subject: "", message: "", rating: 4 });
+      setFeedbackModalOpen(false);
       invalidateDetail();
     },
     onError: (error) => notifyApiErrors({ error, showError, fallbackMessage: t("private", "userTenant.messages.feedbackError", "Impossible d'envoyer le feedback.") })
@@ -124,6 +203,15 @@ export const UserPropertyTenantManagementPage = () => {
     agent: detail?.agent,
     tenant: detail?.tenant
   }), [detail]);
+  const userPropertyOptions = useMemo(() => {
+    if (!detail?.property?.id) return [];
+
+    return [{
+      value: detail.property.id,
+      label: detail.property.title || t("private", "userTenant.issue.propertyFallback", "Bien selectionne"),
+      type: detail.property.type
+    }];
+  }, [detail?.property, t]);
   const filteredNeighbors = useMemo(() => {
     const query = neighborSearch.trim().toLowerCase();
     return (detail?.neighbors || []).filter((neighbor) => {
@@ -160,6 +248,35 @@ export const UserPropertyTenantManagementPage = () => {
 
     createPaymentMutation.mutate({ assetType: "rented", assetId, payload });
   };
+
+  const handleSubmitIssue = (values) => {
+    issueMutation.mutate({
+      assetType: "rented",
+      assetId,
+      payload: {
+        title: values.title,
+        description: values.description,
+        priority: values.priority
+      }
+    });
+  };
+
+  const getTicketStatusLabel = (status) => ({
+    planned: t("private", "owner.maintenance.status.planned", "Planifie"),
+    in_progress: t("private", "owner.maintenance.status.inProgress", "En cours"),
+    closed: t("private", "owner.maintenance.status.closed", "Cloture")
+  })[status] || status;
+
+  const getPriorityLabel = (priority) => ({
+    high: t("private", "priorities.high", "Haute"),
+    medium: t("private", "priorities.medium", "Moyenne"),
+    low: t("private", "priorities.low", "Basse")
+  })[priority] || priority;
+
+  const getFeedbackStatusLabel = (status) => ({
+    handled: t("private", "userTenant.feedback.handled", "Traite"),
+    new: t("private", "userTenant.feedback.new", "Nouveau")
+  })[status] || status;
 
   const handleDeletePayment = (payment) => {
     const confirmed = window.confirm(t("private", "userTenant.messages.confirmDeletePayment", "Supprimer ce paiement ?"));
@@ -215,29 +332,41 @@ export const UserPropertyTenantManagementPage = () => {
           ) : null}
 
           {activeTab === "issue" ? (
-            <Card className="border-[var(--border)] bg-[var(--surface)]">
-              <form className="grid gap-4" onSubmit={issueForm.handleSubmit((values) => issueMutation.mutate({ assetType: "rented", assetId, payload: values }))}>
-                <Input label={t("private", "userTenant.issue.title", "Objet")} error={issueForm.formState.errors.title?.message} {...issueForm.register("title")} />
-                <Textarea label={t("private", "userTenant.issue.description", "Detail")} error={issueForm.formState.errors.description?.message} rows={6} {...issueForm.register("description")} />
-                <Controller
-                  control={issueForm.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <label className="block space-y-2">
-                      <span className="text-sm font-medium text-[var(--foreground)]">{t("private", "userTenant.issue.priority", "Priorite")}</span>
-                      <select {...field} className="w-full rounded-2xl border border-[var(--border)] bg-[var(--input-bg)] px-4 py-3 text-sm text-[var(--foreground)] outline-none">
-                        <option value="low">{t("private", "priorities.low", "Basse")}</option>
-                        <option value="medium">{t("private", "priorities.medium", "Moyenne")}</option>
-                        <option value="high">{t("private", "priorities.high", "Haute")}</option>
-                      </select>
-                    </label>
-                  )}
-                />
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={issueMutation.isPending}>{t("private", "userTenant.actions.report", "Signaler")}</Button>
+            <div className="space-y-4">
+              <Card className="border-[var(--border)] bg-[var(--surface)]">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-[var(--foreground)]">{t("private", "userTenant.issue.listTitle", "Demandes de maintenance")}</h3>
+                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t("private", "userTenant.issue.listDescription", "Les problemes signales ici arrivent dans la gestion de maintenance du proprietaire.")}</p>
+                  </div>
+                  <Button type="button" disabled={issueMutation.isPending || !userPropertyOptions.length} onClick={() => setIssueModalOpen(true)}>
+                    {t("private", "userTenant.issue.newTicket", "Signaler un probleme")}
+                  </Button>
                 </div>
-              </form>
-            </Card>
+              </Card>
+              <div className="space-y-3">
+                {(detail.maintenance || []).map((ticket) => (
+                  <Card key={ticket.id} className="border-[var(--border)] bg-[var(--surface)] shadow-none">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap gap-2">
+                          <Badge className={ticketStatusClassName[ticket.status] || ticketStatusClassName.planned}>{getTicketStatusLabel(ticket.status)}</Badge>
+                          <Badge className={priorityClassName[ticket.priority] || priorityClassName.medium}>{getPriorityLabel(ticket.priority)}</Badge>
+                        </div>
+                        <h3 className="mt-3 break-words text-lg font-semibold text-[var(--foreground)]">{ticket.title || t("private", "userTenant.issue.ticketFallback", "Ticket de maintenance")}</h3>
+                        {ticket.description ? <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{ticket.description}</p> : null}
+                      </div>
+                      <span className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">{ticket.createdAtLabel || "-"}</span>
+                    </div>
+                  </Card>
+                ))}
+                {!detail.maintenance?.length ? (
+                  <Card className="border-dashed border-[var(--border)] text-center shadow-none">
+                    <p className="text-sm text-[var(--muted)]">{t("private", "userTenant.issue.empty", "Aucune demande de maintenance pour ce bien.")}</p>
+                  </Card>
+                ) : null}
+              </div>
+            </div>
           ) : null}
 
           {activeTab === "neighbors" ? (
@@ -261,22 +390,41 @@ export const UserPropertyTenantManagementPage = () => {
           ) : null}
 
           {activeTab === "feedback" ? (
-            <Card className="border-[var(--border)] bg-[var(--surface)]">
-              <form className="grid gap-4" onSubmit={feedbackForm.handleSubmit((values) => feedbackMutation.mutate({ assetType: "rented", assetId, payload: values }))}>
-                <Input label={t("private", "userTenant.feedback.subject", "Objet")} {...feedbackForm.register("subject")} />
-                <Controller
-                  control={feedbackForm.control}
-                  name="rating"
-                  render={({ field }) => (
-                    <Input type="number" min="0" max="5" step="1" label={t("private", "userTenant.feedback.rating", "Note")} error={feedbackForm.formState.errors.rating?.message} {...field} />
-                  )}
-                />
-                <Textarea label={t("private", "userTenant.feedback.message", "Feedback")} rows={6} error={feedbackForm.formState.errors.message?.message} {...feedbackForm.register("message")} />
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={feedbackMutation.isPending}>{t("private", "userTenant.actions.feedback", "Envoyer")}</Button>
+            <div className="space-y-4">
+              <Card className="border-[var(--border)] bg-[var(--surface)]">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-[var(--foreground)]">{t("private", "userTenant.feedback.listTitle", "Feedbacks envoyes")}</h3>
+                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t("private", "userTenant.feedback.listDescription", "Gardez l'historique de vos retours et de leur traitement par le proprietaire.")}</p>
+                  </div>
+                  <Button type="button" disabled={feedbackMutation.isPending} onClick={() => setFeedbackModalOpen(true)}>
+                    {t("private", "userTenant.feedback.newFeedback", "Nouveau feedback")}
+                  </Button>
                 </div>
-              </form>
-            </Card>
+              </Card>
+              <div className="space-y-3">
+                {(detail.feedbacks || []).map((feedback) => (
+                  <Card key={feedback.id} className="border-[var(--border)] bg-[var(--surface)] shadow-none">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap gap-2">
+                          <Badge className={feedbackStatusClassName[feedback.status] || feedbackStatusClassName.new}>{getFeedbackStatusLabel(feedback.status)}</Badge>
+                          <Badge className="border-[var(--border)] bg-[var(--surface-muted)] text-[var(--foreground)]">{feedback.rating}/5</Badge>
+                        </div>
+                        <h3 className="mt-3 break-words text-lg font-semibold text-[var(--foreground)]">{feedback.subject || t("private", "userTenant.feedback.noSubject", "Feedback sans objet")}</h3>
+                        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{feedback.message}</p>
+                      </div>
+                      <span className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">{feedback.createdAtLabel || "-"}</span>
+                    </div>
+                  </Card>
+                ))}
+                {!detail.feedbacks?.length ? (
+                  <Card className="border-dashed border-[var(--border)] text-center shadow-none">
+                    <p className="text-sm text-[var(--muted)]">{t("private", "userTenant.feedback.empty", "Aucun feedback envoye pour ce bien.")}</p>
+                  </Card>
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </>
       ) : null}
@@ -289,6 +437,25 @@ export const UserPropertyTenantManagementPage = () => {
         onClose={() => setPaymentModalState({ open: false, mode: "create", payment: null })}
         onSubmit={handleSubmitPayment}
         isSaving={createPaymentMutation.isPending || updatePaymentMutation.isPending}
+      />
+      <ModalManageTicket
+        open={issueModalOpen}
+        mode="create"
+        propertyOptions={userPropertyOptions}
+        propertySelectDisabled
+        showOwnerFields={false}
+        descriptionRequired
+        titleOverride={t("private", "userTenant.issue.modalTitle", "Signaler un probleme")}
+        saveLabelOverride={t("private", "userTenant.actions.report", "Signaler")}
+        onClose={() => setIssueModalOpen(false)}
+        onSubmit={handleSubmitIssue}
+        isSaving={issueMutation.isPending}
+      />
+      <FeedbackModal
+        open={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+        onSubmit={(payload) => feedbackMutation.mutate({ assetType: "rented", assetId, payload })}
+        isSaving={feedbackMutation.isPending}
       />
     </section>
   );
