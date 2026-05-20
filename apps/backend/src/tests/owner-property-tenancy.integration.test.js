@@ -205,3 +205,55 @@ test("owner cannot generate a receipt for another property from the selected pro
 
   assert.ok(tenantNotification);
 });
+
+test("tenant can download a receipt only after the owner approves the payment", async () => {
+  const owner = await createUser();
+  const tenantUser = await createUser({ role: "user", firstName: "Mira", lastName: "Tenant" });
+  const property = await createRentalProperty({ owner, title: "Receipt download property" });
+  const tenant = await OwnerTenant.create({
+    ownerId: owner._id,
+    managedPropertyId: property._id,
+    linkedUserId: tenantUser._id,
+    firstName: "Mira",
+    lastName: "Tenant",
+    fullName: "Mira Tenant",
+    email: tenantUser.email,
+    sexe: "femme"
+  });
+  const payment = await OwnerRentPayment.create({
+    ownerId: owner._id,
+    managedPropertyId: property._id,
+    tenantId: tenant._id,
+    dueDate: new Date("2026-05-01T00:00:00.000Z"),
+    amount: 600,
+    paidAmount: 600,
+    currency: "USD",
+    status: "pending_approval"
+  });
+
+  const app = createApp();
+  const ownerToken = signAccessToken(owner);
+  const tenantToken = signAccessToken(tenantUser);
+
+  const blockedReceiptResponse = await request(app)
+    .get(`/api/v1/user-assets/properties/rented/${tenant._id}/payments/${payment._id}/receipt`)
+    .set("Authorization", `Bearer ${tenantToken}`);
+
+  assert.equal(blockedReceiptResponse.statusCode, 400);
+
+  const approvalResponse = await request(app)
+    .post(`/api/v1/owner/rents/${payment._id}/approve`)
+    .set("Authorization", `Bearer ${ownerToken}`);
+
+  assert.equal(approvalResponse.statusCode, 200);
+  assert.equal(approvalResponse.body.data.canDownloadReceipt, true);
+  assert.ok(approvalResponse.body.data.receiptNumber);
+
+  const receiptResponse = await request(app)
+    .get(`/api/v1/user-assets/properties/rented/${tenant._id}/payments/${payment._id}/receipt`)
+    .set("Authorization", `Bearer ${tenantToken}`);
+
+  assert.equal(receiptResponse.statusCode, 200);
+  assert.equal(receiptResponse.body.data.receiptNumber, approvalResponse.body.data.receiptNumber);
+  assert.match(receiptResponse.body.data.content, /Preuve: paiement deja effectue/);
+});

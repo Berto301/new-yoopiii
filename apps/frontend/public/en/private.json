@@ -86,7 +86,7 @@
       "feedback": "Send"
     },
     "messages": {
-      "paymentSuccess": "Payment synchronized and receipt available.",
+      "paymentSuccess": "Payment added and sent to the owner for approval.",
       "paymentError": "Unable to synchronize the payment.",
       "issueSuccess": "Issue reported to the owner.",
       "issueError": "Unable to report this issue.",
@@ -139,9 +139,13 @@
     "loading": "Loading tenant management...",
     "error": "Unable to load this tenant management space.",
     "status": {
+      "approved": "Approved",
       "paid": "Paid",
       "late": "Late",
-      "pending": "Pending"
+      "pending": "Pending",
+      "pendingApproval": "Pending approval",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
     },
     "tabs": {
       "dashboard": "Rent dashboard",
@@ -184,9 +188,11 @@
     "receipts": {
       "generate": "Generate",
       "regenerate": "Regenerate",
+      "generated": "Generated",
       "download": "Download",
       "empty": "No receipt available for this property.",
       "fileTitle": "Receipt {number}",
+      "fileProof": "Proof: payment already made",
       "fileProperty": "Property: {property}",
       "fileTenant": "Tenant: {tenant}",
       "fileAmount": "Amount: {amount}",

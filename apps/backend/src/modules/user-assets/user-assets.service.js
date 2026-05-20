@@ -113,6 +113,7 @@ const mapPayment = (payment) => ({
   proofName: payment.proofName || "",
   note: payment.note || "",
   receiptNumber: payment.receiptNumber || "",
+  receiptGeneratedAt: payment.receiptGeneratedAt || null,
   tenant: payment.tenantId?.fullName || "",
   property: payment.managedPropertyId?.title || "",
   canApprove: false,
@@ -526,6 +527,7 @@ export const payUserRent = async ({ userId, assetId, paymentId }) => {
 
   payment.status = "paid";
   payment.receiptNumber = payment.receiptNumber || `Q-${new Date().getFullYear()}-${String(payment._id).slice(-6).toUpperCase()}`;
+  payment.receiptGeneratedAt = payment.receiptGeneratedAt || new Date();
   await payment.save();
 
   await createNotifications([
@@ -575,6 +577,7 @@ export const getUserRentReceipt = async ({ userId, assetId, paymentId }) => {
     status: payment.status,
     content: [
       `Quittance: ${payment.receiptNumber || `Q-${String(payment._id).slice(-6).toUpperCase()}`}`,
+      "Preuve: paiement deja effectue",
       `Locataire: ${payment.tenantId?.fullName || tenant.fullName}`,
       `Montant: ${formatMoney(payment.amount, payment.currency || "USD")}`,
       `Echeance: ${formatDate(payment.dueDate)}`,

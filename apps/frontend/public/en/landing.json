@@ -150,13 +150,13 @@
   "about": {
     "eyebrow": "About us",
     "title": "The first place to find the right property or land",
-    "description": "Yopii highlights properties, land, agents, and agencies in a clear premium showcase that is easy to browse from web or mobile.",
+    "description": "Yopii highlights properties, land, and agencies in a clear premium showcase that is easy to browse from web or mobile.",
     "readMore": "Read more",
     "highlights": {
       "modernHome": "Modern homes",
       "affordablePrice": "Clear pricing",
       "rightPapers": "Verified files",
-      "verifiedAgents": "Verified agents"
+      "verifiedAgencies": "Identified agencies"
     }
   },
   "propertyList": {
@@ -171,15 +171,15 @@
     }
   },
   "agentsSection": {
-    "eyebrow": "Property and land agents",
-    "title": "Contact an agent from the platform.",
-    "description": "Find active profiles connected to the Yopii ecosystem and continue from the showcase to direct contact.",
+    "eyebrow": "Real estate profiles",
+    "title": "Discover active profiles on the platform.",
+    "description": "Find profiles connected to the Yopii ecosystem and better understand the active network around published properties.",
     "agentFallback": "Yopii agent",
     "managedProperties": "managed properties"
   },
   "testimonial": {
     "eyebrow": "Trusted by our users",
-    "description": "Yopii connects the public showcase, published properties, active agencies, and available agents in a clear, modern, reassuring real estate experience."
+    "description": "Yopii connects the public showcase, published properties, and active agencies in a clear, modern, reassuring real estate experience."
   },
   "errors": {
     "title": "Landing unavailable",

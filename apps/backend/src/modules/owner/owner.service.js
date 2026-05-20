@@ -303,6 +303,7 @@ const mapRentPaymentForProperty = (payment) => {
   const currency = payment.currency || contract?.financial?.currency || property?.currency || "USD";
   const paidAmount = Number(payment.paidAmount || payment.amount || 0);
   const receiptAvailable = RECEIPT_PAYMENT_STATUSES.has(status) && Boolean(payment.receiptNumber);
+  const canGenerateReceipt = RECEIPT_PAYMENT_STATUSES.has(status) && !payment.receiptNumber;
 
   return {
     id: String(payment._id),
@@ -333,9 +334,11 @@ const mapRentPaymentForProperty = (payment) => {
     proofName: payment.proofName || "",
     note: payment.note || "",
     receiptNumber: payment.receiptNumber || "",
+    receiptGeneratedAt: payment.receiptGeneratedAt || null,
     canApprove: status === "pending_approval" || status === "pending",
     canEdit: EDITABLE_PAYMENT_STATUSES.has(status),
     canDelete: !APPROVED_PAYMENT_STATUSES.has(status),
+    canGenerateReceipt,
     canDownloadReceipt: receiptAvailable,
     source: payment.source || "legacy",
     createdAt: payment.createdAt,
@@ -1573,18 +1576,20 @@ export const generateOwnerPropertyReceipt = async ({ ownerId, propertyId, paymen
   }
 
   const receiptNumber = payment.receiptNumber || `Q-${new Date().getFullYear()}-${String(payment._id).slice(-6).toUpperCase()}`;
-  const updatedPayment = await OwnerRentPayment.findByIdAndUpdate(
-    payment._id,
-    { $set: { receiptNumber, receiptGeneratedAt: new Date() } },
-    { new: true }
-  )
-    .populate("tenantId", "fullName linkedUserId")
-    .lean();
+  const shouldNotifyTenant = !payment.receiptNumber;
 
-  if (updatedPayment?.tenantId?.linkedUserId) {
+  await OwnerRentPayment.findByIdAndUpdate(
+    payment._id,
+    { $set: { receiptNumber, receiptGeneratedAt: payment.receiptGeneratedAt || new Date() } },
+    { new: true }
+  );
+
+  const updatedPayment = await loadOwnerPayment({ ownerId, paymentId: payment._id });
+
+  if (shouldNotifyTenant && updatedPayment?.tenantId?.linkedUserId) {
     await createNotifications([
       buildOwnerNotificationPayload({
-        userId: updatedPayment.tenantId.linkedUserId,
+        userId: updatedPayment.tenantId.linkedUserId._id || updatedPayment.tenantId.linkedUserId,
         type: "owner.receipt.generated",
         title: "Quittance generee",
         body: `La quittance ${receiptNumber} est disponible.`,

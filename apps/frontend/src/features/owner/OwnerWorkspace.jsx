@@ -282,7 +282,8 @@ export const OwnerRentsModule = () => {
     createRentPaymentMutation,
     updateRentPaymentMutation,
     deleteRentPaymentMutation,
-    approveRentPaymentMutation
+    approveRentPaymentMutation,
+    generateReceiptMutation
   } = useOwnerWorkspace();
   const { t } = useUserPreferences();
   const { showError, showSuccess } = useNotification();
@@ -314,7 +315,7 @@ export const OwnerRentsModule = () => {
     rentAmount: Number(tenant.rentAmount || 0),
     currency: tenant.currency || "USD"
   })).filter((tenant) => tenant.propertyId);
-  const isBusy = createRentPaymentMutation.isPending || updateRentPaymentMutation.isPending || deleteRentPaymentMutation.isPending || approveRentPaymentMutation.isPending;
+  const isBusy = createRentPaymentMutation.isPending || updateRentPaymentMutation.isPending || deleteRentPaymentMutation.isPending || approveRentPaymentMutation.isPending || generateReceiptMutation.isPending;
 
   const handleSubmitPayment = async (payload) => {
     try {
@@ -353,10 +354,25 @@ export const OwnerRentsModule = () => {
     }
   };
 
+  const handleGenerateReceipt = async (payment) => {
+    if (!payment.propertyId) {
+      showError(t("private", "owner.rents.receiptPropertyMissing", "Impossible de retrouver le bien lie a ce paiement."));
+      return;
+    }
+
+    try {
+      await generateReceiptMutation.mutateAsync({ propertyId: payment.propertyId, paymentId: payment.id });
+      showSuccess(t("private", "owner.rents.receiptGenerated", "Quittance generee et locataire notifie."));
+    } catch (error) {
+      notifyApiErrors({ error, showError, fallbackMessage: t("private", "owner.rents.receiptGenerateError", "Impossible de generer cette quittance.") });
+    }
+  };
+
   const handleDownloadReceipt = (payment) => {
     const receiptNumber = payment.receiptNumber || "quittance";
     const content = [
       `Quittance: ${receiptNumber}`,
+      "Preuve: paiement deja effectue",
       `Locataire: ${payment.tenant || "-"}`,
       `Bien: ${payment.property || "-"}`,
       `Echeance: ${payment.dueDateLabel || "-"}`,
@@ -389,6 +405,7 @@ export const OwnerRentsModule = () => {
           emptyLabel={t("private", "owner.rents.empty", "Aucun paiement de loyer disponible.")}
           onEdit={(payment) => setPaymentModalState({ open: true, mode: "edit", payment })}
           onDelete={handleDeletePayment}
+          onGenerateReceipt={handleGenerateReceipt}
           onDownloadReceipt={handleDownloadReceipt}
           onApprove={handleApprovePayment}
         />

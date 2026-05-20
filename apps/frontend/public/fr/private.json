@@ -86,7 +86,7 @@
       "feedback": "Envoyer"
     },
     "messages": {
-      "paymentSuccess": "Paiement synchronise et quittance disponible.",
+      "paymentSuccess": "Paiement ajoute et envoye au proprietaire pour approbation.",
       "paymentError": "Impossible de synchroniser le paiement.",
       "issueSuccess": "Probleme signale au proprietaire.",
       "issueError": "Impossible de signaler ce probleme.",
@@ -139,9 +139,13 @@
     "loading": "Chargement de la gestion locataires...",
     "error": "Impossible de charger cette gestion locataires.",
     "status": {
+      "approved": "Approuve",
       "paid": "Paye",
       "late": "En retard",
-      "pending": "En attente"
+      "pending": "En attente",
+      "pendingApproval": "En attente d'approbation",
+      "rejected": "Rejete",
+      "cancelled": "Annule"
     },
     "tabs": {
       "dashboard": "Dashboard loyers",
@@ -184,9 +188,11 @@
     "receipts": {
       "generate": "Generer",
       "regenerate": "Regenerer",
+      "generated": "Generee",
       "download": "Telecharger",
       "empty": "Aucune quittance disponible pour ce bien.",
       "fileTitle": "Quittance {number}",
+      "fileProof": "Preuve: paiement deja effectue",
       "fileProperty": "Bien: {property}",
       "fileTenant": "Locataire: {tenant}",
       "fileAmount": "Montant: {amount}",

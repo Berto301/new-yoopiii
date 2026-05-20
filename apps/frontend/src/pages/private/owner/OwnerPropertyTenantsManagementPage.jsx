@@ -27,9 +27,13 @@ const replaceTemplate = (template, values = {}) =>
   );
 
 const paymentStatusClassName = {
+  approved: "border-emerald-500/25 bg-[var(--success-surface)] text-[var(--success-foreground)]",
   paid: "border-emerald-500/25 bg-[var(--success-surface)] text-[var(--success-foreground)]",
   late: "border-red-500/25 bg-[var(--danger-surface)] text-[var(--danger-foreground)]",
-  pending: "border-amber-500/25 bg-[var(--warning-surface)] text-[var(--warning-foreground)]"
+  pending: "border-amber-500/25 bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
+  pending_approval: "border-amber-500/25 bg-[var(--warning-surface)] text-[var(--warning-foreground)]",
+  rejected: "border-red-500/25 bg-[var(--danger-surface)] text-[var(--danger-foreground)]",
+  cancelled: "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--muted)]"
 };
 
 const feedbackStatusClassName = {
@@ -40,9 +44,13 @@ const feedbackStatusClassName = {
 const PaymentStatusBadge = ({ status }) => {
   const { t } = useUserPreferences();
   const labels = {
+    approved: t("private", "ownerPropertyTenancy.status.approved", "Approuve"),
     paid: t("private", "ownerPropertyTenancy.status.paid", "Paye"),
     late: t("private", "ownerPropertyTenancy.status.late", "En retard"),
-    pending: t("private", "ownerPropertyTenancy.status.pending", "En attente")
+    pending: t("private", "ownerPropertyTenancy.status.pending", "En attente"),
+    pending_approval: t("private", "ownerPropertyTenancy.status.pendingApproval", "En attente d'approbation"),
+    rejected: t("private", "ownerPropertyTenancy.status.rejected", "Rejete"),
+    cancelled: t("private", "ownerPropertyTenancy.status.cancelled", "Annule")
   };
 
   return <Badge className={paymentStatusClassName[status] || paymentStatusClassName.pending}>{labels[status] || status}</Badge>;
@@ -60,6 +68,7 @@ const downloadReceiptText = ({ receipt, propertyTitle, t }) => {
   const receiptNumber = receipt.receiptNumber || "quittance";
   const content = [
     replaceTemplate(t("private", "ownerPropertyTenancy.receipts.fileTitle", "Quittance {number}"), { number: receiptNumber }),
+    t("private", "ownerPropertyTenancy.receipts.fileProof", "Preuve: paiement deja effectue"),
     replaceTemplate(t("private", "ownerPropertyTenancy.receipts.fileProperty", "Bien: {property}"), { property: propertyTitle || "-" }),
     replaceTemplate(t("private", "ownerPropertyTenancy.receipts.fileTenant", "Locataire: {tenant}"), { tenant: receipt.tenant || "-" }),
     replaceTemplate(t("private", "ownerPropertyTenancy.receipts.fileAmount", "Montant: {amount}"), { amount: receipt.amountLabel || "-" }),
@@ -358,28 +367,33 @@ export const OwnerPropertyTenantsManagementPage = () => {
 
           {activeTab === "receipts" ? (
             <div className="space-y-4">
-              {receipts.map((receipt) => (
-                <Card key={receipt.id} className="border-[var(--border)] bg-[var(--surface)]">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <div className="flex flex-wrap gap-2">
-                        <PaymentStatusBadge status={receipt.status} />
-                        {receipt.receiptNumber ? <Badge className="border-[var(--border)] bg-[var(--surface-muted)] text-[var(--foreground)]">{receipt.receiptNumber}</Badge> : null}
+              {receipts.map((receipt) => {
+                const canGenerateReceipt = Boolean(receipt.canGenerateReceipt);
+                const canDownloadReceipt = Boolean(receipt.canDownloadReceipt);
+
+                return (
+                  <Card key={receipt.id} className="border-[var(--border)] bg-[var(--surface)]">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <div className="flex flex-wrap gap-2">
+                          <PaymentStatusBadge status={receipt.status} />
+                          {receipt.receiptNumber ? <Badge className="border-[var(--border)] bg-[var(--surface-muted)] text-[var(--foreground)]">{receipt.receiptNumber}</Badge> : null}
+                        </div>
+                        <h3 className="mt-3 text-xl font-semibold text-[var(--foreground)]">{receipt.tenant}</h3>
+                        <p className="mt-1 text-sm text-[var(--muted)]">{receipt.dueDateLabel} - {receipt.amountLabel}</p>
                       </div>
-                      <h3 className="mt-3 text-xl font-semibold text-[var(--foreground)]">{receipt.tenant}</h3>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{receipt.dueDateLabel} - {receipt.amountLabel}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" disabled={!canGenerateReceipt || receiptMutation.isPending} onClick={() => handleGenerateReceipt(receipt.id)}>
+                          {receipt.receiptNumber ? t("private", "ownerPropertyTenancy.receipts.generated", "Generee") : t("private", "ownerPropertyTenancy.receipts.generate", "Generer")}
+                        </Button>
+                        <Button type="button" variant="secondary" disabled={!canDownloadReceipt || receiptMutation.isPending} onClick={() => handleDownloadReceipt(receipt)}>
+                          {t("private", "ownerPropertyTenancy.receipts.download", "Telecharger")}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="button" disabled={receiptMutation.isPending} onClick={() => handleGenerateReceipt(receipt.id)}>
-                        {receipt.receiptNumber ? t("private", "ownerPropertyTenancy.receipts.regenerate", "Regenerer") : t("private", "ownerPropertyTenancy.receipts.generate", "Generer")}
-                      </Button>
-                      <Button type="button" variant="secondary" disabled={receiptMutation.isPending} onClick={() => handleDownloadReceipt(receipt)}>
-                        {t("private", "ownerPropertyTenancy.receipts.download", "Telecharger")}
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
 
               {!receipts.length ? (
                 <Card className="border-dashed border-[var(--border)] text-center">

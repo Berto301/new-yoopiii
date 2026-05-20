@@ -344,12 +344,11 @@ const TestimonialBlock = ({ featuredAgency, summary, t }) => (
       <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-500">{t("landing", "testimonial.eyebrow", "Ils nous font confiance")}</p>
       <h2 className="text-3xl font-bold text-stone-950 md:text-4xl">{featuredAgency?.name || "Yopii"}</h2>
       <p className="max-w-2xl text-base leading-8 text-stone-500">
-        {t("landing", "testimonial.description", "Yopii connecte vitrine publique, biens publies, agences actives et agents disponibles dans une experience immobiliere claire, moderne et rassurante.")}
+        {t("landing", "testimonial.description", "Yopii connecte vitrine publique, biens publies et agences actives dans une experience immobiliere claire, moderne et rassurante.")}
       </p>
       <div className="flex flex-wrap gap-3">
         <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.propertiesCount || 0} {t("landing", "hero.metrics.properties", "Biens")}</span>
         <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.agenciesCount || 0} {t("landing", "hero.metrics.agencies", "Agences")}</span>
-        <span className="rounded-full bg-[#f4e1d7] px-4 py-2 text-sm font-medium text-brand-500">{summary.agentsCount || 0} {t("landing", "hero.metrics.agents", "Agents")}</span>
       </div>
     </div>
   </section>
@@ -370,13 +369,14 @@ export const LandingPage = () => {
   const recentProperties = useMemo(() => (landingData?.recentProperties || []).slice(0, 6), [landingData?.recentProperties]);
   const mapProperties = useMemo(() => landingData?.propertyMap || [], [landingData?.propertyMap]);
   const featuredAgents = useMemo(() => (landingData?.agents || []).slice(0, 4), [landingData?.agents]);
+  const hasFeaturedAgents = featuredAgents.length > 0;
   const typeCounts = useMemo(() => getTypeCounts(mapProperties), [mapProperties]);
   const typeItems = PROPERTY_TYPES.filter((item) => item.category === activeTypeTab);
   const aboutHighlights = [
     t("landing", "about.highlights.modernHome", "Habitats modernes"),
     t("landing", "about.highlights.affordablePrice", "Prix lisibles"),
     t("landing", "about.highlights.rightPapers", "Dossiers verifies"),
-    t("landing", "about.highlights.verifiedAgents", "Agents verifies")
+    t("landing", "about.highlights.verifiedAgencies", "Agences identifiees")
   ];
 
   if (landingQuery.isLoading) {
@@ -501,7 +501,7 @@ export const LandingPage = () => {
             <SectionHeading
               eyebrow={t("landing", "about.eyebrow", "A propos")}
               title={t("landing", "about.title", "Le premier endroit pour trouver le bon bien ou terrain")}
-              description={t("landing", "about.description", "Yopii met en avant les biens, les terrains, les agents et les agences dans une vitrine claire, premium et facile a parcourir depuis le web ou le mobile.")}
+              description={t("landing", "about.description", "Yopii met en avant les biens, les terrains et les agences dans une vitrine claire, premium et facile a parcourir depuis le web ou le mobile.")}
             />
             <ul className="grid gap-3 text-sm text-stone-600 md:grid-cols-2">
               {aboutHighlights.map((highlight) => (
@@ -540,19 +540,21 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      <section id="agents" className="mx-auto max-w-7xl px-6 py-16">
-        <SectionHeading
-          eyebrow={t("landing", "agentsSection.eyebrow", "Agents biens et terrains")}
-          title={t("landing", "agentsSection.title", "Contactez un agent depuis la plateforme.")}
-          description={t("landing", "agentsSection.description", "Retrouvez quelques profils actifs relies a l'ecosysteme Yopii pour prolonger l'experience de la vitrine vers la prise de contact.")}
-          align="center"
-        />
-        <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {featuredAgents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} t={t} />
-          ))}
-        </div>
-      </section>
+      {hasFeaturedAgents ? (
+        <section id="agents" className="mx-auto max-w-7xl px-6 py-16">
+          <SectionHeading
+            eyebrow={t("landing", "agentsSection.eyebrow", "Profils immobiliers")}
+            title={t("landing", "agentsSection.title", "Decouvrez les profils actifs sur la plateforme.")}
+            description={t("landing", "agentsSection.description", "Retrouvez quelques profils relies a l'ecosysteme Yopii pour mieux comprendre le reseau actif autour des biens publies.")}
+            align="center"
+          />
+          <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {featuredAgents.map((agent) => (
+              <AgentCard key={agent.id} agent={agent} t={t} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto max-w-7xl px-6 py-16">
         <TestimonialBlock featuredAgency={featuredAgency} summary={summary} t={t} />

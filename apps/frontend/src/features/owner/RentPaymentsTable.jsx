@@ -27,6 +27,7 @@ export const RentPaymentsTable = ({
   showApprove = false,
   onEdit,
   onDelete,
+  onGenerateReceipt,
   onDownloadReceipt,
   onApprove
 }) => {
@@ -67,6 +68,7 @@ export const RentPaymentsTable = ({
             {payments.map((payment) => {
               const canEdit = payment.canEdit !== false;
               const canDelete = payment.canDelete !== false;
+              const canGenerateReceipt = Boolean(payment.canGenerateReceipt);
               const canDownloadReceipt = Boolean(payment.canDownloadReceipt);
               const menuItems = [
                 {
@@ -79,6 +81,13 @@ export const RentPaymentsTable = ({
                   disabled: !onDelete || !canDelete || isBusy,
                   action: () => onDelete?.(payment)
                 },
+                ...(onGenerateReceipt
+                  ? [{
+                      label: t("private", "payments.actions.generateReceipt", "Generer quittance"),
+                      disabled: !canGenerateReceipt || isBusy,
+                      action: () => onGenerateReceipt?.(payment)
+                    }]
+                  : []),
                 {
                   label: t("private", "payments.actions.receipt", "Telecharger quittance"),
                   disabled: !onDownloadReceipt || !canDownloadReceipt || isBusy,

@@ -103,7 +103,7 @@ export const PublicFooter = () => {
             <a href="/#about" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.about", "A propos")}</a>
             <a href="/#properties" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.properties", "Biens")}</a>
             <a href="/#types" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.terrain", "Terrains")}</a>
-            <a href="/#agents" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.agents", "Agents")}</a>
+            <a href="/#contact" className="transition" style={{ color: footerMuted }} onMouseEnter={(event) => { event.currentTarget.style.color = footerLinkHover; }} onMouseLeave={(event) => { event.currentTarget.style.color = footerMuted; }}>{t("layout", "publicNav.contact", "Contact")}</a>
           </div>
         </div>
 

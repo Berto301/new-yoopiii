@@ -43,6 +43,7 @@ const downloadReceipt = (payment) => {
   const receiptNumber = payment.receiptNumber || "quittance";
   const content = [
     `Quittance: ${receiptNumber}`,
+    "Preuve: paiement deja effectue",
     `Locataire: ${payment.tenant || "-"}`,
     `Bien: ${payment.property || "-"}`,
     `Echeance: ${payment.dueDateLabel || "-"}`,
@@ -147,6 +148,15 @@ export const OwnerTenantsPage = () => {
   const handleGenerateReceipt = () => {
     if (!nextReceiptCandidate?.propertyId) return;
     receiptMutation.mutate({ propertyId: nextReceiptCandidate.propertyId, paymentId: nextReceiptCandidate.id });
+  };
+
+  const handleGeneratePaymentReceipt = (payment) => {
+    if (!payment.propertyId) {
+      showError(t("private", "ownerTenantsManagement.receipts.propertyMissing", "Impossible de retrouver le bien lie a ce paiement."));
+      return;
+    }
+
+    receiptMutation.mutate({ propertyId: payment.propertyId, paymentId: payment.id });
   };
 
   return (
@@ -275,6 +285,7 @@ export const OwnerTenantsPage = () => {
             showApprove
             isBusy={approveMutation.isPending || receiptMutation.isPending}
             onApprove={(payment) => approveMutation.mutate(payment.id)}
+            onGenerateReceipt={handleGeneratePaymentReceipt}
             onDownloadReceipt={downloadReceipt}
             emptyLabel={t("private", "ownerTenantsManagement.receipts.empty", "Aucune quittance ou paiement disponible.")}
           />

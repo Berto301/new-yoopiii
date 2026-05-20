@@ -27,7 +27,7 @@ export const PublicLayout = () => {
     { to: "/#about", label: t("layout", "publicNav.about", "About") },
     { to: "/#properties", label: t("layout", "publicNav.properties", "Property") },
     { to: "/#types", label: t("layout", "publicNav.terrain", "Terrain") },
-    { to: "/#agents", label: t("layout", "publicNav.agents", "Agents") },
+    { to: "/#contact", label: t("layout", "publicNav.contact", "Contact") },
     { to: "/login", label: t("layout", "publicNav.login", "Login") }
   ];
 

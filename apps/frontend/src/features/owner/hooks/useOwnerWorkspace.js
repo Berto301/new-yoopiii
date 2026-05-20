@@ -8,6 +8,7 @@ import {
   deleteOwnerRentPayment,
   deleteOwnerTenant,
   deleteOwnerMaintenanceTicket,
+  generateOwnerPropertyReceipt,
   getOwnerContracts,
   getOwnerDashboard,
   getOwnerMaintenance,
@@ -109,6 +110,11 @@ export const useOwnerWorkspace = () => {
     onSuccess: invalidateOwnerWorkspace
   });
 
+  const generateReceiptMutation = useMutation({
+    mutationFn: generateOwnerPropertyReceipt,
+    onSuccess: invalidateOwnerWorkspace
+  });
+
   const updateTenantMutation = useMutation({
     mutationFn: updateOwnerTenant,
     onSuccess: invalidateOwnerWorkspace
@@ -143,6 +149,7 @@ export const useOwnerWorkspace = () => {
     updateRentPaymentMutation,
     deleteRentPaymentMutation,
     approveRentPaymentMutation,
+    generateReceiptMutation,
     updateTenantMutation,
     deleteTenantMutation,
     createMaintenanceTicketMutation,
